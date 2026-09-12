@@ -16,6 +16,8 @@
 @media(max-width:600px){.cash-summary-grid{gap:10px}.cash-stat{padding:15px 12px}.cash-stat .muted{font-size:13px}.cash-stat button{font-size:12px;padding:7px 9px}.cash-flow-row{flex-wrap:wrap;gap:10px}.cash-flow-row .row-main{min-width:125px}.cash-flow-row button{margin-inline-start:45px;font-size:12px}.cash-row-amount{font-size:22px}.cash-title h2{font-size:23px}.period{flex-wrap:wrap}.period button{font-size:12px}.cash-number{overflow-wrap:anywhere}}
 .simple-dashboard{display:grid;grid-template-columns:1fr 1fr;gap:18px}.simple-total{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:245px;padding:28px}.simple-label{font-size:20px;font-weight:600}.simple-number{font-size:clamp(30px,5vw,45px);font-weight:800;direction:ltr;unicode-bidi:isolate;line-height:1.25;overflow-wrap:anywhere}.simple-total button{margin-top:auto;font-size:13px}.simple-note{font-size:13px;line-height:1.6;color:var(--muted)}.spending-total{background:#17251b;border:1px solid #3c6447}.upcoming-income{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:14px;padding:16px 22px}.upcoming-income .hint{width:100%}.upcoming-income button{margin-inline-start:auto}.dashboard-footnote{text-align:center;margin:0}
 @media(max-width:600px){.simple-dashboard{grid-template-columns:1fr;gap:12px}.simple-total{min-height:0;padding:22px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}.simple-label{font-size:18px}.simple-number{font-size:32px}.simple-total .hint,.simple-total .simple-note{grid-column:1/-1}.simple-total button{justify-self:start;grid-column:1/-1;margin-top:5px}.upcoming-income{padding:16px}}
+.minimal-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.minimal-stat{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px;min-height:205px}.minimal-stat>span{font-size:16px;font-weight:600}.minimal-stat>strong{font-size:clamp(24px,3.5vw,36px);font-weight:800;direction:ltr;unicode-bidi:isolate;line-height:1.3}.minimal-stat>button{font-size:12px;margin-top:auto}.minimal-stat .hint{font-size:12px}.minimal-spending{display:flex;justify-content:space-between;align-items:center;gap:16px;background:#17251b;border-color:#3c6447}.minimal-spending>div{display:grid;gap:6px}.minimal-spending strong{font-size:25px;direction:ltr;unicode-bidi:isolate}.minimal-spending span{font-size:14px}.mini-forecast-grid{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px}.mini-forecast-grid>div{display:grid;gap:8px;text-align:center;border-inline-start:1px solid var(--border);padding:0 12px}.mini-forecast-grid>div:first-child{border:0}.mini-forecast-grid strong{font-size:24px;direction:ltr;unicode-bidi:isolate}.mini-forecast-grid small{color:var(--muted);font-size:13px}.mini-forecast-grid .hint{font-size:11px}.mini-forecast h2{margin:0}.mini-forecast .card-head{flex-wrap:wrap}.summary-row{flex-wrap:wrap}
+@media(max-width:650px){.minimal-overview{grid-template-columns:1fr}.minimal-stat{display:grid;grid-template-columns:1fr auto;min-height:0;align-items:center;padding:20px}.minimal-stat .hint{grid-column:1/-1}.minimal-stat>strong{font-size:30px}.minimal-stat>button{justify-self:start;margin:0}.minimal-spending{flex-wrap:wrap}.mini-forecast-grid>div{padding:0 6px}.mini-forecast-grid strong{font-size:19px}.mini-forecast-grid .hint{font-size:10px}}
 </style>
 </head>
 <body>
@@ -28,7 +30,7 @@
   תזרים לצלם, v2. הכל בקובץ אחד. שמירה מקומית או זיהוי אוטומטי בענן, בלי מסכי משתמשים.
   כסף נשמר באגורות. תאריכים הם YYYY-MM-DD; אין המרה של תאריך מקומי ל-UTC.
   יתרת הבנק אינה מחושבת מעסקאות עבר: כל אישור תשלום שואל האם הוא כבר כלול.
-  כל חישוב חיסכון מוגבל לתקופה שנבחרה ולהוצאות שהוזנו.
+  לוח הבקרה שומר את כל התשלומים הרשומים וקבועות ל-90 יום. התחזית מוצגת בנפרד.
 */
 const CashFlow = (() => {
   const DAY = 86400000;
@@ -52,6 +54,7 @@ const CashFlow = (() => {
     if(!raw||raw.schemaVersion!==2)throw Error('זה אינו גיבוי בגרסה החדשה');
     const d=JSON.parse(JSON.stringify(raw));d.bank.updatedAt=d.bank.updatedAt??null;integer(d.revision);integer(d.bank.balanceCents,-100000000000);integer(d.bank.epoch);if(typeof d.bank.verified!=='boolean')throw Error('פרטי הבנק לא תקינים');
     if(d.bank.updatedAt!==null){if(typeof d.bank.updatedAt!=='string'||!Number.isFinite(Date.parse(d.bank.updatedAt)))throw Error('מועד עדכון לא תקין');}
+    if(d.bank.legacyAdjustmentCents!==undefined)integer(d.bank.legacyAdjustmentCents,-100000000000);
     ['bufferCents','taxReserveCents','goalCents'].forEach(k=>integer(d.settings[k]));integer(d.settings.taxBasisPoints,0,10000);integer(d.settings.creditDay,1,31);d.settings.reserveEpoch=d.settings.reserveEpoch||0;integer(d.settings.reserveEpoch);
     // Firebase omits empty arrays. Restore them before validation.
     ['incomes','expenses','receipts'].forEach(k=>{d[k]=d[k]||[];if(!Array.isArray(d[k])||d[k].length>20000)throw Error('מבנה הגיבוי אינו תקין');});
@@ -83,12 +86,24 @@ const CashFlow = (() => {
     }
     return result.sort((a,b)=>a.date.localeCompare(b.date)||a.key.localeCompare(b.key));
   }
+  function cashPosition(s){
+    if(s.bank.verified)return {amountCents:s.bank.balanceCents,ready:true,estimated:false};
+    if(s.legacySnapshot&&'openingBalance' in s.legacySnapshot){
+      try{
+        const opening=cents(s.legacySnapshot.openingBalance,true);
+        const received=s.incomes.filter(i=>i.status==='paid').reduce((sum,i)=>sum+i.amountCents,0);
+        const paid=s.receipts.reduce((sum,r)=>sum+r.amountCents,0);
+        return {amountCents:opening+(s.bank.legacyAdjustmentCents||0)+received-paid,ready:true,estimated:true,openingCents:opening,receivedCents:received,paidCents:paid};
+      }catch(e){}
+    }
+    return {amountCents:s.bank.balanceCents,ready:false,estimated:false};
+  }
   function forecast(s,days,now=today()){
     const end=addDays(now,days),outs=occurrences(s,end),pending=s.incomes.filter(i=>i.status==='pending');
     // Overdue receivables are shown for collection but excluded from forecast until rescheduled.
     const ins=pending.filter(i=>i.expectedDate>=now&&i.expectedDate<=end);
     const events=[...outs.map(o=>({...o,date:o.date<now?now:o.date,type:'expense',originalDate:o.date})),...ins.map(i=>({date:i.expectedDate,type:'income',amountCents:i.amountCents,title:i.client,id:i.id}))].sort((a,b)=>a.date.localeCompare(b.date)||((a.type==='expense'?0:1)-(b.type==='expense'?0:1)));
-    let balance=s.bank.balanceCents,cash=balance,reserve=s.settings.taxReserveCents;
+    let balance=cashPosition(s).amountCents,cash=balance,reserve=s.settings.taxReserveCents;
     let minAvailable=balance-reserve,minDate=now;
     const points=[{date:now,balance,cash,reserve}],timeline=[];
     // Expenses are applied before income on the same day: intra-day shortage stays visible.
@@ -106,8 +121,24 @@ const CashFlow = (() => {
     for(const r of s.receipts)if(!parents.has(r.expenseId))rows.push({id:r.key,title:r.title,amountCents:r.amountCents,date:r.paidDate,kind:'history',note:'חיוב ששולם ונשמר לאחר מחיקת הסדרה'});
     return {rows,totalCents:rows.reduce((sum,r)=>sum+r.amountCents,0),count:rows.length};
   }
+  function cashSummary(s,now=today()){
+    const position=cashPosition(s),recorded=recordedExpenses(s);
+    // Include every remaining saved installment and one-off, regardless of date.
+    // A recurring template contributes its first charge here; future renewals
+    // are generated for the next 90 days and deduplicated by occurrence key.
+    const savedOnly={...s,expenses:s.expenses.map(e=>e.kind==='monthly'?{...e,kind:'once'}:e)};
+    const pending=occurrences(savedOnly,'2100-12-31');
+    const byKey=new Map(pending.map(o=>[o.key,o]));
+    const forecasts=[30,60,90].map(days=>forecast(s,days,now));
+    for(const o of forecasts[2].outs)if(o.kind==='monthly')byKey.set(o.key,o);
+    const commitments=[...byKey.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.key.localeCompare(b.key));
+    const outgoingCents=commitments.reduce((sum,o)=>sum+o.amountCents,0);
+    const remainingCents=position.amountCents-outgoingCents;
+    return {position,recorded,pending,commitments,forecasts,outgoingCents,remainingCents,
+      spendableCents:position.ready&&!position.estimated?Math.max(0,remainingCents-s.settings.bufferCents-s.settings.taxReserveCents):0};
+  }
   function applyPayment(s,type,itemId,date,alreadyIncluded,now=today(),taxAdded=0){
-    parseDate(date);if(date>now)throw Error('אפשר לאשר רק תשלום שכבר התקבל או ירד');if(!s.bank.verified&&!alreadyIncluded)throw Error('קודם עדכן יתרה מהבנק בהגדרות');
+    parseDate(date);if(date>now)throw Error('אפשר לאשר רק תשלום שכבר התקבל או ירד');if(!cashPosition(s).ready&&!alreadyIncluded)throw Error('קודם עדכן יתרה מהבנק בלוח הבקרה');
     const epoch=alreadyIncluded?null:s.bank.epoch;
     if(type==='income'){const i=s.incomes.find(i=>i.id===itemId);if(!i||i.status==='paid')throw Error('ההכנסה כבר סומנה כשולמה');integer(taxAdded,0,i.amountCents);i.status='paid';i.paidDate=date;i.appliedEpoch=epoch;i.taxAddedCents=taxAdded;i.taxEpoch=s.settings.reserveEpoch||0;s.settings.taxReserveCents+=taxAdded;if(!alreadyIncluded)s.bank.balanceCents+=i.amountCents;}
     else{const o=occurrences(s,addDays(now,366)).find(o=>o.key===itemId);if(!o)throw Error('התשלום כבר אושר או אינו קיים');s.receipts.push({key:o.key,expenseId:o.expenseId,index:o.index,title:o.title,amountCents:o.amountCents,paidDate:date,chargeDate:o.date,category:o.category,scope:o.scope,appliedEpoch:epoch});if(!alreadyIncluded)s.bank.balanceCents-=o.amountCents;}
@@ -152,7 +183,7 @@ const CashFlow = (() => {
     // Keep the complete source snapshot, including original dates and installment labels.
     // This lives in saved user data, never in the public HTML source.
     s.legacySnapshot=JSON.parse(JSON.stringify(raw));
-    s.legacyRecovery={source:'money-1d58a/appData',incomeCount:incomes.length,
+    s.legacyRecovery={source:'money-1d58a/appData',syncVersion:3,incomeCount:incomes.length,
       expenseCount:expenses.length,recoveredAt:new Date().toISOString()};
     // openingBalance in v1 is ambiguous, so do not call it an actual bank balance.
     return validate(s);
@@ -171,7 +202,7 @@ const CashFlow = (() => {
     next.revision=target.revision+1;
     return validate(next);
   }
-  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
+  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,cashPosition,cashSummary,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
 })();
 window.CashFlow=CashFlow;
 </script>
@@ -191,7 +222,7 @@ const LOCAL_KEY='photographer-cashflow-v2';
 const CATEGORIES=['ציוד ועדשות','תוכנות ומנויים','נסיעות ודלק','אולפן ולוקיישן','ביטוח ציוד ועסק','שיווק ופרסום','מסים וביטוח לאומי','כיבוד ואוכל לסט','תאורה וגריפ','שכירות וחשבונות','סופר ואוכל','בריאות וספורט','חופשות ופנאי','חיסכון / העברה החוצה','אחר / כללי'];
 const TERMS=[{value:0,label:'מיידי'},{value:30,label:'שוטף +30'},{value:60,label:'שוטף +60'},{value:90,label:'שוטף +90'}];
 const KIND=[{value:'once',label:'חד־פעמית'},{value:'monthly',label:'קבועה / מתחדשת'},{value:'installments',label:'תשלומים'}];
-const TABS=[['dashboard','לוח בקרה'],['income','הכנסות'],['expenses','הוצאות'],['forecast','תחזית'],['settings','הגדרות']];
+const TABS=[['dashboard','לוח בקרה'],['income','הכנסות'],['expenses','הוצאות']];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=c=>new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',minimumFractionDigits:0,maximumFractionDigits:2}).format(c/100);
 const amountInput=c=>(c/100).toFixed(2);
@@ -208,7 +239,7 @@ let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=nu
 const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all'};
 const root=document.getElementById('app'),modal=document.getElementById('modal');
 function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
-function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך ההגדרות.'),100);return E.empty();}}
+function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך כפתור גיבוי.'),100);return E.empty();}}
 state=loadLocal();
 async function commit(change,expectedRevision=state.revision){
   if(busy)throw Error('השמירה הקודמת עדיין מתבצעת');if(expectedRevision!==state.revision)throw Error('המידע השתנה במכשיר אחר. סגור את הטופס ופתח אותו מחדש לפני שמירה');
@@ -252,43 +283,32 @@ function period(){
   const items=[['month','עד סוף החודש'],['30','30 יום'],['60','60 יום'],['90','90 יום']];
   return `<div class="period" aria-label="עד מתי לחשב">${items.map(([key,label])=>button(label,'period',`data-period="${key}" aria-pressed="${key===ui.period}"`,key===ui.period?'active':'')).join('')}</div>`;
 }
-function chart(f){
-  const width=860,height=270,left=76,right=25,top=23,bottom=40,plotW=width-left-right,plotH=height-top-bottom;
-  const threshold=state.settings.bufferCents+state.settings.taxReserveCents;
-  const values=[...f.points.flatMap(p=>[p.balance,p.cash]),threshold,0];let low=Math.min(...values),high=Math.max(...values);const span=Math.max(100000,high-low);low-=span*.12;high+=span*.12;
-  const x=date=>left+((E.parseDate(date)-E.parseDate(f.now))/86400000/Math.max(1,f.days))*plotW,y=value=>top+(high-value)/(high-low)*plotH;
-  function path(prop){let out=`M${x(f.points[0].date).toFixed(2)},${y(f.points[0][prop]).toFixed(2)}`;for(const p of f.points.slice(1))out+=` H${x(p.date).toFixed(2)} V${y(p[prop]).toFixed(2)}`;return out;}
-  const grids=Array.from({length:5},(_,i)=>{const value=low+(high-low)*i/4;return `<line x1="${left}" x2="${width-right}" y1="${y(value)}" y2="${y(value)}" stroke="#332c25"/><text x="${left-8}" y="${y(value)+4}" text-anchor="end">${esc(money(Math.round(value)))}</text>`;}).join('');
-  const ticks=[...new Set([0,Math.round(f.days/3),Math.round(f.days*2/3),f.days])].map(d=>`<text x="${x(E.addDays(f.now,d))}" y="${height-13}" text-anchor="middle">${d===0?'היום':`+${d}`}</text>`).join('');
-  return `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="גרף יתרה: כולל גבייה מתוכננת, וללא גבייה חדשה. היתרה המינימלית לאחר רזרבה למס היא ${esc(money(f.minAvailable))}">${grids}<line x1="${left}" x2="${width-right}" y1="${y(threshold)}" y2="${y(threshold)}" stroke="#66ca7e" stroke-dasharray="5 5"/><path d="${path('cash')}" fill="none" stroke="#a39b8e" stroke-width="2" stroke-dasharray="6 4"/><path d="${path('balance')}" fill="none" stroke="#ff7024" stroke-width="3"/>${ticks}</svg><div class="chart-key"><span><i class="line-key"></i>כולל הכנסות צפויות</span><span><i class="line-key cash"></i>בלי גבייה חדשה</span><span class="green">קו ירוק: כרית + רזרבה נוכחית למס</span></div>`;
-}
-function dashboard(f){
-  const ready=state.bank.verified, show=value=>ready?money(value):'—';
-  const recorded=E.recordedExpenses(state);
-  const paid=paidThisMonth(f.now).reduce((sum,r)=>sum+r.amountCents,0);
-  const next=E.occurrences(state,E.addDays(f.end,366)).find(o=>o.date>f.end);
-  const nextPeriod=next?[30,60,90].find(days=>E.addDays(f.now,days)>=next.date):null;
-  return `<div class="cash-title"><h2>הכסף שלך, ברור.</h2><div class="hint">החישוב מהיום ועד ${dateLabel(f.end)}</div></div>
-    ${period()}
-    ${!ready?`<div class="notice">ההכנסות וההוצאות נשמרו. חסר רק הסכום שמופיע עכשיו בבנק. ${button('הזנת יתרה בבנק','bank','','primary')}</div>`:''}
-    <div class="simple-dashboard">
-      <article class="card simple-total"><div class="simple-label">יש לי עכשיו</div><strong class="simple-number">${show(state.bank.balanceCents)}</strong><div class="hint">היתרה הנוכחית בבנק</div>${button('עדכון יתרה','bank')}</article>
-      <article class="card simple-total"><div class="simple-label">סך ההוצאות ברשימה</div><strong class="simple-number red">${money(recorded.totalCents)}</strong><div class="hint">${recorded.count} רשומות · כל התאריכים, בלי סינון</div>
-      <div class="simple-note"><b>עוד יֵצא ממני עד ${dateLabel(f.end)}: ${money(f.outgoing)}</b></div>
-      ${paid?`<div class="simple-note">כבר ירד החודש לפי הרישומים: <b>${money(paid)}</b>. זה כבר כלול ביתרה בבנק.</div>`:''}
-      ${next?`<div class="simple-note expense-later">אחרי התקופה הזאת: ${esc(next.title)} · <b>${money(next.amountCents)}</b> · ${dateLabel(next.date)}${nextPeriod?button(`לכלול בחישוב — ${nextPeriod} יום`,'period',`data-period="${nextPeriod}"`):''}</div>`:''}
-      <div class="flex" style="flex-wrap:wrap">${button('בדיקת הסכום, שורה־שורה','recorded-expenses')}${button('מה עוד יֵצא?','cash-detail','data-kind="expense"')}</div></article>
-      <article class="card simple-total"><div class="simple-label">יישאר לי בחשבון</div><strong class="simple-number ${ready&&f.cashEnd<0?'red':''}">${show(f.cashEnd)}</strong><div class="hint">היתרה בבנק פחות החיובים שעוד ירדו בתקופה הזאת</div><div class="simple-note">${ready?`${money(state.bank.balanceCents)} פחות ${money(f.outgoing)} = ${money(f.cashEnd)}.<br>`:''}הוצאות שכבר ירדו נכללות ביתרת הבנק. לקוחות שעדיין לא שילמו לא נספרים כאן.</div></article>
-      <article class="card simple-total spending-total"><div class="simple-label">פנוי לי לבזבוז</div><strong class="simple-number ${ready&&f.conservativeSavings>0?'green':'orange'}">${show(f.conservativeSavings)}</strong><div class="hint">אחרי החיובים, כרית הביטחון והכסף למס</div><div class="simple-note">${!ready?'יוצג אחרי עדכון יתרת הבנק.':f.conservativeSavings>0?'זה הסכום הפנוי הכולל לתקופה. אפשר לבזבז אותו או לחסוך אותו.':'לפי ההוצאות שהזנת, כרגע אין כסף פנוי לבזבוז מעבר להן.'}</div>${button('מה משאירים בצד?','spending-detail')}</article>
+function dashboard(){
+  const c=E.cashSummary(state),p=c.position,show=value=>p.ready?money(value):'—';
+  return `${!p.ready?`<div class="notice">הרשומות נשמרות. הזן את היתרה שמופיעה עכשיו בבנק כדי לחשב כמה יישאר. ${button('עדכון יתרה','bank','','primary')}</div>`:''}
+    <div class="minimal-overview">
+      <article class="card minimal-stat"><span>${p.estimated?'יתרה לפי הרישומים':'יש לי עכשיו'}</span><strong>${show(p.amountCents)}</strong>${button('עדכון מהבנק','bank')}<small class="hint">${p.estimated?'הערכה מהיתרה והרישומים באתר הישן':'היתרה שעודכנה, עם תשלומים חדשים שאושרו'}</small></article>
+      <article class="card minimal-stat"><span>סך ההוצאות שהזנתי</span><strong class="red">${money(c.recorded.totalCents)}</strong>${button('כל '+c.recorded.count+' ההוצאות','recorded-expenses')}<small class="hint">כל הרשומות, בלי סינון תאריכים</small></article>
+      <article class="card minimal-stat"><span>יישאר מהכסף שכבר יש</span><strong class="${p.ready&&c.remainingCents<0?'red':''}">${show(c.remainingCents)}</strong>${button('איך זה חושב?','all-commitments')}<small class="hint">אחרי כל החיובים הממתינים הרשומים, וקבועות ל־90 יום</small></article>
     </div>
-    <div class="card upcoming-income"><span>בנוסף, צפוי להיכנס מלקוחות: <b class="green">${money(f.incoming)}</b></span>${button('פירוט','cash-detail','data-kind="income"')}<div class="hint">ברגע שהתשלום מתקבל ונרשם, הוא יכול להגדיל את הכסף הפנוי.</div></div>
-    <p class="hint dashboard-footnote">החישוב מבוסס על החיובים שהזנת לתקופה הזאת. הוצאה שכבר ירדה צריכה להיות מסומנת ככזו כדי שלא תיספר שוב.</p>`;
+    <div class="card minimal-spending"><div><span>פנוי לבזבוז או לחיסכון</span><strong class="${c.spendableCents>0?'green':'orange'}">${!p.ready?'—':p.estimated?'צריך לאשר יתרה בבנק':money(c.spendableCents)}</strong></div>${button(p.estimated?'אישור יתרה מהבנק':'כסף ששומרים בצד',p.estimated?'bank':'cash-reserves')}</div>
+    <section class="card mini-forecast"><div class="card-head"><h2>מבט קדימה</h2><span class="hint">בהנחה שהלקוחות ישלמו במועד</span></div><div class="mini-forecast-grid">${c.forecasts.map(f=>`<div><small>בעוד ${f.days} יום</small><strong class="${p.ready&&f.balance<0?'red':''}">${show(f.balance)}</strong><span class="hint">נכנס ${money(f.incoming)} · יוצא ${money(f.outgoing)}</span></div>`).join('')}</div></section>
+    <p class="hint dashboard-footnote">המספרים מחושבים מחדש בכל שמירה. הוצאות שכבר נכללות ביתרת הבנק אינן מופחתות שוב.</p>`;
+}
+function allCommitmentsDetail(){
+  const c=E.cashSummary(state),p=c.position;
+  openModal('מה נשאר אחרי החיובים?',`<div class="summary-row"><span>${p.estimated?'יתרה מחושבת לפי הרישומים':'יתרה נוכחית'}</span><b>${p.ready?money(p.amountCents):'—'}</b></div><div class="summary-row"><span>כל החיובים שעוד ממתינים</span><b class="red">−${money(c.outgoingCents)}</b></div><div class="summary-row total"><span>יישאר מהכסף שכבר יש</span><b>${p.ready?money(c.remainingCents):'—'}</b></div><p class="hint">כולל את כל התשלומים וההוצאות החד־פעמיות הרשומים, גם מעבר ל־90 יום, והחיובים הקבועים ל־90 הימים הבאים. כל חיוב נספר פעם אחת. כסף מלקוחות שטרם שילמו אינו מתווסף כאן.</p>
+    ${p.estimated?`<div class="notice">היתרה היא הערכה מהרישומים הישנים: יתרת המקור ${money(p.openingCents)} + הכנסות ששולמו ${money(p.receivedCents)} − הוצאות שסומנו כירדו ${money(p.paidCents)}${state.bank.legacyAdjustmentCents?` + התאמות ${money(state.bank.legacyAdjustmentCents)}`:''}. לא התקבלה יתרה עדכנית מהבנק. ${button('עדכון מהבנק','bank')}</div>`:''}
+    ${c.commitments.length?c.commitments.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)}</div></div><b class="amount red">${money(o.amountCents)}</b></div>`).join(''):'<div class="empty">אין חיובים ממתינים.</div>'}<div class="form-actions">${button('כל הרשומות','recorded-expenses')}${button('סגירה','close')}</div>`);
+}
+function cashReserveForm(){
+  openModal('כסף ששומרים בצד',`<form class="form" data-form="cash-reserves">${field('כרית ביטחון להשאיר בחשבון (₪)','buffer',amountInput(state.settings.bufferCents),'number','required min="0" step="0.01"')}${field('כסף בחשבון שמיועד למס (₪)','reserve',amountInput(state.settings.taxReserveCents),'number','required min="0" step="0.01"')}<p class="hint">הכסף הזה מופחת מהפנוי לבזבוז, והוא נשאר בתוך החשבון. הזן 0 לכסף שכבר הועבר לחשבון נפרד.</p>${actionsEnd()}</form>`);
 }
 function recordedExpenseDetail(){
-  const summary=E.recordedExpenses(state),f=E.forecast(state,selectedDays());
+  const c=E.cashSummary(state),summary=c.recorded;
   openModal('סך ההוצאות — כל הרשומות',`<div class="summary-row total"><span>${summary.count} רשומות, בלי סינון תאריכים</span><strong class="cash-row-amount red">${money(summary.totalCents)}</strong></div><p class="hint">זה הסכום של הרשומות שהזנת. כל רכישה בתשלומים נספרת בסכומה הכולל פעם אחת. הוצאה קבועה נספרת כאן לפי הסכום המוזן לחיוב אחד; החידושים העתידיים שלה מחושבים בתחזית. חיובים ששולמו אינם מתווספים פעם שנייה לרכישה.</p>
     ${summary.rows.length?summary.rows.map((r,index)=>`<div class="row"><div class="row-main"><div class="row-title">${index+1}. ${esc(r.title)}</div><div class="row-sub">${dateLabel(r.date)} · ${esc(r.note)}</div></div><b class="amount">${money(r.amountCents)}</b></div>`).join(''):'<div class="empty">אין הוצאות ברשימה.</div>'}
-    <div class="summary-row total"><span>סך כל השורות למעלה</span><b>${money(summary.totalCents)}</b></div><div class="notice" style="margin-top:16px">בנפרד, החיובים שעוד ירדו עד ${dateLabel(f.end)} הם ${money(f.outgoing)}. זה הסכום שמופחת מהיתרה הנוכחית בבנק, ולא כל הוצאות העבר יחד עם כל התשלומים העתידיים.</div><div class="form-actions" style="margin-top:16px">${button('פירוט החיובים שעוד ירדו','cash-detail','data-kind="expense"')}${button('סגירה','close')}</div>`);
+    <div class="summary-row total"><span>סך כל השורות למעלה</span><b>${money(summary.totalCents)}</b></div><div class="notice" style="margin-top:16px">בנפרד, כל החיובים הרשומים שעוד ממתינים וקבועות ל־90 יום הם ${money(c.outgoingCents)}. הסכום הזה מופחת מהיתרה הנוכחית. הוצאות שכבר שולמו אינן מופחתות ממנה שוב.</div><div class="form-actions" style="margin-top:16px">${button('פירוט החיובים שעוד ירדו','all-commitments')}${button('סגירה','close')}</div>`);
 }
 function spendingDetail(){
   const f=E.forecast(state,selectedDays());
@@ -329,12 +349,8 @@ function expensePage(){
   return `<div class="card"><div class="card-head"><h2>חיובים והוצאות <small class="muted">(${state.expenses.length} רשומות)</small></h2>${button('+ הוצאה','new-expense','','primary')}</div><div class="summary-row total"><span>סך ההוצאות ברשימה — כל התאריכים</span><b class="red">${money(E.recordedExpenses(state).totalCents)}</b>${button('בדיקת כל השורות','recorded-expenses')}</div><p class="hint">רכישה ותאריך ירידה מהבנק הם שני תאריכים נפרדים. באשראי הזן את החיוב בפועל. כדי למנוע כפילות, בחר אם להזין חיוב אשראי כולל או את הרכישות המרכיבות אותו.</p><div class="filter-row"><select class="filter" data-change="expense-status" aria-label="סינון הוצאות">${options([{value:'pending',label:'ממתין לחיוב — שנה קדימה'},{value:'paid',label:'חיובים שאושרו'},{value:'series',label:'כל ההוצאות והסדרות'}],ui.expenseStatus)}</select><select class="filter" data-change="expense-scope" aria-label="תחום הוצאה">${options([{value:'all',label:'עסקי ואישי'},{value:'עסקי',label:'עסקי'},{value:'אישי',label:'אישי'}],ui.expenseScope)}</select></div><div class="list">${ui.expenseStatus==='pending'?(list.length?list.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)} · ${esc(o.category)} · ${esc(o.scope)}<br>${esc(o.method)} ${o.date<E.today()?'<span class="red">· מועד החיוב עבר, טרם אושר</span>':''}</div></div><div class="amount red">−${money(o.amountCents)}</div><div class="actions">${button('✓ ירד מהבנק','pay-expense',`data-id="${o.key}"`)}${button('עריכת חיוב','edit-occurrence',`data-id="${o.key}"`)}${button('ביטול חיוב','cancel-occurrence',`data-id="${o.key}"`,'danger')}</div></div>`).join(''):'<div class="empty">אין חיובים ממתינים לשנה הקרובה.</div>'):ui.expenseStatus==='paid'?(history.length?history.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">ירד: ${dateLabel(r.paidDate)} · ${esc(r.category||'כללי')} · ${esc(r.scope||'עסקי')}</div></div><div class="amount red">−${money(r.amountCents)}</div><div class="actions">${button('ביטול סימון','undo-expense',`data-id="${r.key}"`)}</div></div>`).join(''):'<div class="empty">אין חיובים שאושרו.</div>'):renderSeries()}</div></div>`;
 }
 function renderSeries(){const list=state.expenses.filter(e=>ui.expenseScope==='all'||e.scope===ui.expenseScope);return list.length?list.map(e=>`<div class="row"><div class="row-main"><div class="row-title">${esc(e.desc)}</div><div class="row-sub">${esc(e.legacyInstallmentInfo?'תשלום '+e.legacyInstallmentInfo:KIND.find(k=>k.value===e.kind)?.label)} · חיוב ראשון: ${dateLabel(e.chargeDate)} · ${esc(e.scope)}${e.kind==='installments'?` · ${e.count} תשלומים`:''}${e.endDate?` · מסתיים: ${dateLabel(e.endDate)}`:''}<br>${e.kind==='installments'?'סכום הרכישה הכולל':e.kind==='monthly'?'סכום בכל חיוב':'סכום החיוב'}: ${money(e.amountCents)}</div></div><div class="actions">${button('עריכת סדרה','edit-expense',`data-id="${e.id}"`)}${e.kind==='monthly'?button('סיום סדרה','stop-series',`data-id="${e.id}"`):''}${button('מחיקת סדרה','delete-expense',`data-id="${e.id}"`,'danger')}</div></div>`).join(''):'<div class="empty">עדיין אין הוצאות. הוסף חד־פעמיות, תשלומים או הוצאות קבועות.</div>';}
-function forecastPage(f){return `<div class="card">${period()}<h2>תחזית עד ${dateLabel(f.end)}</h2>${chart(f)}<div class="summary-row total"><span>יתרה בסוף התקופה לפני הפרדה למס ולכרית</span><b class="${f.balance<0?'red':'green'}">${money(f.balance)}</b></div><p class="hint">רזרבה למס בסוף התחזית: ${money(f.reserveEnd)}. תחזית הגבייה מניחה שהלקוחות ישלמו במועד. חיובים שלא אושרו ומועדיהם עברו מופיעים כהוצאה היום.</p></div><div class="card"><h2>מה נכנס ומה יוצא</h2><div class="table-wrap"><table><thead><tr><th>תאריך</th><th>תיאור</th><th>נכנס</th><th>יוצא</th><th>יתרה בבנק</th><th>אחרי רזרבה למס</th></tr></thead><tbody><tr><td>היום</td><td>יתרה לפי העדכון שלך</td><td>—</td><td>—</td><td>${money(state.bank.balanceCents)}</td><td>${money(state.bank.balanceCents-state.settings.taxReserveCents)}</td></tr>${f.timeline.map(e=>`<tr><td>${dateLabel(e.date)}${e.originalDate&&e.originalDate<f.now?' *':''}</td><td>${esc(e.title)}</td><td class="green">${e.type==='income'?money(e.amountCents):'—'}</td><td class="red">${e.type==='expense'?money(e.amountCents):'—'}</td><td class="${e.balance<0?'red':''}">${money(e.balance)}</td><td class="${e.available<state.settings.bufferCents?'orange':''}">${money(e.available)}</td></tr>`).join('')}</tbody></table></div>${!f.timeline.length?'<div class="empty">אין תנועות צפויות בתקופה שנבחרה.</div>':''}<p class="hint">* חיוב שמועדו עבר ועדיין לא אושר. באותו יום ההוצאות מחושבות לפני ההכנסות, כדי להציג גם מחסור אפשרי במהלך היום.</p></div>`;}
-function settingsPage(){
-  const s=state.settings,goalProgress=s.goalCents?Math.min(100,Math.max(0,E.forecast(state,ui.days).conservativeSavings/s.goalCents*100)):0;
-  return `<div class="two"><div class="card"><h2>הבנק והכסף ששומרים בצד</h2><div class="summary-row"><span>יתרה לפי העדכון שלך</span><b>${state.bank.verified?money(state.bank.balanceCents):'טרם הוזנה'}</b></div><div class="summary-row"><span>כרית ביטחון</span><b>${money(s.bufferCents)}</b></div><div class="summary-row"><span>רזרבה נוכחית למס</span><b>${money(s.taxReserveCents)}</b></div><div class="summary-row"><span>הפרשה מהכנסות חדשות</span><b>${s.taxBasisPoints/100}%</b></div><div class="summary-row"><span>יום חיוב אשראי ברירת מחדל</span><b>${s.creditDay}</b></div><div class="flex" style="margin-top:15px">${button('עדכון יתרה','bank','','primary')}${button('עריכת הגדרות','preferences')}</div><p class="hint">רזרבה למס היא כסף בתוך החשבון הזה. אל תכלול כסף שכבר נמצא בחשבון מס נפרד. תשלומי מס שהזנת כהוצאות כבר מופחתים מהתזרים; התאם את הרזרבה כך שלא תשריין את אותו כסף פעמיים. האחוז הוא בחירה שלך ואינו חישוב של חבות מס.</p></div>
-  <div class="card"><h2>יעד חיסכון לתקופה</h2><div class="summary-row"><span>היעד שבחרת</span><b>${money(s.goalCents)}</b></div><p class="hint">מראה כמה מהיעד ניתן לכסות כרגע מתוך הכסף הפנוי ב־${ui.days} יום. אינו סופר חיסכון שכבר הועבר לחשבון אחר.</p><div class="progress" role="progressbar" aria-valuenow="${Math.round(goalProgress)}" aria-valuemin="0" aria-valuemax="100" aria-label="כסף פנוי ביחס ליעד"><span style="width:${goalProgress}%"></span></div><p class="hint">${Math.round(goalProgress)}% מהיעד זמין לפי הנתונים.</p>${button('עריכת יעד','preferences')}</div></div>
-  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${button('שחזור מהאתר הישן','recover-legacy')}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">ייבוא מהאתר הישן והעברה מהמכשיר מוסיפים רשומות בלי למחוק מידע קיים. ייבוא גיבוי מלא מהגרסה החדשה מחליף את הנתונים הפעילים; הורד גיבוי לפניו. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
+function storagePanel(){
+  return `  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${button('שחזור מהאתר הישן','recover-legacy')}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">ייבוא מהאתר הישן והעברה מהמכשיר מוסיפים רשומות בלי למחוק מידע קיים. ייבוא גיבוי מלא מהגרסה החדשה מחליף את הנתונים הפעילים; הורד גיבוי לפניו. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
   <div class="card"><h2>שמירה בלי הרשמה</h2><p class="hint">${mode==='cloud'?(cloudReady?'המידע מסונכרן לשמירה פרטית בענן. עותק אחרון נשמר גם בדפדפן.':'מוצג עותק אחרון מהמכשיר. החיבור לענן עדיין אינו זמין.'):mode==='demo'?'נתוני הדוגמה אינם נשמרים.':'המידע נשמר אוטומטית בדפדפן הזה. אין צורך במשתמש או בסיסמה כדי להשתמש באתר.'}</p>
     <div class="flex">${button(mode==='cloud'?'בדיקה מחדש של השמירה בענן':'חיבור לשמירה פרטית בענן','connect-secure','','primary')}${button('גיבוי מוצפן עם סיסמה','encrypted-backup')}</div>
     <p class="hint">שמירה בענן משתמשת בזיהוי אוטומטי של הדפדפן, בלי מסכי התחברות. מחיקת נתוני הדפדפן עלולה למחוק את מפתח הגישה: שמור גם גיבוי כדי שתוכל לשחזר במכשיר אחר. השמירה המקומית הרגילה אינה מוצפנת; לגיבוי מוצפן יש סיסמה שאתה בוחר.</p>
@@ -342,7 +358,10 @@ function settingsPage(){
     ${recoveryNotice()}
   </div>`;
 }
-function render(){ui.days=selectedDays();const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):''}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
+function render(){
+  ui.days=selectedDays();if(!TABS.some(([tab])=>tab===ui.tab))ui.tab='dashboard';
+  root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>הכסף שלך, ברור.</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${button('גיבוי','storage')}${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):''}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד. המידע האישי שלך נשאר שמור.</p>':''}<div class="section">${ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():dashboard()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · מחושב לפי הרישומים שלך</div>`;if(busy)setBusy(true);
+}
 </script>
 <script>
 function incomeForm(id){
@@ -359,7 +378,8 @@ function occurrenceForm(key){const o=E.occurrences(state,E.addDays(E.today(),366
 function bankForm(){openModal('עדכון היתרה הנוכחית בבנק',`<form class="form" data-form="bank">${field('כמה מופיע עכשיו בחשבון? (אפשר גם מינוס)','balance',state.bank.verified?amountInput(state.bank.balanceCents):'','number','step="0.01" required min="-1000000000" max="1000000000"')}<p class="notice">זו היתרה הנוכחית שמופיעה בבנק, אחרי התנועות שכבר בוצעו. לא נוסיף שוב הכנסות ששולמו ולא נוריד שוב הוצאות שאושרו. חיובים שטרם אושרו עדיין נמצאים בתחזית — סמן בנפרד אם כבר ירדו.</p>${actionsEnd()}</form>`);}
 function preferenceForm(){const s=state.settings;openModal('כרית, רזרבה ויעד חיסכון',`<form class="form" data-form="preferences">${field('כרית ביטחון שרוצים להשאיר (₪)','buffer',amountInput(s.bufferCents),'number','min="0" step="0.01" required')}${field('כסף בחשבון שמיועד למס (₪)','reserve',amountInput(s.taxReserveCents),'number','min="0" step="0.01" required')}${field('אחוז שרוצים להפריש מהכנסה חדשה (%)','taxPercent',s.taxBasisPoints/100,'number','min="0" max="100" step="0.01" required')}<p class="hint">בתחזית, האחוז מפחית את הסכום הפנוי מהכנסות צפויות. כשמסמנים שהכנסה התקבלה, אפשר לבחור כמה להוסיף לרזרבה בפועל. הזן שיעור שבחרת בהתאם לניהול העסק שלך.</p><div class="fields">${field('יום חיוב אשראי','creditDay',s.creditDay,'number','min="1" max="31" step="1" required')}${field('יעד חיסכון לתקופה (₪)','goal',amountInput(s.goalCents),'number','min="0" step="0.01" required')}</div>${actionsEnd()}</form>`);}
 function paymentForm(type,id){let title,amount;if(type==='income'){const i=state.incomes.find(i=>i.id===id);if(!i||i.status==='paid')throw Error('ההכנסה אינה ממתינה לתשלום');title=i.client;amount=i.amountCents;}else{const o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===id);if(!o)throw Error('החיוב אינו קיים');title=o.title;amount=o.amountCents;}
-  openModal(type==='income'?'אישור קבלת כסף':'אישור חיוב מהבנק',`<form class="form" data-form="payment"><input type="hidden" name="type" value="${type}"><input type="hidden" name="id" value="${id}"><div class="notice">${esc(title)} · ${money(amount)}</div>${field(type==='income'?'מתי התקבל הכסף?':'מתי הכסף ירד?','paidDate',E.today(),'date',`required max="${E.today()}"`)}<label class="check"><input type="checkbox" name="included" checked>התשלום כבר כלול ביתרת הבנק שהזנתי</label><p class="hint">אם מסומן: נעדכן רק את סטטוס התשלום. אם לא מסומן: ${type==='income'?'נוסיף':'נוריד'} ${money(amount)} ${type==='income'?'ליתרה':'מהיתרה'}. בחר לפי היתרה שמוצגת באתר, כדי להימנע מספירה כפולה.</p>${type==='income'?field('כמה מהתשלום להוסיף לרזרבה למס? (₪)','taxAdded',amountInput(Math.round(amount*state.settings.taxBasisPoints/10000)),'number',`min="0" max="${amountInput(amount)}" step="0.01" required`)+`<p class="hint">אם הכסף למס כבר נכלל ברזרבה שהזנת, רשום כאן 0.</p>`:''}${actionsEnd()}</form>`);
+  const estimated=E.cashPosition(state).estimated;
+  openModal(type==='income'?'אישור קבלת כסף':'אישור חיוב מהבנק',`<form class="form" data-form="payment"><input type="hidden" name="type" value="${type}"><input type="hidden" name="id" value="${id}"><div class="notice">${esc(title)} · ${money(amount)}</div>${field(type==='income'?'מתי התקבל הכסף?':'מתי הכסף ירד?','paidDate',E.today(),'date',`required max="${E.today()}"`)}${estimated?'<p class="hint">היתרה מחושבת מהרישומים. אישור התשלום יעדכן אותה פעם אחת, והחיוב יוסר מרשימת הממתינים.</p>':`<label class="check"><input type="checkbox" name="included" checked>התשלום כבר כלול ביתרת הבנק שהזנתי</label><p class="hint">אם מסומן: נעדכן רק את הסטטוס. אם לא: ${type==='income'?'נוסיף':'נוריד'} ${money(amount)} ${type==='income'?'ליתרה':'מהיתרה'}.</p>`}${type==='income'?field('כמה מהתשלום להוסיף לרזרבה למס? (₪)','taxAdded',amountInput(Math.round(amount*state.settings.taxBasisPoints/10000)),'number',`min="0" max="${amountInput(amount)}" step="0.01" required`)+`<p class="hint">אם הכסף למס כבר נכלל ברזרבה שהזנת, רשום כאן 0.</p>`:''}${actionsEnd()}</form>`);
 }
 function stopSeries(id){const e=state.expenses.find(e=>e.id===id);if(!e)throw Error('הסדרה אינה קיימת');openModal('סיום הוצאה קבועה',`<form class="form" data-form="stop"><input type="hidden" name="id" value="${id}"><p class="hint">${esc(e.desc)}: חיובים שמועד הבסיס שלהם אחרי תאריך הסיום לא ייכללו בתחזית. חיובים שאושרו נשמרים בהיסטוריה.</p>${field('תאריך החיוב האחרון / סיום ההתחייבות','endDate',e.endDate||E.today(),'date','required')}${actionsEnd()}</form>`);}
 function nonnegative(v){return String(v).trim()==='0'||/^0\.0{1,2}$/.test(String(v))?0:E.cents(v);}
@@ -393,7 +413,7 @@ async function assertPrivateRead(uid){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try{
     const response=await fetch(FIREBASE_CONFIG.databaseURL.replace(/\/$/,'')+`/users/${encodeURIComponent(uid)}/appData.json?shallow=true`,{cache:'no-store',credentials:'omit',signal:controller.signal});
-    if(response.status!==401&&response.status!==403)throw Error('הענן עדיין אינו מוגן או שלא ניתן לבדוק אותו. פרסם את כללי ההרשאות שבהגדרות ואז נסה שוב.');
+    if(response.status!==401&&response.status!==403)throw Error('הענן עדיין אינו מוגן או שלא ניתן לבדוק אותו. פרסם את כללי ההרשאות שבחלון גיבוי ואז נסה שוב.');
   }finally{clearTimeout(timer);}
 }
 async function ensureFirebase(){
@@ -450,7 +470,7 @@ async function connectSecure(){
     toast('השמירה הפרטית מחוברת. אין צורך בהרשמה.');
   }catch(e){
     status=mode==='cloud'?'אין גישה לענן — מוצג עותק אחרון':'נשמר במכשיר — הענן לא מחובר';render();
-    toast(e.code==='auth/operation-not-allowed'?'הפעל Anonymous ב־Firebase Authentication, כפי שמוסבר בהגדרות.':e.message||'לא ניתן להתחבר. המידע נשאר שמור במכשיר.');
+    toast(e.code==='auth/operation-not-allowed'?'הפעל Anonymous ב־Firebase Authentication, כפי שמוסבר בחלון גיבוי.':e.message||'לא ניתן להתחבר. המידע נשאר שמור במכשיר.');
   }finally{secureConnecting=false;busy=false;setBusy(false);}
 }
 function encryptedBackupForm(){
@@ -482,7 +502,7 @@ async function clickAction(btn){
   else if(a==='period'){ui.period=btn.dataset.period||btn.dataset.days||'month';ui.days=selectedDays();render();}
   else if(a==='cash-detail')cashDetail(btn.dataset.kind);
   else if(a==='recorded-expenses')recordedExpenseDetail();
-  else if(a==='open-forecast'){ui.tab='forecast';render();}
+  else if(a==='open-forecast'){ui.tab='dashboard';render();}
   else if(a==='close')closeModal();
   else if(a==='new-income')incomeForm();else if(a==='edit-income')incomeForm(id);
   else if(a==='new-expense')expenseForm();else if(a==='edit-expense')expenseForm(id);
@@ -490,9 +510,9 @@ async function clickAction(btn){
   else if(a==='bank')bankForm();else if(a==='preferences')preferenceForm();
   else if(a==='pay-income')paymentForm('income',id);else if(a==='pay-expense')paymentForm('expense',id);
   else if(a==='undo-income'||a==='undo-expense'){
-    const type=a==='undo-income'?'income':'expense',item=type==='income'?state.incomes.find(i=>i.id===id):state.receipts.find(r=>r.key===id),delta=item?.appliedEpoch===state.bank.epoch;
-    if(confirm(`לבטל את סימון התשלום? ${delta?'השינוי שבוצע ליתרת הבנק בסימון זה יבוטל גם הוא.':'יתרת הבנק לא תשתנה, כי התשלום כבר נכלל בעדכון יתרה או סומן ככלול.'}`))await commit(s=>E.undoPayment(s,type,id));
-  }else if(a==='delete-income'){if(confirm('למחוק את רישום ההכנסה? יתרת הבנק והרזרבה למס לא ישתנו.'))await commit(s=>s.incomes=s.incomes.filter(i=>i.id!==id));}
+    const estimated=E.cashPosition(state).estimated;const type=a==='undo-income'?'income':'expense',item=type==='income'?state.incomes.find(i=>i.id===id):state.receipts.find(r=>r.key===id),delta=item?.appliedEpoch===state.bank.epoch;
+    if(confirm(`לבטל את סימון התשלום? ${estimated?'היתרה המחושבת תתעדכן יחד עם ביטול הרישום.':delta?'השינוי שבוצע ליתרת הבנק בסימון זה יבוטל גם הוא.':'יתרת הבנק לא תשתנה, כי התשלום כבר נכלל בעדכון יתרה או סומן ככלול.'}`))await commit(s=>E.undoPayment(s,type,id));
+  }else if(a==='delete-income'){if(confirm('למחוק את רישום ההכנסה? יתרת הבנק והרזרבה למס לא ישתנו.'))await commit(s=>{const i=s.incomes.find(i=>i.id===id);if(E.cashPosition(s).estimated&&i?.status==='paid')s.bank.legacyAdjustmentCents=(s.bank.legacyAdjustmentCents||0)+i.amountCents;s.incomes=s.incomes.filter(i=>i.id!==id);});}
   else if(a==='delete-expense'){if(confirm('למחוק את כל הסדרה ולבטל את החיובים שטרם אושרו? חיובים שאושרו נשמרים בהיסטוריה. יתרת הבנק לא תשתנה.'))await commit(s=>s.expenses=s.expenses.filter(e=>e.id!==id));}
   else if(a==='cancel-occurrence'){const o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===id);if(!o)throw Error('החיוב אינו קיים');if(confirm('לבטל רק את החיוב הזה מהתחזית? ביטול ברישום אינו מבטל התחייבות מול הספק.'))await commit(s=>{const e=s.expenses.find(e=>e.id===o.expenseId);e.overrides[String(o.index)]={...(e.overrides[String(o.index)]||{}),canceled:true};});}
   else if(a==='stop-series')stopSeries(id);
@@ -503,6 +523,9 @@ async function clickAction(btn){
   else if(a==='connect-secure')await connectSecure();
   else if(a==='encrypted-backup')encryptedBackupForm();
   else if(a==='spending-detail')spendingDetail();
+  else if(a==='all-commitments')allCommitmentsDetail();
+  else if(a==='cash-reserves')cashReserveForm();
+  else if(a==='storage')openModal('גיבוי ושמירה',storagePanel());
 }
 async function submitForm(form){
   const data=new FormData(form),get=n=>String(data.get(n)||'').trim(),type=form.dataset.form;
@@ -514,7 +537,8 @@ async function submitForm(form){
   if(type==='unlock-backup'){
     const restored=await decryptBackup(pendingEncryptedBackup,get('backupPassword'));await importData(restored);closeModal();pendingEncryptedBackup=null;return;
   }
-  if(type==='bank'){const amount=E.cents(get('balance'),true);await commit(s=>E.reconcile(s,amount),modalBase);}
+  if(type==='cash-reserves'){const buffer=nonnegative(get('buffer')),reserve=nonnegative(get('reserve'));await commit(s=>{if(reserve!==s.settings.taxReserveCents)s.settings.reserveEpoch++;s.settings.bufferCents=buffer;s.settings.taxReserveCents=reserve;},modalBase);}
+  else if(type==='bank'){const amount=E.cents(get('balance'),true);await commit(s=>E.reconcile(s,amount),modalBase);}
   else if(type==='preferences'){
     const buffer=nonnegative(get('buffer')),reserve=nonnegative(get('reserve')),goal=nonnegative(get('goal')),tax=Number(get('taxPercent')),day=Number(get('creditDay'));if(!Number.isFinite(tax)||tax<0||tax>100||!Number.isInteger(day)||day<1||day>31)throw Error('בדוק את האחוז ואת יום החיוב');
     await commit(s=>{if(reserve!==s.settings.taxReserveCents)s.settings.reserveEpoch=(s.settings.reserveEpoch||0)+1;Object.assign(s.settings,{bufferCents:buffer,taxReserveCents:reserve,taxBasisPoints:Math.round(tax*100),creditDay:day,goalCents:goal});},modalBase);
@@ -568,7 +592,7 @@ function loadRecoveryLocal(){
 async function recoverLegacy(force=false){
   if(recoveryPending||mode==='demo')return;
   const prior=loadRecoveryLocal();
-  if(prior?.legacyRecovery?.source==='money-1d58a/appData'&&!force)return;
+  if(prior?.legacyRecovery?.source==='money-1d58a/appData'&&prior.legacyRecovery.syncVersion===3&&!force)return;
   recoveryPending=true;recoveryFailed=false;render();
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
   try{
@@ -582,19 +606,28 @@ async function recoverLegacy(force=false){
     // Re-read after the request so edits made while loading cannot be overwritten.
     const oldText=localStorage.getItem(LOCAL_KEY);
     const latest=oldText?E.validate(JSON.parse(oldText)):E.empty();
-    // When already restored, keep edits/deletions and never insert source rows again.
+    // On this upgrade, check for new rows added to the old database after its
+    // previous recovery. Compare source IDs with the archived source, so local
+    // edits and deliberate deletions are never overwritten or resurrected.
     if(latest.legacyRecovery?.source==='money-1d58a/appData'){
-      toast('המידע הישן כבר שוחזר ונשמר במכשיר');return;
+      if(!latest.legacySnapshot)throw Error('אין עותק מקור להשוואה בטוחה. אפשר לייבא גיבוי.');
+      const original=E.migrateLegacy(latest.legacySnapshot);
+      const knownIncomes=new Set(original.incomes.map(i=>i.id)),knownExpenses=new Set(original.expenses.map(e=>e.id));
+      const addedIncomes=migrated.incomes.filter(i=>!knownIncomes.has(i.id)),addedExpenses=migrated.expenses.filter(e=>!knownExpenses.has(e.id));
+      const addedIds=new Set(addedExpenses.map(e=>e.id));
+      migrated.incomes=addedIncomes;migrated.expenses=addedExpenses;migrated.receipts=migrated.receipts.filter(r=>addedIds.has(r.expenseId));
+      // The opening figure remains the original basis for the local ledger.
+      migrated.legacySnapshot.openingBalance=latest.legacySnapshot.openingBalance;
     }
     const merged=E.mergeLegacy(latest,migrated);
     // Write immutable backups before changing the active local data.
-    localStorage.setItem(LOCAL_KEY+'-original-backup',JSON.stringify(raw));
+    if(!localStorage.getItem(LOCAL_KEY+'-original-backup'))localStorage.setItem(LOCAL_KEY+'-original-backup',JSON.stringify(raw));
     if(oldText)localStorage.setItem(LOCAL_KEY+'-before-recovery',oldText);
     localStorage.setItem(LOCAL_KEY,JSON.stringify(merged));
     if(mode==='local'){state=merged;status='המידע הישן שוחזר ונשמר במכשיר';}
     ui.expenseStatus='series';
-    toast(`שוחזרו ${migrated.incomes.length} הכנסות ו־${migrated.expenses.length} הוצאות`);
-  }catch(e){recoveryFailed=true;toast(e.message||'השחזור לא הושלם. אפשר לייבא את הגיבוי');}
+    if(migrated.incomes.length||migrated.expenses.length)toast(`נוספו ${migrated.incomes.length} הכנסות ו־${migrated.expenses.length} הוצאות מהאתר הישן`);
+  }catch(e){recoveryFailed=true;if(force||!prior?.legacyRecovery)toast(e.message||'השחזור לא הושלם. אפשר לייבא את הגיבוי');}
   finally{clearTimeout(timer);recoveryPending=false;render();}
 }
 // Keep the last confirmed device data visible while reconnecting.
