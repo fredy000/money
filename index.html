@@ -137,7 +137,7 @@ function render() {
       ${ui.tab === "dashboard" ? renderDashboard(c) : ""}
       ${ui.tab === "income" ? renderIncome() : ""}
       ${ui.tab === "expenses" ? renderExpenses() : ""}
-      ${ui.saveError ? '<div class="save-error">הנתונים נשמרו במכשיר הזה, אבל הסנכרון לענן נכשל כרגע (כנראה בעיית רשת או הרשאות).</div>' : ""}
+      ${ui.saveError ? '<div class="save-error">השמירה במכשיר הזה נכשלה. נסה לפנות מקום באחסון הדפדפן או להשתמש בדפדפן אחר.</div>' : ""}
     </div>
   `;
 }
