@@ -48,7 +48,6 @@
     .section { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* AI Assistant Banner */
     .ai-card { background: linear-gradient(135deg, #1C1814 0%, #2A2118 100%); border: 1px solid rgba(255, 112, 36, 0.35); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
     .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
     .ai-badge { background: var(--accent); color: #FFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -170,7 +169,18 @@
 
   const uid = () => Math.random().toString(36).slice(2, 10);
   const todayStr = () => new Date().toISOString().slice(0, 10);
-  const addDays = (d, days) => { const x = new Date(d); x.setDate(x.getDate() + Number(days)); return x.toISOString().slice(0, 10); };
+  
+  // חישוב תאריך יעד אמיתי לפי תנאי שוטף (סוף החודש הנוכחי + X ימים)
+  const calcExpectedDate = (invoiceDateStr, termDays) => {
+    if (Number(termDays) === 0) return invoiceDateStr;
+    const date = new Date(invoiceDateStr);
+    // מעבר לסוף החודש של תאריך החשבונית
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    // הוספת ימי השוטף (30, 60, 90 וכו') מתחילת החודש הבא
+    endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
+    return endOfMonth.toISOString().slice(0, 10);
+  };
+
   const addMonths = (d, months) => { const x = new Date(d); x.setMonth(x.getMonth() + Number(months)); return x.toISOString().slice(0, 10); };
   
   const fmtMoney = (n) => {
@@ -193,7 +203,11 @@
     if (data) {
       state = {
         openingBalance: Number(data.openingBalance) || 0,
-        incomes: data.incomes || [],
+        incomes: (data.incomes || []).map(inc => ({
+          ...inc,
+          // עדכון אוטומטי של תאריכי היעד עבור נתונים קיימים לפי הלוגיקה החדשה
+          expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
+        })),
         expenses: data.expenses || []
       };
     } else {
@@ -227,7 +241,6 @@
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
     const totalExpSoFar = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
     
-    // יתרה נזילה אמיתית שנשארת ביד
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpSoFar + totalPaid;
     
     const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
@@ -236,8 +249,7 @@
     
     const finalExpectedBalance = actualCurrentBalance + monthExpectedIncome;
 
-    // AI calculations:
-    const safeToSpend = Math.max(0, actualCurrentBalance); // כסף פנוי מיידי
+    const safeToSpend = Math.max(0, actualCurrentBalance);
     const overdueIncomes = pending.filter(i => daysUntil(i.expectedDate) < 0);
     const overdueAmount = overdueIncomes.reduce((s, i) => s + Number(i.amount), 0);
 
@@ -285,20 +297,15 @@
 
   function renderAIAssistant(c) {
     let advice = "";
-    let statusColor = "var(--accent)";
 
     if (c.overdueCount > 0) {
       advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). כרגע התזרים הנזיל שלך עומד על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. מומלץ ליצור קשר עם הלקוחות לפני שחיוב האשראי הבא יורד.`;
-      statusColor = "var(--negative)";
     } else if (c.actualCurrentBalance > 5000) {
       advice = `🟢 <strong>מצב תזרימי מצוין!</strong> יש לך יתרה נזילה חזקה של <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. תוכל להפריש כרגע כ-<strong>${fmtMoney(c.actualCurrentBalance * 0.3)}</strong> לחיסכון/כרית ביטחון או להתחדש בציוד.`;
-      statusColor = "var(--positive)";
     } else if (c.actualCurrentBalance > 2000) {
       advice = `💡 <strong>תזרים יציב:</strong> נשאר לך ביד <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. מומלץ לבזבז רק עד <strong>${fmtMoney(c.actualCurrentBalance * 0.5)}</strong> לרכישות פנאי/ציוד שאינן דחופות, ולשמור את היתרה לכיסוי הוצאות קבועות.`;
-      statusColor = "var(--accent)";
     } else {
       advice = `🛑 <strong>המלצה להדק חגורה:</strong> הנזילות כרגע נמוכה (<strong>${fmtMoney(c.actualCurrentBalance)}</strong>). כדאי להימנע מרכישות שאינן הכרחיות עד שייכנס התשלום הקרוב מלקוחות (צפוי להיכנס: <strong>${fmtMoney(c.monthExpectedIncome)}</strong>).`;
-      statusColor = "var(--negative)";
     }
 
     return `
@@ -413,7 +420,7 @@
         <label class="label">סכום מדויק (₪)
           <input class="input" name="amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}" required/>
         </label>
-        <label class="label">תאריך העבודה / החשבונית
+        <label class="label">תאריך הוצאת החשבונית
           <input class="input" name="date" type="date" value="${editingItem ? editingItem.date : todayStr()}"/>
         </label>
         <label class="label">תנאי תשלום
@@ -617,12 +624,11 @@
       const id = fd.get("id");
       const date = fd.get("date") || todayStr();
       const termDays = Number(fd.get("termDays"));
-      const expectedDate = addDays(date, termDays);
+      const expectedDate = calcExpectedDate(date, termDays);
       
       state.incomes = state.incomes || [];
 
       if (id) {
-        // Edit existing
         const idx = state.incomes.findIndex(i => i.id === id);
         if (idx !== -1) {
           state.incomes[idx].client = fd.get("client");
@@ -633,7 +639,6 @@
         }
         ui.editingIncomeId = null;
       } else {
-        // Add new
         state.incomes.push({
           id: uid(), 
           client: fd.get("client"), 
@@ -657,7 +662,6 @@
       state.expenses = state.expenses || [];
 
       if (id) {
-        // Edit existing
         const idx = state.expenses.findIndex(exp => exp.id === id);
         if (idx !== -1) {
           state.expenses[idx].desc = desc;
@@ -667,7 +671,6 @@
         }
         ui.editingExpenseId = null;
       } else {
-        // Add new
         const category = ui.expenseFormState.category || CATEGORIES[0].name;
         if (ui.isInstallments) {
           const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
