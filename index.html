@@ -60,7 +60,7 @@ input:focus, select:focus, button:focus-visible { box-shadow: 0 0 0 2px var(--ac
 </style>
 </head>
 <body>
-<div id="app"><div style="color:#A79C87;text-align:center;padding-top:60px;">טוען נתונים…</div></div>
+<div id="app"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -75,9 +75,12 @@ const firebaseConfig = {
   messagingSenderId: "1038447297202",
   appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
 };
-const fbApp = initializeApp(firebaseConfig);
-const db = getDatabase(fbApp);
-const dataRef = ref(db, "tazrim-tzalam");
+let dataRef = null;
+try {
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getDatabase(fbApp);
+  dataRef = ref(db, "tazrim-tzalam");
+} catch (e) { /* app still works locally without cloud sync */ }
 
 const TERMS = [
   { days: 0, label: "מיידי" },
@@ -87,7 +90,14 @@ const TERMS = [
 ];
 const CATEGORIES = ["ציוד ואחזקה","תוכנות ומנויים","ביטוח","שיווק ופרסום","נסיעות והובלה","אולפן ושכירות","מיסים וביטוח לאומי","אחר"];
 
+const LOCAL_KEY = "tazrim-tzalam-data";
+
 let state = { openingBalance: 0, incomes: [], expenses: [] };
+try {
+  const raw = localStorage.getItem(LOCAL_KEY);
+  if (raw) state = JSON.parse(raw);
+} catch (e) { /* keep defaults */ }
+
 let ui = { tab: "dashboard", showIncomeForm: false, showExpenseForm: false, showBalanceEdit: false, saveError: false };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -99,17 +109,36 @@ const monthKey = (d) => d.slice(0, 7);
 const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-async function load() {
+async function bootstrapFromCloud() {
+  if (!dataRef) return;
+  // Only pull from Firebase if this device has no local data yet (first visit / new device)
+  const hasLocal = localStorage.getItem(LOCAL_KEY);
+  if (hasLocal) return;
   try {
     const snap = await get(dataRef);
-    if (snap.exists()) state = snap.val();
-  } catch (e) { /* keep defaults */ }
-  render();
+    if (snap.exists()) {
+      state = snap.val();
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+      render();
+    }
+  } catch (e) { /* offline or blocked - local data (if any) stays as-is */ }
 }
-async function persist() {
-  try { await set(dataRef, state); ui.saveError = false; }
-  catch (e) { ui.saveError = true; }
+
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+}
+
+function persist() {
+  saveLocal();
   render();
+  if (!dataRef) return;
+  // best-effort background sync to Firebase - never blocks the UI
+  set(dataRef, state).then(() => {
+    if (ui.saveError) { ui.saveError = false; render(); }
+  }).catch(() => {
+    ui.saveError = true;
+    render();
+  });
 }
 
 function calc() {
@@ -152,7 +181,7 @@ function render() {
       ${ui.tab === "dashboard" ? renderDashboard(c) : ""}
       ${ui.tab === "income" ? renderIncome() : ""}
       ${ui.tab === "expenses" ? renderExpenses() : ""}
-      ${ui.saveError ? '<div class="save-error">השמירה נכשלה כרגע. הנתונים עדיין מוצגים בעמוד.</div>' : ""}
+      ${ui.saveError ? '<div class="save-error">הנתונים נשמרו במכשיר הזה, אבל הסנכרון לענן נכשל כרגע (כנראה בעיית רשת או הרשאות).</div>' : ""}
     </div>
   `;
 }
@@ -310,7 +339,8 @@ document.getElementById("app").addEventListener("submit", (e) => {
   }
 });
 
-load();
+render();
+bootstrapFromCloud();
 </script>
 </body>
 </html>
