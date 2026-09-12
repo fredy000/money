@@ -196,7 +196,7 @@ function selectField(label,name,items,value){return `<label>${label}<select name
 function positiveInput(label,name,value,extra=''){return field(label,name,value,'number',`step="0.01" min="0.01" max="1000000000" required ${extra}`);}
 const actionsEnd=()=>`<div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">שמירה</button></div>`;
 let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=null,user=null,unsub=null,cloudReady=false,modalBase=0,authObserver=null,authGeneration=0;
-const ui={tab:'dashboard',period:'month',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all'};
+const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all'};
 const root=document.getElementById('app'),modal=document.getElementById('modal');
 function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
 function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך ההגדרות.'),100);return E.empty();}}
@@ -255,12 +255,18 @@ function chart(f){
 }
 function dashboard(f){
   const ready=state.bank.verified, show=value=>ready?money(value):'—';
+  const paid=paidThisMonth(f.now).reduce((sum,r)=>sum+r.amountCents,0);
+  const next=E.occurrences(state,E.addDays(f.end,366)).find(o=>o.date>f.end);
+  const nextPeriod=next?[30,60,90].find(days=>E.addDays(f.now,days)>=next.date):null;
   return `<div class="cash-title"><h2>הכסף שלך, ברור.</h2><div class="hint">החישוב מהיום ועד ${dateLabel(f.end)}</div></div>
     ${period()}
     ${!ready?`<div class="notice">ההכנסות וההוצאות נשמרו. חסר רק הסכום שמופיע עכשיו בבנק. ${button('הזנת יתרה בבנק','bank','','primary')}</div>`:''}
     <div class="simple-dashboard">
       <article class="card simple-total"><div class="simple-label">יש לי עכשיו</div><strong class="simple-number">${show(state.bank.balanceCents)}</strong><div class="hint">היתרה הנוכחית בבנק</div>${button('עדכון יתרה','bank')}</article>
-      <article class="card simple-total"><div class="simple-label">עוד יֵצא ממני</div><strong class="simple-number red">${money(f.outgoing)}</strong><div class="hint">החיובים שעוד ירדו עד ${dateLabel(f.end)}</div>${button('מה כלול בסכום?','cash-detail','data-kind="expense"')}</article>
+      <article class="card simple-total"><div class="simple-label">עוד יֵצא ממני</div><strong class="simple-number red">${money(f.outgoing)}</strong><div class="hint">החיובים שעוד ירדו עד ${dateLabel(f.end)}</div>
+      ${paid?`<div class="simple-note">כבר ירד החודש לפי הרישומים: <b>${money(paid)}</b>. זה כבר כלול ביתרה בבנק.</div>`:''}
+      ${next?`<div class="simple-note expense-later">אחרי התקופה הזאת: ${esc(next.title)} · <b>${money(next.amountCents)}</b> · ${dateLabel(next.date)}${nextPeriod?button(`לכלול בחישוב — ${nextPeriod} יום`,'period',`data-period="${nextPeriod}"`):''}</div>`:''}
+      ${button('פירוט כל ההוצאות','cash-detail','data-kind="expense"')}</article>
       <article class="card simple-total"><div class="simple-label">יישאר לי בחשבון</div><strong class="simple-number ${ready&&f.cashEnd<0?'red':''}">${show(f.cashEnd)}</strong><div class="hint">מה שיש עכשיו פחות מה שעוד יֵצא</div><div class="simple-note">לקוחות שעדיין לא שילמו לא נספרים כאן.</div></article>
       <article class="card simple-total spending-total"><div class="simple-label">פנוי לי לבזבוז</div><strong class="simple-number ${ready&&f.conservativeSavings>0?'green':'orange'}">${show(f.conservativeSavings)}</strong><div class="hint">אחרי החיובים, כרית הביטחון והכסף למס</div><div class="simple-note">${!ready?'יוצג אחרי עדכון יתרת הבנק.':f.conservativeSavings>0?'זה הסכום הפנוי הכולל לתקופה. אפשר לבזבז אותו או לחסוך אותו.':'לפי ההוצאות שהזנת, כרגע אין כסף פנוי לבזבוז מעבר להן.'}</div>${button('מה משאירים בצד?','spending-detail')}</article>
     </div>
@@ -285,8 +291,12 @@ function cashDetail(kind){
     rows=f.outs.map(o=>({title:o.title,date:o.date,amount:o.amountCents,note:o.date<f.now?'מועד החיוב עבר — עדיין לא אושר':o.label}));
   }
   const total=rows.reduce((sum,r)=>sum+r.amount,0);
-  openModal(title,`<div class="summary-row"><span>סה״כ</span><strong class="cash-row-amount ${kind==='income'?'green':'red'}">${money(total)}</strong></div>
+  const outside=kind==='expense'?E.occurrences(state,E.addDays(f.end,366)).filter(o=>o.date>f.end):[];
+  const history=kind==='expense'?[...state.receipts].sort((a,b)=>b.paidDate.localeCompare(a.paidDate)):[];
+  openModal(title,`<div class="summary-row"><span>${kind==='expense'?'עוד צפוי לרדת בתקופה שנבחרה':'סה״כ'}</span><strong class="cash-row-amount ${kind==='income'?'green':'red'}">${money(total)}</strong></div>
     ${rows.length?rows.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">${dateLabel(r.date)} · ${esc(r.note)}</div></div><b class="amount ${kind==='income'?'green':'red'}">${sign}${money(r.amount)}</b></div>`).join(''):'<div class="empty">אין תשלומים ברשימה הזאת.</div>'}
+    ${outside.length?`<h3 style="margin-top:24px">חיובים אחרי התקופה שנבחרה</h3><p class="hint">החיובים הבאים אינם מופחתים בסכום הראשי לתקופה הזאת. אפשר להרחיב את התקופה בלוח הבקרה.</p>${outside.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)}</div></div><b class="amount red">${money(o.amountCents)}</b></div>`).join('')}`:''}
+    ${history.length?`<h3 style="margin-top:24px">כבר ירד, לפי הרישומים</h3><p class="hint">החיובים האלה כבר כלולים ביתרת הבנק ואינם מופחתים ממנה שוב. ברשומות מהאתר הישן הסטטוס נקבע לפי התאריך; בדוק מול הבנק, ואם החיוב עדיין לא ירד, בטל את הסימון בלשונית ההוצאות.</p>${history.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">${dateLabel(r.paidDate)} · כבר כלול ביתרה</div></div><b class="amount">${money(r.amountCents)}</b></div>`).join('')}`:''}
     ${kind==='paid'?'<p class="hint">הרשימה מבוססת על חיובים שאושרו ועל הרישומים שהועברו מהאתר הישן. אפשר לבדוק ולתקן את סימון החיוב בלשונית ההוצאות.</p>':''}
     <div class="form-actions" style="margin-top:16px">${button('סגירה','close')}</div>`);
 }
