@@ -1,120 +1,210 @@
-// --- 1. מנוע החישוב החכם (calc) ---
-function calc() {
-  const today = todayStr();
-  const thisMonth = monthKey(today);
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניהול תזרים ומחשבון נזילות חכם</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --positive: #16a34a;
+      --negative: #dc2626;
+      --primary: #2563eb;
+      --border: #e2e8f0;
+    }
 
-  const paidIncomes = (state.incomes || []).filter((i) => i.status === "paid");
-  const pendingIncomes = (state.incomes || []).filter((i) => i.status !== "paid");
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
 
-  // סך הכנסות שנכנסו בפועל
-  const totalPaidIncomes = paidIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
 
-  // הוצאות החודש הנוכחי בלבד
-  const monthExpenses = (state.expenses || [])
-    .filter((e) => monthKey(e.date) === thisMonth)
-    .reduce((s, e) => s + Number(e.amount), 0);
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
 
-  // יתרה נזילה עכשווית בבנק
-  const actualCurrentBalance = Number(state.openingBalance || 0) + totalPaidIncomes - monthExpenses;
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
 
-  // הכנסות צפויות החודש (שטרם שולמו)
-  const monthExpectedIncome = pendingIncomes
-    .filter((i) => monthKey(i.expectedDate) === thisMonth)
-    .reduce((s, i) => s + Number(i.amount), 0);
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
 
-  // תשלומים באיחור (סכום שלא נכנס בזמן)
-  const overdueIncomes = pendingIncomes.filter((i) => i.expectedDate < today);
-  const overdueAmount = overdueIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
 
-  // --- לוגיקת המחשבון החכם להוצאה בטוחה (Safe-to-Spend) ---
-  // רזרבת ביטחון לבלת"מים (10% מהיתרה הנזילה או מינימום 500 ש"ח)
-  const safetyBuffer = Math.max(500, actualCurrentBalance * 0.10);
+<div class="container" id="app"></div>
 
-  // סכום מומלץ להוצאה: יתרה נזילה פחות רזרבת ביטחון
-  let safeToSpend = actualCurrentBalance - safetyBuffer;
-  if (safeToSpend < 0) safeToSpend = 0;
-
-  // חישוב תחזית לסוף החודש (כולל הכנסות עתידיות צפויות)
-  const finalExpectedBalance = actualCurrentBalance + monthExpectedIncome;
-
-  return {
-    openingBalance: Number(state.openingBalance || 0),
-    actualCurrentBalance,
-    finalExpectedBalance,
-    monthExpenses,
-    monthExpectedIncome,
-    safeToSpend,
-    safetyBuffer,
-    overdueAmount,
-    overdueCount: overdueIncomes.length
+<script>
+  // --- 1. הנתונים (State) ---
+  const state = {
+    openingBalance: 10000,
+    incomes: [
+      { id: 1, title: "פרוייקט צילום", amount: 5000, status: "paid", paidDate: "2026-09-05", expectedDate: "2026-09-05" },
+      { id: 2, title: "עריכת וידאו", amount: 3000, status: "pending", expectedDate: "2026-09-25" }
+    ],
+    expenses: [
+      { id: 101, title: "ציוד צילום", amount: 1200, date: "2026-09-02" },
+      { id: 102, title: "דלק ונסיעות", amount: 737.28, date: "2026-09-10" }
+    ]
   };
-}
 
-// --- 2. תצוגת לוח הבקרה (renderDashboard) ---
-function renderDashboard() {
-  const c = calc();
+  // --- 2. פונקציות עזר ---
+  function todayStr() {
+    return new Date().toISOString().split('T')[0];
+  }
 
-  return `
-    <!-- כרטיס מחשבון חכם: כמה מומלץ להוציא -->
-    <div class="card smart-calculator-card" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-      <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 5px;">💡 מחשבון נזילות חכם</div>
-      <div style="font-size: 1.1rem; font-weight: bold;">סכום מומלץ להוצאה כעת:</div>
-      <div style="font-size: 2.2rem; font-weight: 800; color: #4ade80; margin: 10px 0;">
-        ${fmtMoney(c.safeToSpend)}
-      </div>
-      <div style="font-size: 0.85rem; opacity: 0.9; line-height: 1.4;">
-        * מבוסס על יתרה נזילה של <b>${fmtMoney(c.actualCurrentBalance)}</b> בניכוי רזרבת ביטחון לשעת חירום בסך <b>${fmtMoney(c.safetyBuffer)}</b>.
-        ${c.overdueCount > 0 ? `<br><span style="color: #f87171;">⚠️ שימו לב: קיימים ${c.overdueCount} תשלומים באיחור בסך ${fmtMoney(c.overdueAmount)} (לא נלקחו בחשבון הנזיל).</span>` : ''}
-      </div>
-    </div>
+  function monthKey(dateStr) {
+    if (!dateStr) return "";
+    return dateStr.substring(0, 7);
+  }
 
-    <!-- כרטיסי סיכום מדדים -->
-    <div class="grid-3" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-      <div class="card" style="padding: 15px;">
-        <div style="color: var(--muted); font-size: 0.85rem;">יתרה נזילה בבנק</div>
-        <div style="font-size: 1.4rem; font-weight: bold; color: ${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'};">
-          ${fmtMoney(c.actualCurrentBalance)}
+  function fmtMoney(num) {
+    return Number(num || 0).toLocaleString('he-IL', { style: 'currency', currency: 'ILS' });
+  }
+
+  // --- 3. מנוע החישוב החכם (calc) ---
+  function calc() {
+    const today = todayStr();
+    const thisMonth = monthKey(today);
+
+    const paidIncomes = (state.incomes || []).filter((i) => i.status === "paid");
+    const pendingIncomes = (state.incomes || []).filter((i) => i.status !== "paid");
+
+    const totalPaidIncomes = paidIncomes.reduce((s, i) => s + Number(i.amount), 0);
+
+    const monthExpenses = (state.expenses || [])
+      .filter((e) => monthKey(e.date) === thisMonth)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    const actualCurrentBalance = Number(state.openingBalance || 0) + totalPaidIncomes - monthExpenses;
+
+    const monthExpectedIncome = pendingIncomes
+      .filter((i) => monthKey(i.expectedDate) === thisMonth)
+      .reduce((s, i) => s + Number(i.amount), 0);
+
+    const overdueIncomes = pendingIncomes.filter((i) => i.expectedDate < today);
+    const overdueAmount = overdueIncomes.reduce((s, i) => s + Number(i.amount), 0);
+
+    // מחשבון Safe-to-Spend
+    const safetyBuffer = Math.max(500, actualCurrentBalance * 0.10);
+    let safeToSpend = actualCurrentBalance - safetyBuffer;
+    if (safeToSpend < 0) safeToSpend = 0;
+
+    const finalExpectedBalance = actualCurrentBalance + monthExpectedIncome;
+
+    return {
+      openingBalance: Number(state.openingBalance || 0),
+      actualCurrentBalance,
+      finalExpectedBalance,
+      monthExpenses,
+      monthExpectedIncome,
+      totalPaidIncomes,
+      safeToSpend,
+      safetyBuffer,
+      overdueAmount,
+      overdueCount: overdueIncomes.length
+    };
+  }
+
+  // --- 4. תצוגת לוח הבקרה (render) ---
+  function renderDashboard() {
+    const c = calc();
+
+    const html = `
+      <!-- כרטיס מחשבון חכם -->
+      <div class="card" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 24px; margin-bottom: 20px;">
+        <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 5px;">💡 מחשבון נזילות חכם</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">סכום מומלץ להוצאה כעת:</div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: #4ade80; margin: 10px 0;">
+          ${fmtMoney(c.safeToSpend)}
+        </div>
+        <div style="font-size: 0.85rem; opacity: 0.9; line-height: 1.5;">
+          מבוסס על יתרה נזילה של <b>${fmtMoney(c.actualCurrentBalance)}</b> בניכוי רזרבת ביטחון לשעת חירום בסך <b>${fmtMoney(c.safetyBuffer)}</b>.
+          ${c.overdueCount > 0 ? `<br><span style="color: #f87171; font-weight: bold;">⚠️ שימו לב: קיימים ${c.overdueCount} תשלומים באיחור בסך ${fmtMoney(c.overdueAmount)}.</span>` : ''}
         </div>
       </div>
 
-      <div class="card" style="padding: 15px;">
-        <div style="color: var(--muted); font-size: 0.85rem;">הוצאות החודש הנוכחי</div>
-        <div style="font-size: 1.4rem; font-weight: bold; color: var(--negative);">
-          ${fmtMoney(c.monthExpenses)}
+      <!-- מדדים מרכזיים -->
+      <div class="grid-3">
+        <div class="card" style="padding: 16px;">
+          <div style="color: var(--muted); font-size: 0.85rem;">יתרה נזילה בבנק</div>
+          <div style="font-size: 1.4rem; font-weight: bold; color: ${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'}; margin-top: 4px;">
+            ${fmtMoney(c.actualCurrentBalance)}
+          </div>
+        </div>
+
+        <div class="card" style="padding: 16px;">
+          <div style="color: var(--muted); font-size: 0.85rem;">הוצאות החודש הנוכחי</div>
+          <div style="font-size: 1.4rem; font-weight: bold; color: var(--negative); margin-top: 4px;">
+            ${fmtMoney(c.monthExpenses)}
+          </div>
+        </div>
+
+        <div class="card" style="padding: 16px;">
+          <div style="color: var(--muted); font-size: 0.85rem;">תחזית יתרה לסוף חודש</div>
+          <div style="font-size: 1.4rem; font-weight: bold; margin-top: 4px;">
+            ${fmtMoney(c.finalExpectedBalance)}
+          </div>
         </div>
       </div>
 
-      <div class="card" style="padding: 15px;">
-        <div style="color: var(--muted); font-size: 0.85rem;">תחזית יתרה לסוף חודש</div>
-        <div style="font-size: 1.4rem; font-weight: bold;">
-          ${fmtMoney(c.finalExpectedBalance)}
+      <!-- ניתוח תזרים מזומנים -->
+      <div class="card" style="padding: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem;">ניתוח תזרים מזומנים חודשי</h3>
+        
+        <div class="summary-item">
+          <span>יתרת פתיחה בבנק:</span>
+          <span><b>${fmtMoney(c.openingBalance)}</b></span>
+        </div>
+
+        <div class="summary-item" style="color: var(--negative);">
+          <span>פחות הוצאות החודש הנוכחי:</span>
+          <span>-${fmtMoney(c.monthExpenses)}</span>
+        </div>
+
+        <div class="summary-item" style="color: var(--positive);">
+          <span>פלוס הכנסות שנכנסו בפועל:</span>
+          <span>+${fmtMoney(c.totalPaidIncomes)}</span>
+        </div>
+
+        <div class="summary-item" style="font-weight: bold; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-top: 10px;">
+          <span>יתרה נזילה בפועל (נכון להיום):</span>
+          <span>${fmtMoney(c.actualCurrentBalance)}</span>
         </div>
       </div>
-    </div>
+    `;
 
-    <!-- פירוט זרימת מזומנים עקבי -->
-    <div class="card summary-box" style="padding: 20px;">
-      <h3 style="margin-top: 0;">ניתוח תזרים מזומנים חודשי</h3>
-      
-      <div class="summary-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-        <span>יתרת פתיחה בבנק:</span>
-        <span><b>${fmtMoney(c.openingBalance)}</b></span>
-      </div>
+    document.getElementById("app").innerHTML = html;
+  }
 
-      <div class="summary-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; color: var(--negative);">
-        <span>פחות הוצאות החודש הנוכחי:</span>
-        <span>-${fmtMoney(c.monthExpenses)}</span>
-      </div>
+  // הפעלה ראשונית
+  renderDashboard();
+</script>
 
-      <div class="summary-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; color: var(--positive);">
-        <span>פלוס הכנסות שנכנסו בפועל:</span>
-        <span>+${fmtMoney(c.actualCurrentBalance - c.openingBalance + c.monthExpenses)}</span>
-      </div>
-
-      <div class="summary-item" style="display: flex; justify-content: space-between; padding: 12px 0; font-weight: bold; background: #f8fafc; padding: 10px; border-radius: 6px; margin-top: 10px;">
-        <span>יתרה נזילה בפועל (נכון להיום):</span>
-        <span>${fmtMoney(c.actualCurrentBalance)}</span>
-      </div>
-    </div>
-  `;
-}
+</body>
+</html>
