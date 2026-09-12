@@ -62,26 +62,7 @@ input:focus, select:focus, button:focus-visible { box-shadow: 0 0 0 2px var(--ac
 <body>
 <div id="app"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
-  authDomain: "money-1d58a.firebaseapp.com",
-  databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "money-1d58a",
-  storageBucket: "money-1d58a.firebasestorage.app",
-  messagingSenderId: "1038447297202",
-  appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
-};
-let dataRef = null;
-try {
-  const fbApp = initializeApp(firebaseConfig);
-  const db = getDatabase(fbApp);
-  dataRef = ref(db, "tazrim-tzalam");
-} catch (e) { /* app still works locally without cloud sync */ }
-
+<script>
 const TERMS = [
   { days: 0, label: "מיידי" },
   { days: 30, label: "שוטף +30" },
@@ -109,36 +90,11 @@ const monthKey = (d) => d.slice(0, 7);
 const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-async function bootstrapFromCloud() {
-  if (!dataRef) return;
-  // Only pull from Firebase if this device has no local data yet (first visit / new device)
-  const hasLocal = localStorage.getItem(LOCAL_KEY);
-  if (hasLocal) return;
-  try {
-    const snap = await get(dataRef);
-    if (snap.exists()) {
-      state = snap.val();
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-      render();
-    }
-  } catch (e) { /* offline or blocked - local data (if any) stays as-is */ }
-}
-
-function saveLocal() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
-}
-
 function persist() {
-  saveLocal();
+  ui.saveError = false;
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); }
+  catch (e) { ui.saveError = true; }
   render();
-  if (!dataRef) return;
-  // best-effort background sync to Firebase - never blocks the UI
-  set(dataRef, state).then(() => {
-    if (ui.saveError) { ui.saveError = false; render(); }
-  }).catch(() => {
-    ui.saveError = true;
-    render();
-  });
 }
 
 function calc() {
@@ -340,7 +296,6 @@ document.getElementById("app").addEventListener("submit", (e) => {
 });
 
 render();
-bootstrapFromCloud();
 </script>
 </body>
 </html>
