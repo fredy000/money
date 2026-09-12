@@ -1,0 +1,825 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { Camera, Plus, Trash2, Check, Clock, Wallet, ChevronLeft } from "lucide-react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, get, set } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
+  authDomain: "money-1d58a.firebaseapp.com",
+  databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "money-1d58a",
+  storageBucket: "money-1d58a.firebasestorage.app",
+  messagingSenderId: "1038447297202",
+  appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+const DATA_REF = ref(db, "tazrim-tzalam");
+
+const TERMS = [
+  { days: 0, label: "מיידי" },
+  { days: 30, label: "שוטף +30" },
+  { days: 60, label: "שוטף +60" },
+  { days: 90, label: "שוטף +90" },
+];
+
+const CATEGORIES = [
+  "ציוד ואחזקה",
+  "תוכנות ומנויים",
+  "ביטוח",
+  "שיווק ופרסום",
+  "נסיעות והובלה",
+  "אולפן ושכירות",
+  "מיסים וביטוח לאומי",
+  "אחר",
+];
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + Number(days));
+  return d.toISOString().slice(0, 10);
+}
+function fmtMoney(n) {
+  return new Intl.NumberFormat("he-IL", {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
+}
+function fmtDate(dateStr) {
+  return new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(
+    new Date(dateStr)
+  );
+}
+function monthKey(dateStr) {
+  return dateStr.slice(0, 7);
+}
+function daysUntil(dateStr) {
+  const ms = new Date(dateStr) - new Date(todayStr());
+  return Math.round(ms / 86400000);
+}
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+export default function App() {
+  const [data, setData] = useState({ openingBalance: 0, incomes: [], expenses: [] });
+  const [ready, setReady] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [tab, setTab] = useState("dashboard");
+  const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showBalanceEdit, setShowBalanceEdit] = useState(false);
+
+  // load
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await get(DATA_REF);
+        if (snap.exists()) {
+          setData(snap.val());
+        }
+      } catch (e) {
+        // no saved data yet, or offline - keep defaults
+      }
+      setReady(true);
+    })();
+  }, []);
+
+  async function persist(next) {
+    setData(next);
+    try {
+      await set(DATA_REF, next);
+      setSaveError(false);
+    } catch (e) {
+      setSaveError(true);
+    }
+  }
+
+  function addIncome(entry) {
+    persist({ ...data, incomes: [...data.incomes, { id: uid(), ...entry }] });
+  }
+  function addExpense(entry) {
+    persist({ ...data, expenses: [...data.expenses, { id: uid(), ...entry }] });
+  }
+  function markPaid(id) {
+    persist({
+      ...data,
+      incomes: data.incomes.map((inc) =>
+        inc.id === id ? { ...inc, status: "paid", paidDate: todayStr() } : inc
+      ),
+    });
+  }
+  function deleteIncome(id) {
+    persist({ ...data, incomes: data.incomes.filter((i) => i.id !== id) });
+  }
+  function deleteExpense(id) {
+    persist({ ...data, expenses: data.expenses.filter((e) => e.id !== id) });
+  }
+  function setOpeningBalance(v) {
+    persist({ ...data, openingBalance: Number(v) || 0 });
+  }
+
+  const calc = useMemo(() => {
+    const today = todayStr();
+    const thisMonth = monthKey(today);
+
+    const paidIncomes = data.incomes.filter((i) => i.status === "paid");
+    const pendingIncomes = data.incomes
+      .filter((i) => i.status !== "paid")
+      .sort((a, b) => (a.expectedDate > b.expectedDate ? 1 : -1));
+
+    const totalPaid = paidIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    const totalExpensesSoFar = data.expenses
+      .filter((e) => e.date <= today)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    const availableNow = Number(data.openingBalance || 0) + totalPaid - totalExpensesSoFar;
+
+    const monthPaidIncome = paidIncomes
+      .filter((i) => monthKey(i.paidDate || i.date) === thisMonth)
+      .reduce((s, i) => s + Number(i.amount), 0);
+    const monthExpectedIncome = pendingIncomes
+      .filter((i) => monthKey(i.expectedDate) === thisMonth)
+      .reduce((s, i) => s + Number(i.amount), 0);
+    const monthExpenses = data.expenses
+      .filter((e) => monthKey(e.date) === thisMonth)
+      .reduce((s, e) => s + Number(e.amount), 0);
+
+    // historical monthly averages over completed months (excluding current)
+    const monthMap = {};
+    paidIncomes.forEach((i) => {
+      const mk = monthKey(i.paidDate || i.date);
+      if (mk === thisMonth) return;
+      monthMap[mk] = monthMap[mk] || { income: 0, expense: 0 };
+      monthMap[mk].income += Number(i.amount);
+    });
+    data.expenses.forEach((e) => {
+      const mk = monthKey(e.date);
+      if (mk === thisMonth) return;
+      monthMap[mk] = monthMap[mk] || { income: 0, expense: 0 };
+      monthMap[mk].expense += Number(e.amount);
+    });
+    const months = Object.keys(monthMap);
+    let avgIncome = 0,
+      avgExpense = 0;
+    if (months.length > 0) {
+      avgIncome = months.reduce((s, m) => s + monthMap[m].income, 0) / months.length;
+      avgExpense = months.reduce((s, m) => s + monthMap[m].expense, 0) / months.length;
+    }
+    const avgSurplus = avgIncome - avgExpense;
+
+    return {
+      availableNow,
+      pendingIncomes,
+      monthPaidIncome,
+      monthExpectedIncome,
+      monthExpenses,
+      avgIncome,
+      avgExpense,
+      avgSurplus,
+      monthsCounted: months.length,
+    };
+  }, [data]);
+
+  if (!ready) {
+    return (
+      <div style={{ ...styles.page, alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "var(--text-muted)" }}>טוען נתונים…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div dir="rtl" style={styles.page}>
+      <style>{css}</style>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div style={styles.brand}>
+            <Camera size={22} color="var(--accent)" />
+            <span style={styles.brandText}>תזרים לצלם</span>
+          </div>
+          <div style={styles.tabs}>
+            {[
+              { k: "dashboard", label: "לוח בקרה" },
+              { k: "income", label: "הכנסות" },
+              { k: "expenses", label: "הוצאות" },
+            ].map((t) => (
+              <button
+                key={t.k}
+                onClick={() => setTab(t.k)}
+                style={{ ...styles.tabBtn, ...(tab === t.k ? styles.tabBtnActive : {}) }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {tab === "dashboard" && (
+          <Dashboard
+            calc={calc}
+            data={data}
+            markPaid={markPaid}
+            showBalanceEdit={showBalanceEdit}
+            setShowBalanceEdit={setShowBalanceEdit}
+            setOpeningBalance={setOpeningBalance}
+          />
+        )}
+
+        {tab === "income" && (
+          <IncomeTab
+            incomes={data.incomes}
+            addIncome={addIncome}
+            deleteIncome={deleteIncome}
+            markPaid={markPaid}
+            showForm={showIncomeForm}
+            setShowForm={setShowIncomeForm}
+          />
+        )}
+
+        {tab === "expenses" && (
+          <ExpensesTab
+            expenses={data.expenses}
+            addExpense={addExpense}
+            deleteExpense={deleteExpense}
+            showForm={showExpenseForm}
+            setShowForm={setShowExpenseForm}
+          />
+        )}
+
+        {saveError && (
+          <div style={styles.saveError}>השמירה נכשלה כרגע. הנתונים עדיין מוצגים בעמוד.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ calc, data, markPaid, showBalanceEdit, setShowBalanceEdit, setOpeningBalance }) {
+  const hasAnyData = data.incomes.length > 0 || data.expenses.length > 0;
+
+  return (
+    <div style={styles.section}>
+      <div style={styles.hero}>
+        <div style={styles.heroLabel}>יתרה זמינה כרגע</div>
+        <div style={styles.heroNumber}>{fmtMoney(calc.availableNow)}</div>
+        <button style={styles.linkBtn} onClick={() => setShowBalanceEdit((s) => !s)}>
+          עדכון יתרת פתיחה
+        </button>
+        {showBalanceEdit && (
+          <div style={{ marginTop: 10 }}>
+            <input
+              type="number"
+              defaultValue={data.openingBalance}
+              onBlur={(e) => setOpeningBalance(e.target.value)}
+              style={styles.input}
+              placeholder="יתרת בנק נוכחית, לפני חישוב התנועות שהוזנו"
+            />
+          </div>
+        )}
+      </div>
+
+      <div style={styles.statRow}>
+        <StatCard label="התקבל החודש" value={fmtMoney(calc.monthPaidIncome)} dot="var(--positive)" />
+        <StatCard label="הוצאות החודש" value={fmtMoney(calc.monthExpenses)} dot="var(--negative)" />
+        <StatCard
+          label="עוד צפוי החודש"
+          value={fmtMoney(calc.monthExpectedIncome)}
+          dot="var(--accent)"
+        />
+      </div>
+
+      <Card title="בדרך אליך" icon={<Clock size={16} color="var(--accent)" />}>
+        {calc.pendingIncomes.length === 0 ? (
+          <EmptyRow text="אין תשלומים ממתינים כרגע. כל מה שהזנת כבר שולם." />
+        ) : (
+          <div>
+            {calc.pendingIncomes.map((inc) => {
+              const d = daysUntil(inc.expectedDate);
+              return (
+                <div key={inc.id} style={styles.row}>
+                  <div style={{ flex: 1 }}>
+                    <div style={styles.rowTitle}>{inc.client}</div>
+                    <div style={styles.rowSub}>
+                      צפוי ב{fmtDate(inc.expectedDate)}
+                      {d >= 0 ? ` · בעוד ${d} ימים` : ` · באיחור של ${-d} ימים`}
+                    </div>
+                  </div>
+                  <div style={styles.rowAmount}>{fmtMoney(inc.amount)}</div>
+                  <button style={styles.iconBtn} title="סמן כשולם" onClick={() => markPaid(inc.id)}>
+                    <Check size={16} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card title="יכולת חיסכון" icon={<Wallet size={16} color="var(--accent)" />}>
+        {calc.monthsCounted === 0 ? (
+          <EmptyRow text="אחרי שיצטברו לך חודש-חודשיים של הכנסות שסומנו כשולמו והוצאות, כאן תופיע הערכה כמה אפשר לשים בצד כל חודש." />
+        ) : (
+          <div>
+            <p style={styles.p}>
+              בממוצע על {calc.monthsCounted} {calc.monthsCounted === 1 ? "חודש" : "חודשים"} מלאים
+              שנרשמו, נכנסו לך כ{fmtMoney(calc.avgIncome)} ויצאו כ{fmtMoney(calc.avgExpense)}.
+            </p>
+            {calc.avgSurplus > 0 ? (
+              <p style={styles.p}>
+                נשאר עודף ממוצע של <strong style={{ color: "var(--positive)" }}>{fmtMoney(calc.avgSurplus)}</strong> לחודש.
+                בגלל השוטף +30/+60, כדאי קודם לבנות כרית של חודש-חודשיים הוצאות בצד, ורק אחר כך
+                להתייחס לעודף הזה כחיסכון קבוע.
+              </p>
+            ) : (
+              <p style={styles.p}>
+                בממוצע ההוצאות עולות על ההכנסות שכבר התקבלו ב
+                <strong style={{ color: "var(--negative)" }}> {fmtMoney(-calc.avgSurplus)}</strong> לחודש.
+                לפני חיסכון, שווה לבדוק אילו הוצאות קבועות אפשר לצמצם, או להדק מעקב אחרי לקוחות עם
+                תשלום שוטף ארוך.
+              </p>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {!hasAnyData && (
+        <p style={{ ...styles.p, color: "var(--text-muted)", textAlign: "center", marginTop: 8 }}>
+          התחל בהוספת עבודה בלשונית הכנסות, או הוצאה בלשונית הוצאות.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, dot }) {
+  return (
+    <div style={styles.statCard}>
+      <div style={styles.statDot}>
+        <span style={{ ...styles.dot, background: dot }} />
+        {label}
+      </div>
+      <div style={styles.statValue}>{value}</div>
+    </div>
+  );
+}
+
+function Card({ title, icon, children }) {
+  return (
+    <div style={styles.card}>
+      <div style={styles.cardTitle}>
+        {icon}
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyRow({ text }) {
+  return <div style={{ color: "var(--text-muted)", fontSize: 14, padding: "8px 0" }}>{text}</div>;
+}
+
+function IncomeTab({ incomes, addIncome, deleteIncome, markPaid, showForm, setShowForm }) {
+  const [client, setClient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayStr());
+  const [termDays, setTermDays] = useState(30);
+
+  const sorted = [...incomes].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  function submit(e) {
+    e.preventDefault();
+    if (!client || !amount) return;
+    const expectedDate = addDays(date, termDays);
+    addIncome({
+      client,
+      amount: Number(amount),
+      date,
+      termDays,
+      expectedDate,
+      status: termDays === 0 ? "paid" : "pending",
+      paidDate: termDays === 0 ? date : null,
+    });
+    setClient("");
+    setAmount("");
+    setDate(todayStr());
+    setTermDays(30);
+    setShowForm(false);
+  }
+
+  return (
+    <div style={styles.section}>
+      <button style={styles.addBtn} onClick={() => setShowForm((s) => !s)}>
+        <Plus size={16} />
+        הוספת עבודה
+      </button>
+
+      {showForm && (
+        <form onSubmit={submit} style={styles.form}>
+          <label style={styles.label}>
+            לקוח / עבודה
+            <input
+              style={styles.input}
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+              placeholder='למשל: חתונה — משפחת כהן'
+            />
+          </label>
+          <label style={styles.label}>
+            סכום
+            <input
+              style={styles.input}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+          <label style={styles.label}>
+            תאריך העבודה / החשבונית
+            <input
+              style={styles.input}
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label style={styles.label}>
+            תנאי תשלום
+            <select
+              style={styles.input}
+              value={termDays}
+              onChange={(e) => setTermDays(Number(e.target.value))}
+            >
+              {TERMS.map((t) => (
+                <option key={t.days} value={t.days}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div style={styles.formHint}>
+            תאריך תשלום צפוי: {fmtDate(addDays(date, termDays))}
+          </div>
+          <button type="submit" style={styles.submitBtn}>
+            שמירה
+          </button>
+        </form>
+      )}
+
+      <div style={styles.list}>
+        {sorted.length === 0 && <EmptyRow text="עדיין לא נוספו עבודות." />}
+        {sorted.map((inc) => (
+          <div key={inc.id} style={styles.row}>
+            <div style={{ flex: 1 }}>
+              <div style={styles.rowTitle}>{inc.client}</div>
+              <div style={styles.rowSub}>
+                {fmtDate(inc.date)} ·{" "}
+                {inc.status === "paid" ? (
+                  <span style={{ color: "var(--positive)" }}>שולם {fmtDate(inc.paidDate)}</span>
+                ) : (
+                  <span style={{ color: "var(--accent)" }}>צפוי {fmtDate(inc.expectedDate)}</span>
+                )}
+              </div>
+            </div>
+            <div style={styles.rowAmount}>{fmtMoney(inc.amount)}</div>
+            {inc.status !== "paid" && (
+              <button style={styles.iconBtn} title="סמן כשולם" onClick={() => markPaid(inc.id)}>
+                <Check size={16} />
+              </button>
+            )}
+            <button style={styles.iconBtnMuted} title="מחיקה" onClick={() => deleteIncome(inc.id)}>
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExpensesTab({ expenses, addExpense, deleteExpense, showForm, setShowForm }) {
+  const [desc, setDesc] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayStr());
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [recurring, setRecurring] = useState(false);
+
+  const sorted = [...expenses].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  function submit(e) {
+    e.preventDefault();
+    if (!desc || !amount) return;
+    addExpense({ desc, amount: Number(amount), date, category, recurring });
+    setDesc("");
+    setAmount("");
+    setDate(todayStr());
+    setCategory(CATEGORIES[0]);
+    setRecurring(false);
+    setShowForm(false);
+  }
+
+  return (
+    <div style={styles.section}>
+      <button style={styles.addBtn} onClick={() => setShowForm((s) => !s)}>
+        <Plus size={16} />
+        הוספת הוצאה
+      </button>
+
+      {showForm && (
+        <form onSubmit={submit} style={styles.form}>
+          <label style={styles.label}>
+            תיאור
+            <input
+              style={styles.input}
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="למשל: ליסינג עדשה"
+            />
+          </label>
+          <label style={styles.label}>
+            סכום
+            <input
+              style={styles.input}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+          <label style={styles.label}>
+            תאריך
+            <input
+              style={styles.input}
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label style={styles.label}>
+            קטגוריה
+            <select style={styles.input} value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ ...styles.label, flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={recurring}
+              onChange={(e) => setRecurring(e.target.checked)}
+              style={{ width: 16, height: 16 }}
+            />
+            הוצאה שחוזרת כל חודש
+          </label>
+          <button type="submit" style={styles.submitBtn}>
+            שמירה
+          </button>
+        </form>
+      )}
+
+      <div style={styles.list}>
+        {sorted.length === 0 && <EmptyRow text="עדיין לא נוספו הוצאות." />}
+        {sorted.map((exp) => (
+          <div key={exp.id} style={styles.row}>
+            <div style={{ flex: 1 }}>
+              <div style={styles.rowTitle}>{exp.desc}</div>
+              <div style={styles.rowSub}>
+                {fmtDate(exp.date)} · {exp.category}
+                {exp.recurring ? " · חוזרת" : ""}
+              </div>
+            </div>
+            <div style={{ ...styles.rowAmount, color: "var(--negative)" }}>
+              -{fmtMoney(exp.amount)}
+            </div>
+            <button style={styles.iconBtnMuted} title="מחיקה" onClick={() => deleteExpense(exp.id)}>
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "var(--bg)",
+    display: "flex",
+    fontFamily: "'Inter', system-ui, sans-serif",
+  },
+  container: { width: "100%", maxWidth: 640, margin: "0 auto", padding: "28px 18px 60px" },
+  header: { marginBottom: 22 },
+  brand: { display: "flex", alignItems: "center", gap: 8, marginBottom: 18 },
+  brandText: {
+    fontFamily: "'Fraunces', serif",
+    fontSize: 21,
+    color: "var(--text)",
+    letterSpacing: "0.2px",
+  },
+  tabs: { display: "flex", gap: 6, background: "var(--surface)", padding: 4, borderRadius: 10 },
+  tabBtn: {
+    flex: 1,
+    padding: "9px 0",
+    border: "none",
+    background: "transparent",
+    color: "var(--text-muted)",
+    borderRadius: 7,
+    fontSize: 14,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  tabBtnActive: { background: "var(--surface-2)", color: "var(--text)" },
+  section: { display: "flex", flexDirection: "column", gap: 16 },
+  hero: {
+    background: "linear-gradient(160deg, var(--surface) 0%, var(--surface) 70%, #2E2311 100%)",
+    border: "1px solid var(--border)",
+    borderRadius: 18,
+    padding: "26px 22px",
+    textAlign: "center",
+  },
+  heroLabel: { color: "var(--text-muted)", fontSize: 13.5, marginBottom: 6 },
+  heroNumber: {
+    fontFamily: "'Fraunces', serif",
+    fontSize: 44,
+    color: "var(--accent)",
+    lineHeight: 1.1,
+    fontVariantNumeric: "tabular-nums",
+  },
+  linkBtn: {
+    marginTop: 10,
+    background: "none",
+    border: "none",
+    color: "var(--text-muted)",
+    fontSize: 12.5,
+    textDecoration: "underline",
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  statRow: { display: "flex", gap: 10 },
+  statCard: {
+    flex: 1,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: "12px 12px",
+  },
+  statDot: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 11.5,
+    color: "var(--text-muted)",
+    marginBottom: 6,
+  },
+  dot: { width: 6, height: 6, borderRadius: "50%", display: "inline-block" },
+  statValue: {
+    fontSize: 17,
+    color: "var(--text)",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+  },
+  card: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: "16px 16px",
+  },
+  cardTitle: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "var(--text)",
+    fontSize: 15,
+    fontWeight: 600,
+    marginBottom: 10,
+  },
+  p: { color: "var(--text-muted)", fontSize: 14, lineHeight: 1.7, margin: "0 0 8px" },
+  row: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 0",
+    borderBottom: "1px solid var(--border)",
+  },
+  rowTitle: { color: "var(--text)", fontSize: 14.5 },
+  rowSub: { color: "var(--text-muted)", fontSize: 12.5, marginTop: 2 },
+  rowAmount: {
+    color: "var(--text)",
+    fontVariantNumeric: "tabular-nums",
+    fontSize: 14.5,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+  iconBtn: {
+    background: "var(--positive)",
+    border: "none",
+    color: "#12160F",
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+  iconBtnMuted: {
+    background: "var(--surface-2)",
+    border: "1px solid var(--border)",
+    color: "var(--text-muted)",
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+  addBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    background: "var(--accent)",
+    color: "#221204",
+    border: "none",
+    borderRadius: 10,
+    padding: "11px 0",
+    fontSize: 14.5,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  form: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  label: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    fontSize: 13,
+    color: "var(--text-muted)",
+  },
+  input: {
+    background: "var(--surface-2)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "9px 10px",
+    color: "var(--text)",
+    fontSize: 14.5,
+    fontFamily: "inherit",
+  },
+  formHint: { fontSize: 12.5, color: "var(--text-muted)" },
+  submitBtn: {
+    background: "var(--accent)",
+    color: "#221204",
+    border: "none",
+    borderRadius: 8,
+    padding: "10px 0",
+    fontSize: 14.5,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  list: { display: "flex", flexDirection: "column" },
+  saveError: {
+    marginTop: 14,
+    fontSize: 12.5,
+    color: "var(--negative)",
+    textAlign: "center",
+  },
+};
+
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap');
+:root {
+  --bg: #16140F;
+  --surface: #211E17;
+  --surface-2: #2A261C;
+  --text: #F1EBDD;
+  --text-muted: #A79C87;
+  --accent: #E2793D;
+  --positive: #7FA37A;
+  --negative: #C2695C;
+  --border: #3A3428;
+}
+* { box-sizing: border-box; }
+input, select { outline: none; }
+input:focus, select:focus, button:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+::placeholder { color: #6E6553; }
+`;
