@@ -1,1 +1,620 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>תזרים לצלם - מעקב הכנסות, הוצאות ותשלומים</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
+    
+    :root {
+      --bg: #0C0B0A;
+      --surface: #161412;
+      --surface-card: #1D1A17;
+      --surface-input: #27231F;
+      --text: #F7F4EF;
+      --text-muted: #A39B8E;
+      --accent: #FF7024;
+      --accent-glow: rgba(255, 112, 36, 0.25);
+      --accent-hover: #FF8542;
+      --positive: #4EB868;
+      --positive-bg: rgba(78, 184, 104, 0.12);
+      --negative: #FF5252;
+      --negative-bg: rgba(255, 82, 82, 0.12);
+      --border: #2D2822;
+      --border-focus: #483F36;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    * { box-sizing: border-box; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+    body { margin: 0; background: var(--bg); font-family: 'Rubik', system-ui, -apple-system, sans-serif; min-height: 100vh; color: var(--text); -webkit-font-smoothing: antialiased; }
+    #app { width: 100%; max-width: 680px; margin: 0 auto; padding: 28px 18px 80px; }
+    
+    input, select, button { font-family: inherit; outline: none; }
+    input:focus, select:focus, button:focus-visible { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-glow); }
+    ::placeholder { color: #615848; }
+    
+    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .brand-logo { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px var(--accent-glow); color: #FFF; }
+    .brand-text { font-weight: 800; font-size: 22px; color: var(--text); letter-spacing: -0.5px; }
+    .sync-badge { font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); backdrop-filter: blur(10px); }
+    
+    .tabs { display: flex; gap: 8px; background: var(--surface); padding: 6px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; }
+    .tab-btn { flex: 1; padding: 12px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 12px; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: var(--surface-card); color: var(--accent); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    
+    .section { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 30px 24px; text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,112,36,0.08) 0%, transparent 60%); pointer-events: none; }
+    .hero-label { color: var(--text-muted); font-size: 13.5px; font-weight: 500; margin-bottom: 8px; letter-spacing: 0.2px; }
+    .hero-number { font-weight: 800; font-size: 42px; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 10px rgba(0,0,0,0.5); word-break: break-all; }
+    .link-btn { margin-top: 14px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-block; }
+    .link-btn:hover { color: var(--text); border-color: var(--accent); }
+    
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .stat-value { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; }
+    
+    .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); }
+    .card-title { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+    
+    .row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .row:last-child { border-bottom: none; }
+    .row-title { color: var(--text); font-size: 15px; font-weight: 600; }
+    .row-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+    .row-amount { color: var(--text); font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; white-space: nowrap; margin-right: auto; }
+    
+    .icon-btn { background: var(--positive-bg); border: 1px solid rgba(78, 184, 104, 0.3); color: var(--positive); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; font-weight: bold; }
+    .icon-btn:hover { background: var(--positive); color: #000; }
+    .icon-btn-muted { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; }
+    .icon-btn-muted:hover { border-color: var(--negative); color: var(--negative); }
+    
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); color: #FFF; border: none; border-radius: 16px; padding: 14px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); }
+    .add-btn:active { transform: scale(0.98); }
+    
+    .form-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); }
+    .label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+    .input { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; width: 100%; }
+    .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 15px var(--accent-glow); }
+    .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
+    .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
+    .installments-box { background: var(--surface-input); padding: 14px; border-radius: 14px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
 
+    .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 4px; }
+    @media (min-width: 480px) { .category-grid { grid-template-columns: repeat(3, 1fr); } }
+    .cat-card { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: right; user-select: none; }
+    .cat-card:hover { border-color: var(--border-focus); }
+    .cat-card.selected { background: rgba(255, 112, 36, 0.12); border-color: var(--accent); }
+    .cat-icon { font-size: 18px; flex-shrink: 0; }
+    .cat-name { font-size: 12.5px; font-weight: 600; color: var(--text); }
+
+    .cpa-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+    .cpa-card { background: var(--surface-input); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .cpa-title { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+    .cpa-val { font-size: 16.5px; font-weight: 800; word-break: break-all; }
+    .cpa-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    
+    .health-bar-container { background: var(--surface-input); height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 16px; border: 1px solid var(--border); }
+    .health-bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+    
+    .insight-box { background: rgba(255,112,36,0.06); border-right: 3px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin-top: 10px; font-size: 13.5px; line-height: 1.5; color: var(--text); }
+  </style>
+</head>
+<body>
+<div id="app">טוען נתונים...</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
+    authDomain: "money-1d58a.firebaseapp.com",
+    databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "money-1d58a",
+    storageBucket: "money-1d58a.firebasestorage.app",
+    messagingSenderId: "1038447297202",
+    appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
+    measurementId: "G-NRXTEBFEXT"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db, "appData");
+
+  const TERMS = [
+    { days: 0, label: "מיידי" },
+    { days: 30, label: "שוטף +30" },
+    { days: 60, label: "שוטף +60" },
+    { days: 90, label: "שוטף +90" },
+  ];
+
+  const CATEGORIES = [
+    { name: "ציוד ועדשות", icon: "📷" },
+    { name: "תוכנות ומנויים", icon: "💻" },
+    { name: "נסיעות ודלק", icon: "🚗" },
+    { name: "אולפן ולוקיישן", icon: "🏛️" },
+    { name: "ביטוח ציוד ועסק", icon: "🛡️" },
+    { name: "שיווק ופרסום", icon: "📣" },
+    { name: "מיסים וביטוח לאומי", icon: "📑" },
+    { name: "כיבוד ואוכל לסט", icon: "☕" },
+    { name: "תאורה וגריפ", icon: "💡" },
+    { name: "אחר / כללי", icon: "📦" }
+  ];
+
+  let state = { openingBalance: 0, incomes: [], expenses: [] };
+  let syncStatus = "סנכרון פעיל ☁️";
+
+  let ui = { 
+    tab: "dashboard", 
+    showIncomeForm: false, 
+    showExpenseForm: false, 
+    showBalanceEdit: false, 
+    isInstallments: false,
+    expenseFormState: { desc: "", amount: "", date: "", category: CATEGORIES[0].name, installmentsCount: 3, recurring: false }
+  };
+
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const addDays = (d, days) => { const x = new Date(d); x.setDate(x.getDate() + Number(days)); return x.toISOString().slice(0, 10); };
+  const addMonths = (d, months) => { const x = new Date(d); x.setMonth(x.getMonth() + Number(months)); return x.toISOString().slice(0, 10); };
+  
+  // הגדרה מעודכנת: מציג תמיד את הסכום המדויק עם אגורות במידה וקיימות
+  const fmtMoney = (n) => {
+    const val = Number(n || 0);
+    return new Intl.NumberFormat("he-IL", { 
+      style: "currency", 
+      currency: "ILS", 
+      minimumFractionDigits: val % 1 === 0 ? 0 : 2, 
+      maximumFractionDigits: 2 
+    }).format(val);
+  };
+
+  const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(d));
+  const monthKey = (d) => d.slice(0, 7);
+  const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
+  const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      state = {
+        openingBalance: Number(data.openingBalance) || 0,
+        incomes: data.incomes || [],
+        expenses: data.expenses || []
+      };
+    } else {
+      saveToCloud();
+    }
+    render();
+  }, (err) => {
+    syncStatus = "שגיאת הרשאות ⚠️";
+    render();
+  });
+
+  async function saveToCloud() {
+    try {
+      syncStatus = "שומר...";
+      render();
+      await set(dbRef, state);
+      syncStatus = "סנכרון פעיל ☁️";
+    } catch (e) {
+      syncStatus = "שגיאה בשמירה ❌";
+    }
+    render();
+  }
+
+  function calc() {
+    const today = todayStr();
+    const thisMonth = monthKey(today);
+    
+    const paid = (state.incomes || []).filter((i) => i.status === "paid");
+    const pending = (state.incomes || []).filter((i) => i.status !== "paid").sort((a, b) => (a.expectedDate > b.expectedDate ? 1 : -1));
+    
+    const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
+    const totalExpSoFar = (state.expenses || []).filter((e) => e.date <= today).reduce((s, e) => s + Number(e.amount), 0);
+    
+    const availableNow = Number(state.openingBalance || 0) + totalPaid - totalExpSoFar;
+    
+    const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
+    const monthExpectedIncome = pending.filter((i) => monthKey(i.expectedDate) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
+    const monthExpenses = (state.expenses || []).filter((e) => monthKey(e.date) === thisMonth).reduce((s, e) => s + Number(e.amount), 0);
+    
+    const mm = {};
+    paid.forEach((i) => { 
+      const mk = monthKey(i.paidDate || i.date); 
+      if (mk === thisMonth) return; 
+      mm[mk] = mm[mk] || { income: 0, expense: 0 }; 
+      mm[mk].income += Number(i.amount); 
+    });
+    
+    (state.expenses || []).forEach((e) => { 
+      const mk = monthKey(e.date); 
+      if (mk === thisMonth) return; 
+      mm[mk] = mm[mk] || { income: 0, expense: 0 }; 
+      mm[mk].expense += Number(e.amount); 
+    });
+    
+    const months = Object.keys(mm);
+    let avgIncome = 0, avgExpense = 0;
+    if (months.length > 0) {
+      avgIncome = months.reduce((s, m) => s + mm[m].income, 0) / months.length;
+      avgExpense = months.reduce((s, m) => s + mm[m].expense, 0) / months.length;
+    } else {
+      avgExpense = monthExpenses;
+      avgIncome = monthPaidIncome + monthExpectedIncome;
+    }
+
+    const safetyBuffer = Math.max(avgExpense * 1.5, 5000);
+    const totalPendingAmount = pending.reduce((s, i) => s + Number(i.amount), 0);
+    
+    let safeToSave = 0;
+    let safeToSpend = 0;
+    
+    if (availableNow > safetyBuffer) {
+      safeToSave = Math.max(0, (availableNow - safetyBuffer) * 0.7);
+      safeToSpend = Math.max(0, availableNow - safetyBuffer - safeToSave);
+    } else {
+      safeToSpend = Math.max(0, availableNow * 0.3);
+      safeToSave = 0;
+    }
+
+    let healthScore = 50;
+    if (availableNow >= safetyBuffer) healthScore += 30;
+    else if (availableNow > 0) healthScore += 10;
+    else healthScore -= 30;
+
+    if (avgIncome > avgExpense && avgExpense > 0) healthScore += 20;
+    healthScore = Math.min(100, Math.max(10, healthScore));
+
+    return { 
+      availableNow, pending, monthPaidIncome, monthExpectedIncome, monthExpenses, 
+      avgIncome, avgExpense, avgSurplus: avgIncome - avgExpense, monthsCounted: months.length,
+      safetyBuffer, safeToSave, safeToSpend, healthScore, totalPendingAmount
+    };
+  }
+
+  function render() {
+    const c = calc();
+    const root = document.getElementById("app");
+    root.innerHTML = `
+      <div class="brand">
+        <div class="brand-logo">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          </div>
+          <span class="brand-text">תזרים לצלם</span>
+        </div>
+        <span class="sync-badge">${syncStatus}</span>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}" data-action="tab" data-tab="dashboard">לוח בקרה</button>
+        <button class="tab-btn ${ui.tab === "income" ? "active" : ""}" data-action="tab" data-tab="income">הכנסות</button>
+        <button class="tab-btn ${ui.tab === "expenses" ? "active" : ""}" data-action="tab" data-tab="expenses">הוצאות</button>
+      </div>
+      <div class="section">
+        ${ui.tab === "dashboard" ? renderDashboard(c) : ""}
+        ${ui.tab === "income" ? renderIncome() : ""}
+        ${ui.tab === "expenses" ? renderExpenses() : ""}
+      </div>
+    `;
+  }
+
+  function renderDashboard(c) {
+    const healthColor = c.healthScore > 75 ? "var(--positive)" : c.healthScore > 40 ? "var(--accent)" : "var(--negative)";
+    
+    return `
+      <div class="hero">
+        <div class="hero-label">יתרה זמינה כרגע בחשבון</div>
+        <div class="hero-number">${fmtMoney(c.availableNow)}</div>
+        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה מדויקת</button>
+        ${ui.showBalanceEdit ? `
+          <div style="margin-top:16px;display:flex;gap:8px;">
+            <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${state.openingBalance || ''}" placeholder="סכום מדויק (למשל: 12540.50)"/>
+            <button class="submit-btn" style="padding:0 20px;margin-top:0" data-action="save-balance">עדכן</button>
+          </div>` : ""}
+      </div>
+      <div class="stat-row">
+        ${statCard("נכנס החודש", fmtMoney(c.monthPaidIncome), "var(--positive)")}
+        ${statCard("הוצאות החודש", fmtMoney(c.monthExpenses), "var(--negative)")}
+        ${statCard("צפוי החודש", fmtMoney(c.monthExpectedIncome), "var(--accent)")}
+      </div>
+
+      <div class="card">
+        <div class="card-title">💼 ניתוח תזרים וייעוץ פיננסי מקצועי</div>
+        
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span style="color:var(--text-muted)">חוסן פיננסי לעסק</span>
+          <span style="font-weight:700;color:${healthColor}">${c.healthScore}%</span>
+        </div>
+        <div class="health-bar-container">
+          <div class="health-bar-fill" style="width:${c.healthScore}%;background:${healthColor}"></div>
+        </div>
+
+        <div class="cpa-grid">
+          <div class="cpa-card">
+            <div class="cpa-title">כסף חופשי לבזבוז / רכישות</div>
+            <div class="cpa-val" style="color:var(--positive)">${fmtMoney(c.safeToSpend)}</div>
+            <div class="cpa-sub">לאחר ניכוי כרית ביטחון והוצאות</div>
+          </div>
+          <div class="cpa-card">
+            <div class="cpa-title">מומלץ להעביר לחיסכון</div>
+            <div class="cpa-val" style="color:var(--accent)">${fmtMoney(c.safeToSave)}</div>
+            <div class="cpa-sub">לבניית כרית ביטחון / השקעה</div>
+          </div>
+        </div>
+
+        <div class="insight-box">
+          ${getCpaInsightText(c)}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⏳ תשלומים בדרך אליך (שוטף ממתין)</div>
+        ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע.</div>' :
+          c.pending.map((inc) => {
+            const d = daysUntil(inc.expectedDate);
+            return `<div class="row">
+              <div style="flex:1">
+                <div class="row-title">${esc(inc.client)}</div>
+                <div class="row-sub">צפוי ב-${fmtDate(inc.expectedDate)} · ${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}</div>
+              </div>
+              <div class="row-amount">${fmtMoney(inc.amount)}</div>
+              <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>
+            </div>`;
+          }).join("")}
+      </div>
+    `;
+  }
+
+  function getCpaInsightText(c) {
+    if (c.availableNow < 0) {
+      return `⚠️ <strong>התזרים כרגע בחובה.</strong> מומלץ למקד מאמצים בגביית תשלומים מעוכבים בשווי כולל של <strong>${fmtMoney(c.totalPendingAmount)}</strong> ולעכב הוצאות ציוד חדשות בשבועות הקרובים.`;
+    }
+    if (c.availableNow < c.safetyBuffer) {
+      return `🛡️ <strong>בניית כרית ביטחון:</strong> כרגע היתרה שלך נמוכה מיעד כרית הביטחון המומלץ לצלמים (<strong>${fmtMoney(c.safetyBuffer)}</strong>). מומלץ להחזיק כסף זה נזיל לימים פחות עמוסים לפני שתרכוש ציוד נוסף.`;
+    }
+    if (c.safeToSave > 0) {
+      return `🎉 <strong>מצב פיננסי מעולה!</strong> העסק מיוצב ויש לך כרית ביטחון חזקה. אתה יכול להעביר <strong>${fmtMoney(c.safeToSave)}</strong> לחיסכון/השקעות שקטות, ובנוסף לעמוד ברכישות ציוד חדשות.`;
+    }
+    return `📊 <strong>מאזן מאוזן:</strong> היתרה מספקת לכיסוי ההוצאות הקרובות. המשוואה הכללית מציגה הוגנות פיננסית.`;
+  }
+
+  function statCard(label, value, dot) {
+    return `<div class="stat-card"><div class="stat-dot-row"><span class="dot" style="background:${dot}"></span>${label}</div><div class="stat-value">${value}</div></div>`;
+  }
+
+  function renderIncome() {
+    const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+    return `
+      <button class="add-btn" data-action="toggle-income-form">+ הוספת עבודה / יום צילום</button>
+      ${ui.showIncomeForm ? `
+      <form class="form-box" id="income-form">
+        <label class="label">לקוח / תיאור העבודה<input class="input" name="client" placeholder="למשל: צילומי תדמית / פרסומת" required/></label>
+        <label class="label">סכום מדויק (₪)<input class="input" name="amount" type="number" step="0.01" placeholder="0.00" required/></label>
+        <label class="label">תאריך העבודה / החשבונית<input class="input" name="date" type="date" value="${todayStr()}"/></label>
+        <label class="label">תנאי תשלום
+          <select class="input" name="termDays">
+            ${TERMS.map((t) => `<option value="${t.days}">${t.label}</option>`).join("")}
+          </select>
+        </label>
+        <button type="submit" class="submit-btn">שמור הכנסה</button>
+      </form>` : ""}
+      <div class="card" style="padding:0 20px;">
+        ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו עבודות.</div>' : sorted.map((inc) => `
+          <div class="row">
+            <div style="flex:1">
+              <div class="row-title">${esc(inc.client)}</div>
+              <div class="row-sub">${fmtDate(inc.date)} · ${inc.status === "paid" ? `<span style="color:var(--positive)">שולם ב-${fmtDate(inc.paidDate)}</span>` : `<span style="color:var(--accent)">צפוי ב-${fmtDate(inc.expectedDate)}</span>`}</div>
+            </div>
+            <div class="row-amount">${fmtMoney(inc.amount)}</div>
+            ${inc.status !== "paid" ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>` : ""}
+            <button class="icon-btn-muted" data-action="delete-income" data-id="${inc.id}" title="מחיקה">🗑</button>
+          </div>`).join("")}
+      </div>
+    `;
+  }
+
+  function renderExpenses() {
+    const sorted = [...(state.expenses || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+    const f = ui.expenseFormState;
+    
+    return `
+      <button class="add-btn" data-action="toggle-expense-form">+ הוספת הוצאה חדשה</button>
+      ${ui.showExpenseForm ? `
+      <form class="form-box" id="expense-form">
+        <label class="label">תיאור ההוצאה
+          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${esc(f.desc)}" required/>
+        </label>
+        <label class="label">סכום מדויק (₪)
+          <input class="input" name="amount" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${f.amount}" required/>
+        </label>
+        <label class="label">תאריך הרכישה
+          <input class="input" name="date" id="exp-date" type="date" value="${f.date || todayStr()}"/>
+        </label>
+
+        <label class="label">בחירת קטגוריה
+          <div class="category-grid">
+            ${CATEGORIES.map((c) => `
+              <div class="cat-card ${f.category === c.name ? "selected" : ""}" data-action="select-category" data-cat="${c.name}">
+                <span class="cat-icon">${c.icon}</span>
+                <span class="cat-name">${c.name}</span>
+              </div>
+            `).join("")}
+          </div>
+        </label>
+        
+        <label class="label checkbox-label">
+          <input type="checkbox" id="installments-check" style="width:18px;height:18px;accent-color:var(--accent)" ${ui.isInstallments ? "checked" : ""}/> 
+          חלק לתשלומים חודשיים
+        </label>
+
+        ${ui.isInstallments ? `
+          <div class="installments-box">
+            <label class="label">מספר תשלומים
+              <input class="input" name="installmentsCount" id="exp-installmentsCount" type="number" min="2" max="36" value="${f.installmentsCount || 3}" required/>
+            </label>
+          </div>
+        ` : `
+          <label class="label checkbox-label">
+            <input type="checkbox" name="recurring" id="exp-recurring" style="width:18px;height:18px;accent-color:var(--accent)" ${f.recurring ? "checked" : ""}/> הוצאה חודשית קבועה (מתחדשת)
+          </label>
+        `}
+
+        <button type="submit" class="submit-btn">שמור הוצאה</button>
+      </form>` : ""}
+      <div class="card" style="padding:0 20px;">
+        ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו הוצאות.</div>' : sorted.map((exp) => {
+          const catObj = CATEGORIES.find(c => c.name === exp.category);
+          const icon = catObj ? catObj.icon : "📦";
+          return `
+          <div class="row">
+            <div style="flex:1">
+              <div class="row-title">${icon} ${esc(exp.desc)}</div>
+              <div class="row-sub">${fmtDate(exp.date)} · ${exp.category}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
+            </div>
+            <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
+            <button class="icon-btn-muted" data-action="delete-expense" data-id="${exp.id}" title="מחיקה">🗑</button>
+          </div>`;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  function saveCurrentExpenseState() {
+    const descEl = document.getElementById("exp-desc");
+    const amountEl = document.getElementById("exp-amount");
+    const dateEl = document.getElementById("exp-date");
+    const instCountEl = document.getElementById("exp-installmentsCount");
+    const recEl = document.getElementById("exp-recurring");
+
+    if (descEl) ui.expenseFormState.desc = descEl.value;
+    if (amountEl) ui.expenseFormState.amount = amountEl.value;
+    if (dateEl) ui.expenseFormState.date = dateEl.value;
+    if (instCountEl) ui.expenseFormState.installmentsCount = instCountEl.value;
+    if (recEl) ui.expenseFormState.recurring = recEl.checked;
+  }
+
+  document.getElementById("app").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    
+    if (action === "tab") { 
+      ui.tab = btn.dataset.tab; 
+      render(); 
+    } else if (action === "toggle-balance-edit") { 
+      ui.showBalanceEdit = !ui.showBalanceEdit; 
+      render(); 
+    } else if (action === "save-balance") {
+      const input = document.getElementById("balance-input");
+      state.openingBalance = parseFloat(input.value) || 0;
+      ui.showBalanceEdit = false;
+      saveToCloud();
+    } else if (action === "toggle-income-form") { 
+      ui.showIncomeForm = !ui.showIncomeForm; 
+      render(); 
+    } else if (action === "toggle-expense-form") { 
+      ui.showExpenseForm = !ui.showExpenseForm; 
+      ui.isInstallments = false;
+      ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
+      render(); 
+    } else if (action === "select-category") {
+      saveCurrentExpenseState();
+      ui.expenseFormState.category = btn.dataset.cat;
+      render();
+    } else if (action === "mark-paid") {
+      const inc = state.incomes.find((i) => i.id === btn.dataset.id);
+      if (inc) { 
+        inc.status = "paid"; 
+        inc.paidDate = todayStr(); 
+        saveToCloud(); 
+      }
+    } else if (action === "delete-income") {
+      state.incomes = state.incomes.filter((i) => i.id !== btn.dataset.id); 
+      saveToCloud();
+    } else if (action === "delete-expense") {
+      state.expenses = state.expenses.filter((e) => e.id !== btn.dataset.id); 
+      saveToCloud();
+    }
+  });
+
+  document.getElementById("app").addEventListener("change", (e) => {
+    if (e.target.id === "installments-check") {
+      saveCurrentExpenseState();
+      ui.isInstallments = e.target.checked;
+      render();
+    }
+  });
+
+  document.getElementById("app").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (e.target.id === "income-form") {
+      const fd = new FormData(e.target);
+      const date = fd.get("date") || todayStr();
+      const termDays = Number(fd.get("termDays"));
+      const expectedDate = addDays(date, termDays);
+      
+      state.incomes = state.incomes || [];
+      state.incomes.push({
+        id: uid(), 
+        client: fd.get("client"), 
+        amount: Number(fd.get("amount")), 
+        date, 
+        termDays, 
+        expectedDate,
+        status: termDays === 0 ? "paid" : "pending", 
+        paidDate: termDays === 0 ? date : null,
+      });
+      
+      ui.showIncomeForm = false; 
+      saveToCloud();
+    } else if (e.target.id === "expense-form") {
+      const fd = new FormData(e.target);
+      const totalAmount = Number(fd.get("amount"));
+      const startDate = fd.get("date") || todayStr();
+      const desc = fd.get("desc");
+      const category = ui.expenseFormState.category || CATEGORIES[0].name;
+      
+      state.expenses = state.expenses || [];
+
+      if (ui.isInstallments) {
+        const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
+        const monthlyAmount = Number((totalAmount / count).toFixed(2));
+        
+        for (let i = 0; i < count; i++) {
+          state.expenses.push({
+            id: uid(),
+            desc: `${desc}`,
+            amount: monthlyAmount,
+            date: addMonths(startDate, i),
+            category: category,
+            installmentInfo: `${i + 1}/${count}`
+          });
+        }
+      } else {
+        state.expenses.push({
+          id: uid(), 
+          desc: desc, 
+          amount: totalAmount, 
+          date: startDate,
+          category: category, 
+          recurring: fd.get("recurring") === "on",
+        });
+      }
+      
+      ui.showExpenseForm = false; 
+      ui.isInstallments = false;
+      ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
+      saveToCloud();
+    }
+  });
+</script>
+</body>
+</html>
