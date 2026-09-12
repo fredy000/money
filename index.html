@@ -1,730 +1,342 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
-    
-    :root {
-      --bg: #0C0B0A;
-      --surface: #161412;
-      --surface-card: #1D1A17;
-      --surface-input: #27231F;
-      --text: #F7F4EF;
-      --text-muted: #A39B8E;
-      --accent: #FF7024;
-      --accent-glow: rgba(255, 112, 36, 0.25);
-      --accent-hover: #FF8542;
-      --positive: #4EB868;
-      --positive-bg: rgba(78, 184, 104, 0.12);
-      --negative: #FF5252;
-      --negative-bg: rgba(255, 82, 82, 0.12);
-      --border: #2D2822;
-      --border-focus: #483F36;
-      --radius: 16px;
-      --shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-    
-    * { box-sizing: border-box; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
-    body { margin: 0; background: var(--bg); font-family: 'Rubik', system-ui, -apple-system, sans-serif; min-height: 100vh; color: var(--text); -webkit-font-smoothing: antialiased; }
-    #app { width: 100%; max-width: 720px; margin: 0 auto; padding: 28px 18px 80px; }
-    
-    input, select, button { font-family: inherit; outline: none; }
-    input:focus, select:focus, button:focus-visible { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-glow); }
-    ::placeholder { color: #615848; }
-    
-    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-    .brand-logo { display: flex; align-items: center; gap: 12px; }
-    .brand-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px var(--accent-glow); color: #FFF; }
-    .brand-text { font-weight: 800; font-size: 22px; color: var(--text); letter-spacing: -0.5px; }
-    .sync-badge { font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); backdrop-filter: blur(10px); }
-    
-    .tabs { display: flex; gap: 8px; background: var(--surface); padding: 6px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; }
-    .tab-btn { flex: 1; padding: 12px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 12px; font-size: 14.5px; font-weight: 600; cursor: pointer; }
-    .tab-btn.active { background: var(--surface-card); color: var(--accent); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-    
-    .section { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .ai-card { background: linear-gradient(135deg, #1C1814 0%, #2A2118 100%); border: 1px solid rgba(255, 112, 36, 0.35); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-    .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .ai-badge { background: var(--accent); color: #FFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .ai-title { font-weight: 700; font-size: 16px; color: var(--text); }
-    .ai-text { font-size: 14px; line-height: 1.6; color: #E2DACF; }
-    .ai-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
-    .ai-stat { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--border); }
-    .ai-stat-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
-    .ai-stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
-
-    .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
-    .hero-label { color: var(--text-muted); font-size: 13.5px; font-weight: 500; margin-bottom: 6px; }
-    .hero-number { font-weight: 800; font-size: 40px; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; word-break: break-all; }
-    .link-btn { margin-top: 12px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-block; }
-    .link-btn:hover { color: var(--text); border-color: var(--accent); }
-    
-    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .stat-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 12px; display: flex; flex-direction: column; justify-content: space-between; }
-    .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .stat-value { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; }
-    
-    .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); }
-    .card-title { display: flex; align-items: center; justify-content: space-between; color: var(--text); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
-    
-    .total-banner { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
-    .total-banner-label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
-    .total-banner-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
-
-    .summary-box { background: var(--surface-input); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
-    .summary-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-    .summary-item.sub { font-size: 13px; color: var(--text-muted); padding-right: 12px; }
-    .summary-item.total { background: rgba(255, 112, 36, 0.12); border: 1px solid var(--accent); padding: 12px; border-radius: 12px; font-weight: 800; font-size: 15px; color: var(--text); margin-top: 6px; }
-
-    .row { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-    .row:last-child { border-bottom: none; }
-    .row-title { color: var(--text); font-size: 15px; font-weight: 600; }
-    .row-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
-    .row-amount { color: var(--text); font-variant-numeric: tabular-nums; font-size: 15.5px; font-weight: 700; white-space: nowrap; margin-right: auto; }
-    .actions-group { display: flex; align-items: center; gap: 6px; }
-
-    .icon-btn { background: var(--positive-bg); border: 1px solid rgba(78, 184, 104, 0.3); color: var(--positive); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; font-weight: bold; }
-    .icon-btn:hover { background: var(--positive); color: #000; }
-    .icon-btn-muted { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13.5px; }
-    .icon-btn-muted:hover { border-color: var(--accent); color: var(--accent); }
-    .icon-btn-danger:hover { border-color: var(--negative); color: var(--negative); }
-    
-    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); color: #FFF; border: none; border-radius: 16px; padding: 14px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); }
-    .add-btn:active { transform: scale(0.98); }
-    
-    .form-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
-    .label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
-    .input { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; width: 100%; }
-    .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 15px var(--accent-glow); }
-    .cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
-    .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
-
-    .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 4px; }
-    @media (min-width: 480px) { .category-grid { grid-template-columns: repeat(3, 1fr); } }
-    .cat-card { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: right; user-select: none; }
-    .cat-card:hover { border-color: var(--border-focus); }
-    .cat-card.selected { background: rgba(255, 112, 36, 0.12); border-color: var(--accent); }
-    .cat-icon { font-size: 18px; flex-shrink: 0; }
-    .cat-name { font-size: 12.5px; font-weight: 600; color: var(--text); }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c0b0a">
+<title>תזרים לצלם — הכנסות, הוצאות וחיסכון</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
+:root{--bg:#0c0b0a;--surface:#161412;--card:#1d1a17;--input:#27231f;--text:#f7f4ef;--muted:#a39b8e;--accent:#ff7024;--green:#66ca7e;--red:#ff7070;--border:#332c25;--radius:18px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Rubik,system-ui,sans-serif;color:var(--text);line-height:1.5}#app{max-width:1050px;margin:auto;padding:28px 20px 70px}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}button{border:1px solid var(--border);background:var(--input);color:var(--text);padding:9px 14px;border-radius:10px}button:hover{border-color:var(--accent)}.primary{background:var(--accent);color:#fff;font-weight:700;border-color:var(--accent)}.danger{color:var(--red)}.green{color:var(--green)}.red{color:var(--red)}.orange{color:var(--accent)}.muted,.hint{color:var(--muted)}.hint{font-size:13px;line-height:1.7}.brand,.flex,.card-head,.row,.summary-row{display:flex;align-items:center;gap:12px}.brand,.card-head,.summary-row{justify-content:space-between}.brand{margin-bottom:24px;flex-wrap:wrap}.brand-icon{background:var(--accent);padding:10px;border-radius:13px;font-size:23px}.brand h1{font-size:23px;margin:0;letter-spacing:-.5px}.brand small{color:var(--muted)}.badge{font-size:12px;background:var(--card);border:1px solid var(--border);padding:6px 11px;border-radius:20px}.tabs{display:flex;gap:5px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:22px}.tabs button{flex:1;background:none;border-color:transparent;font-size:14px;padding:12px 7px}.tabs button.active{background:var(--card);color:var(--accent);border-color:var(--border)}.section{display:grid;gap:20px}.card,.hero{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}.hero{background:linear-gradient(145deg,#302419,#171411);border-color:#684023;text-align:center;padding:30px 24px}.hero .value{font-size:clamp(32px,6vw,52px);font-weight:800;line-height:1.25;margin:8px 0}.hero .hero-label{color:var(--muted)}h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px}.card-head h2{margin:0}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{padding:17px;background:var(--card);border:1px solid var(--border);border-radius:16px}.stat small{color:var(--muted);display:block;font-size:12px}.stat strong{display:block;font-size:20px;margin-top:7px;overflow-wrap:anywhere}.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}.period{display:flex;gap:6px;justify-content:center;margin-bottom:18px}.period button.active{background:var(--accent);color:#fff}.notice{padding:14px 17px;background:#292014;border:1px solid #604126;border-radius:13px;font-size:14px;line-height:1.75}.empty{text-align:center;padding:28px;color:var(--muted)}.list{padding-top:10px}.row{padding:16px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}.row:last-child{border-bottom:0}.row-main{flex:1;min-width:150px}.row-title{font-size:15px;font-weight:600;overflow-wrap:anywhere}.row-sub{font-size:12px;color:var(--muted);margin-top:5px}.amount{white-space:nowrap;font-weight:700;direction:ltr;unicode-bidi:isolate}.actions{display:flex;gap:5px;flex-wrap:wrap}.actions button{font-size:12px;padding:6px 9px}.form{display:grid;gap:15px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:15px}.form label{display:grid;gap:7px;color:var(--muted);font-size:13px}.form input,.form select,.filter{width:100%;background:var(--input);border:1px solid var(--border);border-radius:11px;color:var(--text);padding:11px 12px}.form input[type=checkbox]{width:auto;accent-color:var(--accent);margin:0}.form label.check{display:flex;align-items:center;gap:10px;color:var(--text)}input[type=date],input[type=number]{direction:ltr;text-align:right;color-scheme:dark}.form-actions{display:flex;gap:9px;justify-content:flex-end}.summary-row{padding:8px 0;font-size:14px}.summary-row.total{border-top:1px solid var(--border);padding-top:14px;margin-top:8px;font-weight:700}.insights{display:grid;gap:12px}.insights p{margin:0;color:#e2dacf;font-size:14px;line-height:1.8}.chart{width:100%;height:auto;display:block;direction:ltr}.chart text{font-family:inherit;fill:var(--muted);font-size:11px}.chart-key{display:flex;gap:18px;font-size:12px;justify-content:center;color:var(--muted);flex-wrap:wrap}.line-key{display:inline-block;width:18px;height:3px;background:var(--accent);vertical-align:middle;margin-left:5px}.line-key.cash{background:var(--muted)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:right;padding:12px 10px;border-bottom:1px solid var(--border);white-space:nowrap}th{color:var(--muted);font-weight:500}dialog{width:min(600px,calc(100% - 28px));border:1px solid var(--border);border-radius:20px;background:var(--card);color:var(--text);padding:25px;max-height:90vh;overflow:auto}dialog::backdrop{background:#000b;backdrop-filter:blur(3px)}.dialog-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.dialog-head h2{margin:0}.dialog-head button{padding:4px 10px}#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:13px 20px;max-width:calc(100% - 30px);background:#383027;color:#fff;border:1px solid #705033;border-radius:12px;z-index:100;box-shadow:0 8px 40px #0008;font-size:14px}#toast:empty{display:none}.filter-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.filter{width:auto;font-size:13px;padding:7px 12px}.progress{height:9px;border-radius:20px;background:var(--input);overflow:hidden;margin-top:12px}.progress span{height:100%;display:block;background:var(--accent)}.pill{font-size:11px;border:1px solid var(--border);border-radius:7px;padding:2px 6px;display:inline-block}.footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 0 0}.setup-block{border-color:#70401d}.no-wrap{white-space:nowrap}a{color:var(--accent)}
+@media(max-width:720px){#app{padding:20px 13px 65px}.stats{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.tabs button{font-size:12px}.card{padding:17px}.brand h1{font-size:20px}.fields{grid-template-columns:1fr}.row .actions{width:100%;justify-content:flex-end}.chart text{font-size:12px}}
+@media(prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}.section{animation:appear .2s}@keyframes appear{from{opacity:.6}to{opacity:1}}}
+</style>
 </head>
 <body>
-<div id="app">טוען נתונים ועוזר AI...</div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
-    authDomain: "money-1d58a.firebaseapp.com",
-    databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "money-1d58a",
-    storageBucket: "money-1d58a.firebasestorage.app",
-    messagingSenderId: "1038447297202",
-    appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
-    measurementId: "G-NRXTEBFEXT"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const dbRef = ref(db, "appData");
-
-  const TERMS = [
-    { days: 0, label: "מיידי" },
-    { days: 30, label: "שוטף +30" },
-    { days: 60, label: "שוטף +60" },
-    { days: 90, label: "שוטף +90" },
-  ];
-
-  const CATEGORIES = [
-    { name: "ציוד ועדשות", icon: "📷" },
-    { name: "תוכנות ומנויים", icon: "💻" },
-    { name: "נסיעות ודלק", icon: "🚗" },
-    { name: "אולפן ולוקיישן", icon: "🏛️" },
-    { name: "ביטוח ציוד ועסק", icon: "🛡️" },
-    { name: "שיווק ופרסום", icon: "📣" },
-    { name: "מיסים וביטוח לאומי", icon: "📑" },
-    { name: "כיבוד ואוכל לסט", icon: "☕" },
-    { name: "תאורה וגריפ", icon: "💡" },
-    { name: "אחר / כללי", icon: "📦" }
-  ];
-
-  let state = { openingBalance: 4513.73, incomes: [], expenses: [] };
-  let syncStatus = "סנכרון פעיל ☁️";
-
-  let ui = { 
-    tab: "dashboard", 
-    showIncomeForm: false, 
-    editingIncomeId: null,
-    showExpenseForm: false, 
-    editingExpenseId: null,
-    showBalanceEdit: false, 
-    isInstallments: false,
-    expenseFormState: { desc: "", amount: "", date: "", category: CATEGORIES[0].name, installmentsCount: 3, recurring: false }
-  };
-
-  const uid = () => Math.random().toString(36).slice(2, 10);
-  const todayStr = () => new Date().toISOString().slice(0, 10);
-  
-  const calcExpectedDate = (invoiceDateStr, termDays) => {
-    if (Number(termDays) === 0) return invoiceDateStr;
-    const date = new Date(invoiceDateStr);
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
-    return endOfMonth.toISOString().slice(0, 10);
-  };
-
-  const addMonths = (d, months) => { const x = new Date(d); x.setMonth(x.getMonth() + Number(months)); return x.toISOString().slice(0, 10); };
-  
-  const fmtMoney = (n) => {
-    const val = Number(n || 0);
-    return new Intl.NumberFormat("he-IL", { 
-      style: "currency", 
-      currency: "ILS", 
-      minimumFractionDigits: 0, 
-      maximumFractionDigits: 2 
-    }).format(val);
-  };
-
-  const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(d));
-  const monthKey = (d) => d.slice(0, 7);
-  const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
-  const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-  onValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      state = {
-        openingBalance: Number(data.openingBalance) || 0,
-        incomes: (data.incomes || []).map(inc => ({
-          ...inc,
-          expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
-        })),
-        expenses: data.expenses || []
-      };
-    } else {
-      saveToCloud();
+<main id="app"></main>
+<dialog id="modal"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+/*
+  תזרים לצלם, v2. הכל בקובץ אחד. אין חובה להתחבר כדי להשתמש מקומית.
+  כסף נשמר באגורות. תאריכים הם YYYY-MM-DD; אין המרה של תאריך מקומי ל-UTC.
+  יתרת הבנק אינה מחושבת מעסקאות עבר: כל אישור תשלום שואל האם הוא כבר כלול.
+  כל חישוב חיסכון מוגבל לתקופה שנבחרה ולהוצאות שהוזנו.
+*/
+const CashFlow = (() => {
+  const DAY = 86400000;
+  function parseDate(s) {
+    if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw Error('תאריך לא תקין');
+    const [y,m,d]=s.split('-').map(Number), x=new Date(Date.UTC(y,m-1,d));
+    if(y<2000||y>2100||x.getUTCFullYear()!==y||x.getUTCMonth()!==m-1||x.getUTCDate()!==d) throw Error('תאריך לא תקין');
+    return x;
+  }
+  function strDate(x){return [x.getUTCFullYear(),String(x.getUTCMonth()+1).padStart(2,'0'),String(x.getUTCDate()).padStart(2,'0')].join('-');}
+  function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function addDays(s,n){const d=parseDate(s);d.setUTCDate(d.getUTCDate()+n);return strDate(d);}
+  function addMonths(s,n){const d=parseDate(s), y=d.getUTCFullYear(),m=d.getUTCMonth();const first=new Date(Date.UTC(y,m+n,1)),last=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();first.setUTCDate(Math.min(d.getUTCDate(),last));return strDate(first);}
+  function dueDate(s,days){if(![0,30,60,90].includes(Number(days)))throw Error('תנאי תשלום לא תקינים');if(Number(days)===0)return s;const d=parseDate(s);return addDays(strDate(new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0))),Number(days));}
+  function creditDate(purchase,day){const d=parseDate(purchase), y=d.getUTCFullYear(),m=d.getUTCMonth();let f=new Date(Date.UTC(y,m,Math.min(day,new Date(Date.UTC(y,m+1,0)).getUTCDate())));if(strDate(f)<purchase){const last=new Date(Date.UTC(y,m+2,0)).getUTCDate();f=new Date(Date.UTC(y,m+1,Math.min(day,last)));}return strDate(f);}
+  function cents(v,negative=false){const s=String(v).trim();if(!/^-?\d+(\.\d{1,2})?$/.test(s))throw Error('יש להזין סכום תקין, עם עד שתי ספרות אחרי הנקודה');const n=Math.round(Number(s)*100);if(!Number.isSafeInteger(n)||Math.abs(n)>100000000000||(!negative&&n<=0))throw Error('הסכום אינו תקין');return n;}
+  function integer(n,min=0,max=100000000000){if(!Number.isSafeInteger(n)||n<min||n>max)throw Error('מספר לא תקין בגיבוי');return n;}
+  function split(total,count){integer(total,1);integer(count,2,120);if(total<count)throw Error('הסכום קטן מדי למספר התשלומים');const a=Array(count).fill(Math.floor(total/count));a[count-1]+=total-a.reduce((s,x)=>s+x,0);return a;}
+  function empty(){return {schemaVersion:2,revision:0,bank:{balanceCents:0,verified:false,updatedAt:null,epoch:0},settings:{bufferCents:500000,taxReserveCents:0,taxBasisPoints:0,creditDay:2,goalCents:0,reserveEpoch:0},incomes:[],expenses:[],receipts:[]};}
+  function validate(raw){
+    if(!raw||raw.schemaVersion!==2)throw Error('זה אינו גיבוי בגרסה החדשה');
+    const d=JSON.parse(JSON.stringify(raw));d.bank.updatedAt=d.bank.updatedAt??null;integer(d.revision);integer(d.bank.balanceCents,-100000000000);integer(d.bank.epoch);if(typeof d.bank.verified!=='boolean')throw Error('פרטי הבנק לא תקינים');
+    if(d.bank.updatedAt!==null){if(typeof d.bank.updatedAt!=='string'||!Number.isFinite(Date.parse(d.bank.updatedAt)))throw Error('מועד עדכון לא תקין');}
+    ['bufferCents','taxReserveCents','goalCents'].forEach(k=>integer(d.settings[k]));integer(d.settings.taxBasisPoints,0,10000);integer(d.settings.creditDay,1,31);d.settings.reserveEpoch=d.settings.reserveEpoch||0;integer(d.settings.reserveEpoch);
+    // Firebase omits empty arrays. Restore them before validation.
+    ['incomes','expenses','receipts'].forEach(k=>{d[k]=d[k]||[];if(!Array.isArray(d[k])||d[k].length>20000)throw Error('מבנה הגיבוי אינו תקין');});
+    const ids=new Set(), id=(x)=>{if(typeof x!=='string'||!/^[-a-zA-Z0-9_]{1,100}$/.test(x))throw Error('מזהה לא תקין');},text=(x)=>{if(typeof x!=='string'||!x.trim()||x.length>500)throw Error('תיאור לא תקין');};
+    function unique(x,prefix){id(x);if(ids.has(prefix+x))throw Error('מזהה כפול בגיבוי');ids.add(prefix+x);}
+    for(const i of d.incomes){unique(i.id,'i');text(i.client);integer(i.amountCents,1);parseDate(i.date);parseDate(i.expectedDate);if(![0,30,60,90].includes(i.termDays)||!['pending','paid'].includes(i.status))throw Error('פרטי הכנסה לא תקינים');if(i.status==='paid'){i.appliedEpoch=i.appliedEpoch??null;parseDate(i.paidDate);if(i.appliedEpoch!==null)integer(i.appliedEpoch);if(i.taxAddedCents!==undefined)integer(i.taxAddedCents,0,i.amountCents);if(i.taxEpoch!==undefined)integer(i.taxEpoch);}if(typeof i.manualDate!=='boolean')throw Error('תאריך גבייה לא תקין');}
+    for(const e of d.expenses){unique(e.id,'e');text(e.desc);text(e.category);if(!['עסקי','אישי'].includes(e.scope))throw Error('סוג הוצאה לא תקין');if(!['אשראי','העברה','מזומן','הוראת קבע'].includes(e.method))throw Error('אמצעי תשלום לא תקין');integer(e.amountCents,1);parseDate(e.purchaseDate);parseDate(e.chargeDate);if(!['once','monthly','installments'].includes(e.kind))throw Error('סדרה לא תקינה');integer(e.count,1,120);integer(e.everyMonths,1,12);if(e.kind==='installments')split(e.amountCents,e.count);if(e.endDate)parseDate(e.endDate);e.overrides=e.overrides||{};if(typeof e.overrides!=='object'||Array.isArray(e.overrides)||Object.keys(e.overrides).length>2000)throw Error('חריגים לא תקינים');for(const [k,o] of Object.entries(e.overrides)){if(!/^\d{1,4}$/.test(k)||Number(k)>1212)throw Error('תשלום לא תקין');if(o.amountCents!==undefined)integer(o.amountCents,1);if(o.chargeDate)parseDate(o.chargeDate);if(o.canceled!==undefined&&typeof o.canceled!=='boolean')throw Error('ביטול לא תקין');}}
+    for(const r of d.receipts){r.appliedEpoch=r.appliedEpoch??null;unique(r.key,'r');id(r.expenseId);integer(r.index,0,1212);if(r.key!==r.expenseId+'_'+r.index)throw Error('קבלה לא תקינה');text(r.title);integer(r.amountCents,1);parseDate(r.paidDate);parseDate(r.chargeDate);if(r.appliedEpoch!==null)integer(r.appliedEpoch);}
+    return d;
+  }
+  function occurrences(s,end){
+    const result=[],paid=new Set(s.receipts.map(r=>r.key));
+    for(const e of s.expenses){
+      const amounts=e.kind==='installments'?split(e.amountCents,e.count):null;
+      const count=e.kind==='monthly'?1213:e.kind==='installments'?e.count:1;const maxOverride=Math.max(-1,...Object.keys(e.overrides).map(Number));
+      for(let index=0;index<count;index++){
+        const base=e.kind==='once'?e.chargeDate:addMonths(e.chargeDate,index*e.everyMonths);
+        // Monthly anchors never drift after February. Overrides retain their original occurrence key.
+        const o=e.overrides[String(index)]||{},date=o.chargeDate||base;
+        if(e.kind==='monthly'&&base>end&&index>maxOverride)break;
+        if(e.endDate&&base>e.endDate)continue;
+        if(date>end||o.canceled)continue;
+        const key=e.id+'_'+index;
+        if(paid.has(key))continue;
+        result.push({key,expenseId:e.id,index,date,baseDate:base,amountCents:o.amountCents||amounts?.[index]||e.amountCents,title:e.desc,category:e.category,scope:e.scope,kind:e.kind,method:e.method,label:e.kind==='installments'?`תשלום ${index+1}/${e.count}`:e.kind==='monthly'?(e.everyMonths===1?'חודשי':`כל ${e.everyMonths} חודשים`):'חד־פעמי'});
+      }
     }
+    return result.sort((a,b)=>a.date.localeCompare(b.date)||a.key.localeCompare(b.key));
+  }
+  function forecast(s,days,now=today()){
+    const end=addDays(now,days),outs=occurrences(s,end),pending=s.incomes.filter(i=>i.status==='pending');
+    // Overdue receivables are shown for collection but excluded from forecast until rescheduled.
+    const ins=pending.filter(i=>i.expectedDate>=now&&i.expectedDate<=end);
+    const events=[...outs.map(o=>({...o,date:o.date<now?now:o.date,type:'expense',originalDate:o.date})),...ins.map(i=>({date:i.expectedDate,type:'income',amountCents:i.amountCents,title:i.client,id:i.id}))].sort((a,b)=>a.date.localeCompare(b.date)||((a.type==='expense'?0:1)-(b.type==='expense'?0:1)));
+    let balance=s.bank.balanceCents,cash=balance,reserve=s.settings.taxReserveCents;
+    let minAvailable=balance-reserve,minDate=now;
+    const points=[{date:now,balance,cash,reserve}],timeline=[];
+    // Expenses are applied before income on the same day: intra-day shortage stays visible.
+    for(const e of events){if(e.type==='expense'){balance-=e.amountCents;cash-=e.amountCents;}else{balance+=e.amountCents;reserve+=Math.round(e.amountCents*s.settings.taxBasisPoints/10000);}const available=balance-reserve;if(available<minAvailable){minAvailable=available;minDate=e.date;}timeline.push({...e,balance,reserve,available});points.push({date:e.date,balance,cash,reserve});}
+    points.push({date:end,balance,cash,reserve});
+    const buffer=s.settings.bufferCents;
+    return {now,end,days,outs,ins,events,timeline,points,balance,minAvailable,minDate,expectedSavings:Math.max(0,minAvailable-buffer),conservativeSavings:Math.max(0,cash-s.settings.taxReserveCents-buffer),cashEnd:cash,reserveEnd:reserve,incoming:ins.reduce((s,i)=>s+i.amountCents,0),outgoing:outs.reduce((s,e)=>s+e.amountCents,0),overdue:pending.filter(i=>i.expectedDate<now),shortfall:Math.max(0,buffer-minAvailable)};
+  }
+  function applyPayment(s,type,itemId,date,alreadyIncluded,now=today(),taxAdded=0){
+    parseDate(date);if(date>now)throw Error('אפשר לאשר רק תשלום שכבר התקבל או ירד');if(!s.bank.verified&&!alreadyIncluded)throw Error('קודם עדכן יתרה מהבנק בהגדרות');
+    const epoch=alreadyIncluded?null:s.bank.epoch;
+    if(type==='income'){const i=s.incomes.find(i=>i.id===itemId);if(!i||i.status==='paid')throw Error('ההכנסה כבר סומנה כשולמה');integer(taxAdded,0,i.amountCents);i.status='paid';i.paidDate=date;i.appliedEpoch=epoch;i.taxAddedCents=taxAdded;i.taxEpoch=s.settings.reserveEpoch||0;s.settings.taxReserveCents+=taxAdded;if(!alreadyIncluded)s.bank.balanceCents+=i.amountCents;}
+    else{const o=occurrences(s,addDays(now,366)).find(o=>o.key===itemId);if(!o)throw Error('התשלום כבר אושר או אינו קיים');s.receipts.push({key:o.key,expenseId:o.expenseId,index:o.index,title:o.title,amountCents:o.amountCents,paidDate:date,chargeDate:o.date,category:o.category,scope:o.scope,appliedEpoch:epoch});if(!alreadyIncluded)s.bank.balanceCents-=o.amountCents;}
+    if(!alreadyIncluded)s.bank.updatedAt=new Date().toISOString();
+  }
+  function undoPayment(s,type,key){
+    if(type==='income'){const i=s.incomes.find(i=>i.id===key);if(!i||i.status!=='paid')throw Error('התשלום אינו קיים');if(i.appliedEpoch===s.bank.epoch)s.bank.balanceCents-=i.amountCents;if(i.taxEpoch===(s.settings.reserveEpoch||0))s.settings.taxReserveCents=Math.max(0,s.settings.taxReserveCents-(i.taxAddedCents||0));delete i.taxAddedCents;delete i.taxEpoch;i.status='pending';delete i.paidDate;delete i.appliedEpoch;}
+    else{const r=s.receipts.find(r=>r.key===key);if(!r)throw Error('התשלום אינו קיים');if(!s.expenses.some(e=>e.id===r.expenseId))throw Error('הסדרה נמחקה. הוסף הוצאה חדשה כדי להחזיר אותה לתחזית');if(r.appliedEpoch===s.bank.epoch)s.bank.balanceCents+=r.amountCents;s.receipts=s.receipts.filter(x=>x.key!==key);}
+  }
+  function reconcile(s,amount){s.bank={balanceCents:amount,verified:true,epoch:s.bank.epoch+1,updatedAt:new Date().toISOString()};}
+  function migrateLegacy(raw,now=today()){
+    if(!raw||!('openingBalance' in raw))throw Error('פורמט הגיבוי הישן אינו מוכר');const s=empty();const list=x=>Array.isArray(x)?x:Object.values(x||{});const id=()=>globalThis.crypto.randomUUID().replace(/-/g,'');
+    s.incomes=list(raw.incomes).map(i=>({id:id(),client:String(i.client||'לקוח'),amountCents:cents(i.amount),date:i.date,termDays:Number(i.termDays)||0,expectedDate:dueDate(i.date,Number(i.termDays)||0),manualDate:false,status:i.status==='paid'?'paid':'pending',...(i.status==='paid'?{paidDate:i.paidDate||i.date,appliedEpoch:null}:{})}));
+    s.expenses=list(raw.expenses).map(e=>({id:id(),desc:String(e.desc||'הוצאה')+(e.installmentInfo?` (תשלום ${e.installmentInfo})`:''),amountCents:cents(e.amount),purchaseDate:e.date,chargeDate:e.date,kind:e.recurring?'monthly':'once',count:1,everyMonths:1,endDate:null,category:String(e.category||'אחר / כללי'),scope:'עסקי',method:'העברה',overrides:{}}));
+    // Legacy app treated all expenses through today as already deducted. Keep that history,
+    // but require a fresh actual bank balance; openingBalance is ambiguous and is NOT reused.
+    for(const o of occurrences(s,now))s.receipts.push({key:o.key,expenseId:o.expenseId,index:o.index,title:o.title,amountCents:o.amountCents,paidDate:o.date,chargeDate:o.date,category:o.category,scope:o.scope,appliedEpoch:null});
+    return validate(s);
+  }
+  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,applyPayment,undoPayment,reconcile,migrateLegacy};
+})();
+window.CashFlow=CashFlow;
+</script>
+<script>
+const E=CashFlow;
+const FIREBASE_CONFIG={
+  apiKey:'AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw',
+  authDomain:'money-1d58a.firebaseapp.com',
+  databaseURL:'https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:'money-1d58a',
+  storageBucket:'money-1d58a.firebasestorage.app',
+  messagingSenderId:'1038447297202',
+  appId:'1:1038447297202:web:bd907752a47cb171bc7fab'
+};
+const FIREBASE_RULES={rules:{'.read':false,'.write':false,users:{'$uid':{appData:{'.read':'auth != null && auth.uid === $uid','.write':'auth != null && auth.uid === $uid','.validate':"newData.hasChildren(['schemaVersion', 'revision', 'bank', 'settings']) && newData.child('schemaVersion').val() === 2"}}}}};
+const LOCAL_KEY='photographer-cashflow-v2';
+const CATEGORIES=['ציוד ועדשות','תוכנות ומנויים','נסיעות ודלק','אולפן ולוקיישן','ביטוח ציוד ועסק','שיווק ופרסום','מסים וביטוח לאומי','כיבוד ואוכל לסט','תאורה וגריפ','שכירות וחשבונות','סופר ואוכל','בריאות וספורט','חופשות ופנאי','חיסכון / העברה החוצה','אחר / כללי'];
+const TERMS=[{value:0,label:'מיידי'},{value:30,label:'שוטף +30'},{value:60,label:'שוטף +60'},{value:90,label:'שוטף +90'}];
+const KIND=[{value:'once',label:'חד־פעמית'},{value:'monthly',label:'קבועה / מתחדשת'},{value:'installments',label:'תשלומים'}];
+const TABS=[['dashboard','לוח בקרה'],['income','הכנסות'],['expenses','הוצאות'],['forecast','תחזית'],['settings','הגדרות']];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=c=>new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',minimumFractionDigits:0,maximumFractionDigits:2}).format(c/100);
+const amountInput=c=>(c/100).toFixed(2);
+const dateLabel=s=>new Intl.DateTimeFormat('he-IL',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(E.parseDate(s));
+const uid=()=>crypto.randomUUID().replace(/-/g,'');
+const clone=o=>JSON.parse(JSON.stringify(o));
+const button=(label,action,attrs='',cls='')=>`<button type="button" class="${cls}" data-action="${action}" ${attrs}>${label}</button>`;
+function options(items,current){return items.map(i=>{const v=typeof i==='string'?i:i.value,label=typeof i==='string'?i:i.label;return `<option value="${esc(v)}" ${String(v)===String(current)?'selected':''}>${esc(label)}</option>`;}).join('');}
+function field(label,name,value='',type='text',extra=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${type==='date'?`min="2000-01-01" ${extra.includes('max=')?'':'max="2100-12-31"'}`:''} ${extra}></label>`;}
+function selectField(label,name,items,value){return `<label>${label}<select name="${name}">${options(items,value)}</select></label>`;}
+function positiveInput(label,name,value,extra=''){return field(label,name,value,'number',`step="0.01" min="0.01" max="1000000000" required ${extra}`);}
+const actionsEnd=()=>`<div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">שמירה</button></div>`;
+let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=null,user=null,unsub=null,cloudReady=false,modalBase=0,authObserver=null,authGeneration=0;
+const ui={tab:'dashboard',days:90,incomeRange:'all',incomeStatus:'all',expenseStatus:'pending',expenseScope:'all'};
+const root=document.getElementById('app'),modal=document.getElementById('modal');
+function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
+function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך ההגדרות.'),100);return E.empty();}}
+state=loadLocal();
+async function commit(change,expectedRevision=state.revision){
+  if(busy)throw Error('השמירה הקודמת עדיין מתבצעת');if(expectedRevision!==state.revision)throw Error('המידע השתנה במכשיר אחר. סגור את הטופס ופתח אותו מחדש לפני שמירה');
+  const draft=clone(state);change(draft);draft.revision=expectedRevision+1;E.validate(draft);
+  busy=true;status='שומר…';setBusy(true);
+  try{
+    if(mode==='cloud'){
+      if(!cloudReady||!user)throw Error('החיבור לענן אינו מוכן. התחבר מחדש');
+      if(!navigator.onLine)throw Error('אין אינטרנט. השינוי לא נשמר; אפשר לנסות שוב כשיחזור החיבור');
+      const accountId=user.uid,sessionGeneration=authGeneration;
+      const result=await fb.db.runTransaction(fb.db.ref(fb.database,`users/${accountId}/appData`),current=>{
+        const revision=current?.revision||0;if(revision!==expectedRevision)return;
+        return draft;
+      },{applyLocally:false});
+      if(mode!=='cloud'||user?.uid!==accountId||authGeneration!==sessionGeneration)throw Error('החשבון השתנה בזמן השמירה. התחבר מחדש כדי לראות את הנתונים');
+      if(!result.committed)throw Error('המידע השתנה בזמן השמירה. סגור את הטופס ופתח אותו מחדש');
+      state=E.validate(result.snapshot.val());status='מסונכרן לחשבון';
+    }else if(mode==='local'){
+      const saved=localStorage.getItem(LOCAL_KEY);if(saved&&(JSON.parse(saved).revision||0)!==expectedRevision)throw Error('המידע השתנה בחלונית אחרת. רענן ונסה שוב');
+      localStorage.setItem(LOCAL_KEY,JSON.stringify(draft));state=draft;status='נשמר במכשיר';
+    }else{state=draft;status='תצוגת דוגמה — ללא שמירה';}
     render();
-  }, (err) => {
-    syncStatus = "שגיאת הרשאות ⚠️";
-    render();
+  }catch(e){status=mode==='cloud'?'השינוי לא נשמר בענן':'השינוי לא נשמר';render();throw e;}
+  finally{busy=false;setBusy(false);}
+}
+function setBusy(value){document.querySelectorAll('button').forEach(b=>b.disabled=value);const el=document.getElementById('sync');if(el)el.textContent=status;}
+function openModal(title,content){modalBase=state.revision;modal.innerHTML=`<div class="dialog-head"><h2>${title}</h2>${button('×','close','aria-label="סגור"')}</div>${content}`;if(!modal.open)modal.showModal();setTimeout(()=>modal.querySelector('input:not([type=hidden]),select,button')?.focus(),0);}
+function closeModal(){modal.close();modal.innerHTML='';}
+function stats(f){return `<div class="stats"><div class="stat"><small>💳 יתרה לפי העדכון שלך</small><strong>${state.bank.verified?money(state.bank.balanceCents):'לא הוזנה'}</strong></div><div class="stat"><small>🟠 צפוי להיכנס ב־${f.days} יום</small><strong class="orange">${money(f.incoming)}</strong></div><div class="stat"><small>🔴 ממתין לחיוב עד סוף התקופה</small><strong class="red">${money(f.outgoing)}</strong></div><div class="stat"><small>🛡️ כרית + רזרבה נוכחית למס</small><strong>${money(state.settings.bufferCents+state.settings.taxReserveCents)}</strong></div></div>`;}
+function period(){return `<div class="period" aria-label="תקופת תחזית">${[30,60,90].map(d=>button(`${d} יום`,'period',`data-days="${d}" aria-pressed="${d===ui.days}"`,d===ui.days?'active':'')).join('')}</div>`;}
+function chart(f){
+  const width=860,height=270,left=76,right=25,top=23,bottom=40,plotW=width-left-right,plotH=height-top-bottom;
+  const threshold=state.settings.bufferCents+state.settings.taxReserveCents;
+  const values=[...f.points.flatMap(p=>[p.balance,p.cash]),threshold,0];let low=Math.min(...values),high=Math.max(...values);const span=Math.max(100000,high-low);low-=span*.12;high+=span*.12;
+  const x=date=>left+((E.parseDate(date)-E.parseDate(f.now))/86400000/f.days)*plotW,y=value=>top+(high-value)/(high-low)*plotH;
+  function path(prop){let out=`M${x(f.points[0].date).toFixed(2)},${y(f.points[0][prop]).toFixed(2)}`;for(const p of f.points.slice(1))out+=` H${x(p.date).toFixed(2)} V${y(p[prop]).toFixed(2)}`;return out;}
+  const grids=Array.from({length:5},(_,i)=>{const value=low+(high-low)*i/4;return `<line x1="${left}" x2="${width-right}" y1="${y(value)}" y2="${y(value)}" stroke="#332c25"/><text x="${left-8}" y="${y(value)+4}" text-anchor="end">${esc(money(Math.round(value)))}</text>`;}).join('');
+  const ticks=[0,Math.round(f.days/3),Math.round(f.days*2/3),f.days].map(d=>`<text x="${x(E.addDays(f.now,d))}" y="${height-13}" text-anchor="middle">${d===0?'היום':`+${d}`}</text>`).join('');
+  return `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="גרף יתרה: כולל גבייה מתוכננת, וללא גבייה חדשה. היתרה המינימלית לאחר רזרבה למס היא ${esc(money(f.minAvailable))}">${grids}<line x1="${left}" x2="${width-right}" y1="${y(threshold)}" y2="${y(threshold)}" stroke="#66ca7e" stroke-dasharray="5 5"/><path d="${path('cash')}" fill="none" stroke="#a39b8e" stroke-width="2" stroke-dasharray="6 4"/><path d="${path('balance')}" fill="none" stroke="#ff7024" stroke-width="3"/>${ticks}</svg><div class="chart-key"><span><i class="line-key"></i>כולל הכנסות צפויות</span><span><i class="line-key cash"></i>בלי גבייה חדשה</span><span class="green">קו ירוק: כרית + רזרבה נוכחית למס</span></div>`;
+}
+function dashboard(f){
+  const overdue=f.overdue.reduce((s,i)=>s+i.amountCents,0),overdueExpenses=f.outs.filter(o=>o.date<f.now),bankDate=state.bank.updatedAt?new Intl.DateTimeFormat('he-IL',{dateStyle:'short',timeStyle:'short'}).format(new Date(state.bank.updatedAt)):'טרם עודכן';
+  return `${!state.bank.verified?`<div class="card setup-block"><h2>מתחילים ממה שבאמת יש בבנק</h2><p class="hint">עדכן את היתרה הנוכחית, ואז הוסף הכנסות והוצאות — כולל ההוצאות האישיות שיורדות מהחשבון הזה.</p><div class="flex">${button('עדכון יתרה','bank','','primary')}${button('לראות דוגמה','demo')}</div></div>`:''}
+  <div class="hero">${period()}<div class="hero-label">פנוי לחיסכון מתוך הכסף הקיים</div><div class="value green">${state.bank.verified?money(f.conservativeSavings):'—'}</div><p class="hint">אחרי כל ההוצאות שטרם אושרו עד ${dateLabel(f.end)}, כרית ביטחון ורזרבה נוכחית למס.<br>הסכום הזה אינו מסתמך על לקוחות שעדיין לא שילמו.</p>${state.bank.verified?`<div class="pill">אם כל הגבייה המתוכננת תיכנס בזמן: ${money(f.expectedSavings)}</div>`:''}<div class="hint" style="margin-top:12px">החישוב מסתמך על המידע שהזנת ועל ${f.days} הימים שנבחרו.</div></div>
+  ${stats(f)}
+  ${overdue?`<div class="notice">⚠️ ${f.overdue.length} חשבוניות באיחור, בסך ${money(overdue)}. הן מוצגות בהכנסות, אך אינן נכנסות לתחזית עד שתעדכן תאריך גבייה או תאשר שהכסף התקבל.</div>`:''}
+  ${overdueExpenses.length?`<div class="notice">יש ${overdueExpenses.length} חיובים שמועד הירידה שלהם עבר, בסך ${money(overdueExpenses.reduce((s,o)=>s+o.amountCents,0))}. הם עדיין מופחתים מהתחזית היום. אם כבר ירדו ונכללו ביתרת הבנק — סמן אותם ככאלה בלשונית ההוצאות.</div>`:''}
+  <div class="card"><h2>איך החשבון צפוי להשתנות</h2>${chart(f)}</div>
+  <div class="two"><div class="card"><h2>החישוב שלך</h2><div class="summary-row"><span>יתרה לפי העדכון שלך</span><b>${money(state.bank.balanceCents)}</b></div><div class="summary-row"><span>פחות חיובים ממתינים</span><b class="red">−${money(f.outgoing)}</b></div><div class="summary-row"><span>פחות כרית ביטחון</span><b>−${money(state.settings.bufferCents)}</b></div><div class="summary-row"><span>פחות רזרבה נוכחית למס</span><b>−${money(state.settings.taxReserveCents)}</b></div><div class="summary-row total"><span>פנוי מתוך הכסף הקיים</span><b class="green">${state.bank.verified?money(f.conservativeSavings):'—'}</b></div><p class="hint">יתרת הבנק עודכנה ב־${esc(bankDate)}. ${button('עדכון מהבנק','bank')}</p></div>
+  <div class="card"><h2>💡 תובנות תזרים</h2><div class="insights">${!state.bank.verified?'<p>הזן יתרה מהבנק כדי לקבל תמונת תזרים.</p>':`<p>היתרה הנמוכה ביותר לאחר רזרבה למס, בתרחיש הגבייה המתוכננת: <b class="${f.minAvailable<0?'red':'orange'}">${money(f.minAvailable)}</b>, ב־${dateLabel(f.minDate)}.</p>${f.shortfall?`<p>בתקופה הזאת חסרים ${money(f.shortfall)} כדי לשמור על כרית הביטחון שבחרת. בדוק מתי החיובים יורדים ואילו לקוחות אפשר לקדם לגבייה.</p>`:`<p>בתחזית המוזנת נשמרת כרית הביטחון. לפני העברה לחיסכון, ודא שכל חיובי האשראי וההוצאות הקבועות הוזנו.</p>`}<p>ללא גבייה חדשה, היתרה בסוף התקופה תהיה ${money(f.cashEnd)}.</p>`}<p>חיסכון שהועבר לחשבון אחר צריך להירשם כהוצאה מסוג ״חיסכון / העברה החוצה״ או להתעדכן ביתרת הבנק.</p></div></div></div>`;
+}
+function rangeControl(value,action){return `<select class="filter" data-change="${action}" aria-label="סינון תקופה">${options([{value:'all',label:'כל הזמן'},{value:'month',label:'החודש'},{value:'year',label:'השנה'}],value)}</select>`;}
+function inRange(date,range){const t=E.today();return range==='all'||date.startsWith(t.slice(0,range==='year'?4:7));}
+function incomePage(){
+  const list=state.incomes.filter(i=>inRange(i.status==='paid'?i.paidDate:i.date,ui.incomeRange)&&(ui.incomeStatus==='all'||i.status===ui.incomeStatus)).sort((a,b)=>(a.status==='paid'?a.paidDate:a.expectedDate).localeCompare(b.status==='paid'?b.paidDate:b.expectedDate));
+  const paid=list.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amountCents,0),pending=list.filter(i=>i.status==='pending').reduce((s,i)=>s+i.amountCents,0);
+  return `<div class="card"><div class="card-head"><h2>עבודות וחשבוניות</h2>${button('+ הכנסה','new-income','','primary')}</div><p class="hint">תנאי ״מיידי״ אינם מסמנים שהכסף התקבל. תשלום מאושר רק לאחר שאתה מסמן אותו.</p><div class="filter-row">${rangeControl(ui.incomeRange,'income-range')}<select class="filter" data-change="income-status" aria-label="סטטוס הכנסה">${options([{value:'all',label:'הכול'},{value:'pending',label:'ממתין לתשלום'},{value:'paid',label:'שולם'}],ui.incomeStatus)}</select><span class="hint">התקבל: <b class="green">${money(paid)}</b> · ממתין: <b class="orange">${money(pending)}</b></span></div><div class="list">${list.length?list.map(i=>`<div class="row"><div class="row-main"><div class="row-title">${esc(i.client)}</div><div class="row-sub">חשבונית: ${dateLabel(i.date)} · ${esc(TERMS.find(t=>t.value===i.termDays)?.label)}<br>${i.status==='paid'?`<span class="green">שולם: ${dateLabel(i.paidDate)}</span>`:`<span class="${i.expectedDate<E.today()?'red':'orange'}">${i.expectedDate<E.today()?'באיחור — מועד':'צפוי'}: ${dateLabel(i.expectedDate)}</span>`}</div></div><div class="amount ${i.status==='paid'?'green':'orange'}">${money(i.amountCents)}</div><div class="actions">${i.status==='pending'?button('✓ התקבל','pay-income',`data-id="${i.id}"`):button('ביטול סימון','undo-income',`data-id="${i.id}"`)}${button('עריכה','edit-income',`data-id="${i.id}"`)}${button('מחיקה','delete-income',`data-id="${i.id}"`,'danger')}</div></div>`).join(''):'<div class="empty">אין הכנסות בסינון שנבחר.</div>'}</div></div>`;
+}
+function expensePage(){
+  const end=E.addDays(E.today(),366),all=E.occurrences(state,end),list=all.filter(o=>ui.expenseScope==='all'||o.scope===ui.expenseScope),history=state.receipts.filter(r=>ui.expenseScope==='all'||r.scope===ui.expenseScope).sort((a,b)=>b.paidDate.localeCompare(a.paidDate));
+  return `<div class="card"><div class="card-head"><h2>חיובים והוצאות</h2>${button('+ הוצאה','new-expense','','primary')}</div><p class="hint">רכישה ותאריך ירידה מהבנק הם שני תאריכים נפרדים. באשראי הזן את החיוב בפועל. כדי למנוע כפילות, בחר אם להזין חיוב אשראי כולל או את הרכישות המרכיבות אותו.</p><div class="filter-row"><select class="filter" data-change="expense-status" aria-label="סינון הוצאות">${options([{value:'pending',label:'ממתין לחיוב — שנה קדימה'},{value:'paid',label:'חיובים שאושרו'},{value:'series',label:'ניהול סדרות והוצאות'}],ui.expenseStatus)}</select><select class="filter" data-change="expense-scope" aria-label="תחום הוצאה">${options([{value:'all',label:'עסקי ואישי'},{value:'עסקי',label:'עסקי'},{value:'אישי',label:'אישי'}],ui.expenseScope)}</select></div><div class="list">${ui.expenseStatus==='pending'?(list.length?list.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)} · ${esc(o.category)} · ${esc(o.scope)}<br>${esc(o.method)} ${o.date<E.today()?'<span class="red">· מועד החיוב עבר, טרם אושר</span>':''}</div></div><div class="amount red">−${money(o.amountCents)}</div><div class="actions">${button('✓ ירד מהבנק','pay-expense',`data-id="${o.key}"`)}${button('עריכת חיוב','edit-occurrence',`data-id="${o.key}"`)}${button('ביטול חיוב','cancel-occurrence',`data-id="${o.key}"`,'danger')}</div></div>`).join(''):'<div class="empty">אין חיובים ממתינים לשנה הקרובה.</div>'):ui.expenseStatus==='paid'?(history.length?history.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">ירד: ${dateLabel(r.paidDate)} · ${esc(r.category||'כללי')} · ${esc(r.scope||'עסקי')}</div></div><div class="amount red">−${money(r.amountCents)}</div><div class="actions">${button('ביטול סימון','undo-expense',`data-id="${r.key}"`)}</div></div>`).join(''):'<div class="empty">אין חיובים שאושרו.</div>'):renderSeries()}</div></div>`;
+}
+function renderSeries(){const list=state.expenses.filter(e=>ui.expenseScope==='all'||e.scope===ui.expenseScope);return list.length?list.map(e=>`<div class="row"><div class="row-main"><div class="row-title">${esc(e.desc)}</div><div class="row-sub">${esc(KIND.find(k=>k.value===e.kind)?.label)} · חיוב ראשון: ${dateLabel(e.chargeDate)} · ${esc(e.scope)}${e.kind==='installments'?` · ${e.count} תשלומים`:''}${e.endDate?` · מסתיים: ${dateLabel(e.endDate)}`:''}<br>${e.kind==='installments'?'סכום הרכישה הכולל':e.kind==='monthly'?'סכום בכל חיוב':'סכום החיוב'}: ${money(e.amountCents)}</div></div><div class="actions">${button('עריכת סדרה','edit-expense',`data-id="${e.id}"`)}${e.kind==='monthly'?button('סיום סדרה','stop-series',`data-id="${e.id}"`):''}${button('מחיקת סדרה','delete-expense',`data-id="${e.id}"`,'danger')}</div></div>`).join(''):'<div class="empty">עדיין אין הוצאות. הוסף חד־פעמיות, תשלומים או הוצאות קבועות.</div>';}
+function forecastPage(f){return `<div class="card">${period()}<h2>תחזית עד ${dateLabel(f.end)}</h2>${chart(f)}<div class="summary-row total"><span>יתרה בסוף התקופה לפני הפרדה למס ולכרית</span><b class="${f.balance<0?'red':'green'}">${money(f.balance)}</b></div><p class="hint">רזרבה למס בסוף התחזית: ${money(f.reserveEnd)}. תחזית הגבייה מניחה שהלקוחות ישלמו במועד. חיובים שלא אושרו ומועדיהם עברו מופיעים כהוצאה היום.</p></div><div class="card"><h2>מה נכנס ומה יוצא</h2><div class="table-wrap"><table><thead><tr><th>תאריך</th><th>תיאור</th><th>נכנס</th><th>יוצא</th><th>יתרה בבנק</th><th>אחרי רזרבה למס</th></tr></thead><tbody><tr><td>היום</td><td>יתרה לפי העדכון שלך</td><td>—</td><td>—</td><td>${money(state.bank.balanceCents)}</td><td>${money(state.bank.balanceCents-state.settings.taxReserveCents)}</td></tr>${f.timeline.map(e=>`<tr><td>${dateLabel(e.date)}${e.originalDate&&e.originalDate<f.now?' *':''}</td><td>${esc(e.title)}</td><td class="green">${e.type==='income'?money(e.amountCents):'—'}</td><td class="red">${e.type==='expense'?money(e.amountCents):'—'}</td><td class="${e.balance<0?'red':''}">${money(e.balance)}</td><td class="${e.available<state.settings.bufferCents?'orange':''}">${money(e.available)}</td></tr>`).join('')}</tbody></table></div>${!f.timeline.length?'<div class="empty">אין תנועות צפויות בתקופה שנבחרה.</div>':''}<p class="hint">* חיוב שמועדו עבר ועדיין לא אושר. באותו יום ההוצאות מחושבות לפני ההכנסות, כדי להציג גם מחסור אפשרי במהלך היום.</p></div>`;}
+function settingsPage(){
+  const s=state.settings,goalProgress=s.goalCents?Math.min(100,Math.max(0,E.forecast(state,ui.days).conservativeSavings/s.goalCents*100)):0;
+  return `<div class="two"><div class="card"><h2>הבנק והכסף ששומרים בצד</h2><div class="summary-row"><span>יתרה לפי העדכון שלך</span><b>${state.bank.verified?money(state.bank.balanceCents):'טרם הוזנה'}</b></div><div class="summary-row"><span>כרית ביטחון</span><b>${money(s.bufferCents)}</b></div><div class="summary-row"><span>רזרבה נוכחית למס</span><b>${money(s.taxReserveCents)}</b></div><div class="summary-row"><span>הפרשה מהכנסות חדשות</span><b>${s.taxBasisPoints/100}%</b></div><div class="summary-row"><span>יום חיוב אשראי ברירת מחדל</span><b>${s.creditDay}</b></div><div class="flex" style="margin-top:15px">${button('עדכון יתרה','bank','','primary')}${button('עריכת הגדרות','preferences')}</div><p class="hint">רזרבה למס היא כסף בתוך החשבון הזה. אל תכלול כסף שכבר נמצא בחשבון מס נפרד. תשלומי מס שהזנת כהוצאות כבר מופחתים מהתזרים; התאם את הרזרבה כך שלא תשריין את אותו כסף פעמיים. האחוז הוא בחירה שלך ואינו חישוב של חבות מס.</p></div>
+  <div class="card"><h2>יעד חיסכון לתקופה</h2><div class="summary-row"><span>היעד שבחרת</span><b>${money(s.goalCents)}</b></div><p class="hint">מראה כמה מהיעד ניתן לכסות כרגע מתוך הכסף הפנוי ב־${ui.days} יום. אינו סופר חיסכון שכבר הועבר לחשבון אחר.</p><div class="progress" role="progressbar" aria-valuenow="${Math.round(goalProgress)}" aria-valuemin="0" aria-valuemax="100" aria-label="כסף פנוי ביחס ליעד"><span style="width:${goalProgress}%"></span></div><p class="hint">${Math.round(goalProgress)}% מהיעד זמין לפי הנתונים.</p>${button('עריכת יעד','preferences')}</div></div>
+  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${mode==='cloud'?button('ייבוא המידע מהמכשיר','import-local'):''}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">הייבוא מחליף את הנתונים הפעילים. הורד גיבוי לפני ייבוא. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
+  <div class="card"><h2>חיבור לחשבון וסנכרון</h2>${mode==='cloud'?`<p class="hint">מחובר: ${esc(user?.email||'')} · המידע נשמר בחשבון שלך.</p><div class="flex">${button('התנתקות','logout')}${button('הורדת המידע מהאתר הישן','legacy-cloud')}</div>`:`<p class="hint">${mode==='demo'?'זו תצוגת דוגמה. הנתונים בה אינם נשמרים.':'המידע נשמר כרגע בדפדפן הזה. מומלץ להוריד גיבוי.'} אפשר להתחבר באמצעות אימייל וסיסמה לאחר הפעלת Firebase Authentication.</p>${button('התחברות / יצירת חשבון','login','','primary')}`}
+  <details style="margin-top:18px"><summary>הוראות חיבור Firebase והעברת המידע הישן</summary><div class="hint"><ol><li>בפרויקט Firebase שלך, פתח Authentication → Sign-in method והפעל Email/Password.</li><li>ב־Authentication → Settings → Authorized domains הוסף את הדומיין של האתר. בעת בדיקה מקומית אפשר להוסיף localhost.</li><li>לפני שינוי ההרשאות, הורד JSON של הנתונים הישנים דרך Realtime Database → ⋮ → Export JSON. המידע הישן נמצא תחת appData. שמור גיבוי במקום בטוח.</li><li>ב־Realtime Database → Rules החלף את הכללים בכללים שלמטה ולחץ Publish. הנתיב הישן appData ייחסם; הנתונים החדשים נשמרים בנפרד לכל משתמש.</li><li>פתח את האתר דרך HTTP/HTTPS, התחבר או צור חשבון, וייבא את הגיבוי דרך ההגדרות. לאחר הייבוא עדכן את היתרה הנוכחית בבנק ובדוק את תאריכי הירידה של האשראי.</li></ol><p>הגדרת Firebase שבקוד היא מהפרויקט המקורי שלך. אם החלפת פרויקט, עדכן את FIREBASE_CONFIG.</p><pre dir="ltr" style="overflow:auto;background:var(--input);padding:15px;border-radius:12px;font-size:12px;text-align:left">${esc(JSON.stringify(FIREBASE_RULES,null,2))}</pre>${button('הורדת כללי ההרשאות','download-rules')}<p><a href="https://firebase.google.com/docs/auth/web/password-auth" target="_blank" rel="noopener">מדריך Firebase להתחברות באימייל וסיסמה</a></p><p>אם הורדת נתונים מתוך הנתיב הישן לפני חסימתו, אפשר להשתמש גם בכפתור ״הורדת המידע מהאתר הישן״. הפעולה קוראת בלבד; היא אינה מוחקת או משנה את המידע הישן.</p></div></details></div>`;
+}
+function render(){const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):mode==='cloud'?button('החשבון שלי','account'):button('התחברות','login')}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
+</script>
+<script>
+function incomeForm(id){
+  const i=state.incomes.find(x=>x.id===id)||{id:'',client:'',amountCents:0,date:E.today(),termDays:30,expectedDate:E.dueDate(E.today(),30),manualDate:false,status:'pending'};
+  openModal(i.id?'עריכת הכנסה':'הכנסה חדשה',`<form class="form" data-form="income"><input type="hidden" name="id" value="${i.id}">${field('לקוח / תיאור העבודה','client',i.client,'text','required maxlength="500"')}${positiveInput('סכום שיתקבל בבנק (₪)','amount',i.amountCents?amountInput(i.amountCents):'',i.status==='paid'?'readonly':'')}<div class="fields">${field('תאריך הוצאת החשבונית','date',i.date,'date','required')}${selectField('תנאי תשלום','termDays',TERMS,i.termDays)}</div><label class="check"><input type="checkbox" name="manualDate" ${i.manualDate?'checked':''}>תאריך גבייה ידני</label>${field('תאריך צפוי לקבלת הכסף','expectedDate',i.expectedDate,'date',`required ${i.manualDate?'':'readonly'}`)}<p class="hint">שוטף +30/+60 מחושב כסוף חודש החשבונית ועוד מספר הימים המדויק. אפשר לעדכן ידנית לפי הסיכום עם הלקוח. גם תנאי מיידי נשמרים כממתינים לתשלום.${i.status==='paid'?'<br>לשינוי סכום ששולם, בטל קודם את סימון התשלום.':''}</p>${actionsEnd()}</form>`);
+}
+function expenseForm(id){
+  const e=state.expenses.find(e=>e.id===id)||{id:'',desc:'',amountCents:0,purchaseDate:E.today(),chargeDate:E.creditDate(E.today(),state.settings.creditDay),kind:'once',count:3,everyMonths:1,endDate:null,category:CATEGORIES[0],scope:'עסקי',method:'אשראי',overrides:{}};
+  const paid=state.receipts.some(r=>r.expenseId===e.id),financialLock=paid&&e.kind!=='monthly';
+  openModal(e.id?'עריכת הוצאה / סדרה':'הוצאה חדשה',`<form class="form" data-form="expense"><input type="hidden" name="id" value="${e.id}">${field('תיאור ההוצאה','desc',e.desc,'text','required maxlength="500"')}${positiveInput('סכום (בתשלומים: כל הרכישה; בקבועה: בכל חיוב)','amount',e.amountCents?amountInput(e.amountCents):'',financialLock?'readonly':'')}<div class="fields">${field('תאריך הרכישה','purchaseDate',e.purchaseDate,'date','required')}${field('תאריך ירידה ראשון מהבנק','chargeDate',e.chargeDate,'date',`required ${paid?'readonly':''}`)}</div><div class="fields">${selectField('אמצעי תשלום','method',['אשראי','העברה','מזומן','הוראת קבע'],e.method)}${selectField('סוג הוצאה','kind',KIND,e.kind)}</div><div class="fields">${field('מספר תשלומים (רק ברכישה בתשלומים)','count',e.count,'number',`min="2" max="120" step="1" ${paid?'readonly':''}`)}${selectField('תדירות (רק בהוצאה קבועה)','everyMonths',[{value:1,label:'כל חודש'},{value:2,label:'כל חודשיים'},{value:3,label:'כל 3 חודשים'},{value:6,label:'כל חצי שנה'},{value:12,label:'כל שנה'}],e.everyMonths)}</div><div class="fields">${selectField('קטגוריה','category',CATEGORIES.includes(e.category)?CATEGORIES:[e.category,...CATEGORIES],e.category)}${selectField('תחום','scope',['עסקי','אישי'],e.scope)}</div>${field('תאריך סיום לקבועה (אפשר להשאיר ריק)','endDate',e.endDate||'','date')}<div class="flex">${button('חישוב לפי יום חיוב אשראי','credit-date')}</div><p class="hint">יום ברירת המחדל הוא ${state.settings.creditDay}; בדוק את התאריך מול פירוט האשראי. אפשר לערוך חיוב בודד בלשונית ״ממתין לחיוב״. ${paid?'חיובים שאושרו נשמרים כפי שהיו. כשיש חיובים שאושרו, אי אפשר לשנות את תחילת הסדרה, סוגה או תדירותה. שינוי סכום בהוצאה קבועה חל על חיובים שלא אושרו, מלבד חריגים שכבר ערכת.':''}</p>${actionsEnd()}</form>`);
+  if(paid){modal.querySelector('[name=kind]').disabled=true;modal.querySelector('[name=everyMonths]').disabled=true;}
+}
+function occurrenceForm(key){const o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===key);if(!o)throw Error('החיוב אינו קיים');openModal('עריכת החיוב הזה בלבד',`<form class="form" data-form="occurrence"><input type="hidden" name="key" value="${key}"><div class="notice">${esc(o.title)} · ${esc(o.label)}. שאר הסדרה נשארת כפי שהיא.</div>${positiveInput('סכום החיוב (₪)','amount',amountInput(o.amountCents))}${field('תאריך ירידה מהבנק','chargeDate',o.date,'date','required')}${actionsEnd()}</form>`);}
+function bankForm(){openModal('עדכון היתרה הנוכחית בבנק',`<form class="form" data-form="bank">${field('כמה מופיע עכשיו בחשבון? (אפשר גם מינוס)','balance',state.bank.verified?amountInput(state.bank.balanceCents):'','number','step="0.01" required min="-1000000000" max="1000000000"')}<p class="notice">זו היתרה הנוכחית שמופיעה בבנק, אחרי התנועות שכבר בוצעו. לא נוסיף שוב הכנסות ששולמו ולא נוריד שוב הוצאות שאושרו. חיובים שטרם אושרו עדיין נמצאים בתחזית — סמן בנפרד אם כבר ירדו.</p>${actionsEnd()}</form>`);}
+function preferenceForm(){const s=state.settings;openModal('כרית, רזרבה ויעד חיסכון',`<form class="form" data-form="preferences">${field('כרית ביטחון שרוצים להשאיר (₪)','buffer',amountInput(s.bufferCents),'number','min="0" step="0.01" required')}${field('כסף בחשבון שמיועד למס (₪)','reserve',amountInput(s.taxReserveCents),'number','min="0" step="0.01" required')}${field('אחוז שרוצים להפריש מהכנסה חדשה (%)','taxPercent',s.taxBasisPoints/100,'number','min="0" max="100" step="0.01" required')}<p class="hint">בתחזית, האחוז מפחית את הסכום הפנוי מהכנסות צפויות. כשמסמנים שהכנסה התקבלה, אפשר לבחור כמה להוסיף לרזרבה בפועל. הזן שיעור שבחרת בהתאם לניהול העסק שלך.</p><div class="fields">${field('יום חיוב אשראי','creditDay',s.creditDay,'number','min="1" max="31" step="1" required')}${field('יעד חיסכון לתקופה (₪)','goal',amountInput(s.goalCents),'number','min="0" step="0.01" required')}</div>${actionsEnd()}</form>`);}
+function paymentForm(type,id){let title,amount;if(type==='income'){const i=state.incomes.find(i=>i.id===id);if(!i||i.status==='paid')throw Error('ההכנסה אינה ממתינה לתשלום');title=i.client;amount=i.amountCents;}else{const o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===id);if(!o)throw Error('החיוב אינו קיים');title=o.title;amount=o.amountCents;}
+  openModal(type==='income'?'אישור קבלת כסף':'אישור חיוב מהבנק',`<form class="form" data-form="payment"><input type="hidden" name="type" value="${type}"><input type="hidden" name="id" value="${id}"><div class="notice">${esc(title)} · ${money(amount)}</div>${field(type==='income'?'מתי התקבל הכסף?':'מתי הכסף ירד?','paidDate',E.today(),'date',`required max="${E.today()}"`)}<label class="check"><input type="checkbox" name="included" checked>התשלום כבר כלול ביתרת הבנק שהזנתי</label><p class="hint">אם מסומן: נעדכן רק את סטטוס התשלום. אם לא מסומן: ${type==='income'?'נוסיף':'נוריד'} ${money(amount)} ${type==='income'?'ליתרה':'מהיתרה'}. בחר לפי היתרה שמוצגת באתר, כדי להימנע מספירה כפולה.</p>${type==='income'?field('כמה מהתשלום להוסיף לרזרבה למס? (₪)','taxAdded',amountInput(Math.round(amount*state.settings.taxBasisPoints/10000)),'number',`min="0" max="${amountInput(amount)}" step="0.01" required`)+`<p class="hint">אם הכסף למס כבר נכלל ברזרבה שהזנת, רשום כאן 0.</p>`:''}${actionsEnd()}</form>`);
+}
+function stopSeries(id){const e=state.expenses.find(e=>e.id===id);if(!e)throw Error('הסדרה אינה קיימת');openModal('סיום הוצאה קבועה',`<form class="form" data-form="stop"><input type="hidden" name="id" value="${id}"><p class="hint">${esc(e.desc)}: חיובים שמועד הבסיס שלהם אחרי תאריך הסיום לא ייכללו בתחזית. חיובים שאושרו נשמרים בהיסטוריה.</p>${field('תאריך החיוב האחרון / סיום ההתחייבות','endDate',e.endDate||E.today(),'date','required')}${actionsEnd()}</form>`);}
+function nonnegative(v){return String(v).trim()==='0'||/^0\.0{1,2}$/.test(String(v))?0:E.cents(v);}
+function download(name,content,type='application/json'){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+function csvCell(v){let s=String(v??'');if(/^[\s]*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}
+function exportCSV(){const rows=[['סוג','תיאור','תאריך רכישה / חשבונית','מועד תזרים','סכום ₪','סטטוס','תחום / הערה']];for(const i of state.incomes)rows.push(['הכנסה',i.client,i.date,i.status==='paid'?i.paidDate:i.expectedDate,amountInput(i.amountCents),i.status==='paid'?'שולם':'ממתין','']);for(const o of E.occurrences(state,E.addDays(E.today(),366)))rows.push(['הוצאה',o.title,state.expenses.find(e=>e.id===o.expenseId)?.purchaseDate,o.date,amountInput(o.amountCents),'ממתין לחיוב',o.scope+' · '+o.label]);for(const r of state.receipts)rows.push(['הוצאה',r.title,'',r.paidDate,amountInput(r.amountCents),'ירד',r.scope||'']);download(`cashflow-${E.today()}.csv`,'\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
+function exportSource(){const copy=document.documentElement.cloneNode(true);copy.querySelector('#app').textContent='';copy.querySelector('#modal').textContent='';copy.querySelector('#modal').removeAttribute('open');copy.querySelector('#toast').textContent='';download('index.html','<!DOCTYPE html>\n'+copy.outerHTML,'text/html;charset=utf-8');}
+async function importData(raw){let source=raw.appData||raw,legacy=source.schemaVersion!==2;const imported=legacy?E.migrateLegacy(source):E.validate(source);if(!confirm(`הייבוא יחליף את המידע הפעיל ${mode==='cloud'?'בחשבון שלך':'בדפדפן הזה'}. הורדת גיבוי?${legacy?'\nבייבוא מהגרסה הישנה תידרש יתרת בנק חדשה. הוצאות עבר ייחשבו ככאלה שכבר ירדו; בדוק במיוחד חיובי אשראי.':''}`))return;await commit(draft=>{const revision=draft.revision;Object.keys(draft).forEach(k=>delete draft[k]);Object.assign(draft,imported,{revision});});toast(legacy?'המידע הועבר. כעת עדכן יתרה מהבנק ובדוק חיובי אשראי.':'הגיבוי יובא בהצלחה');if(legacy)bankForm();}
+function pickImport(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.addEventListener('change',async()=>{const file=input.files[0];if(!file)return;try{if(file.size>10000000)throw Error('הגיבוי גדול מ־10MB');await importData(JSON.parse(await file.text()));}catch(e){toast('הייבוא נכשל: '+e.message);}});input.click();}
+function demo(){if(mode==='cloud')throw Error('כדי לראות דוגמה, התנתק תחילה');mode='demo';state=E.empty();E.reconcile(state,1250000);state.settings.bufferCents=300000;state.settings.taxReserveCents=100000;state.settings.taxBasisPoints=1500;state.settings.goalCents=500000;const t=E.today();state.incomes=[{id:'demo_income_1',client:'צילום פרסומת — לקוח א׳',amountCents:800000,date:t,termDays:30,manualDate:true,expectedDate:E.addDays(t,25),status:'pending'},{id:'demo_income_2',client:'צילום מוצר — לקוח ב׳',amountCents:350000,date:E.addDays(t,-40),termDays:30,manualDate:true,expectedDate:E.addDays(t,-4),status:'pending'}];state.expenses=[{id:'demo_rent',desc:'העברה לחשבון המשותף',amountCents:430000,purchaseDate:t,chargeDate:E.addDays(t,8),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'שכירות וחשבונות',scope:'אישי',method:'העברה',overrides:{}},{id:'demo_adobe',desc:'תוכנות עריכה',amountCents:23000,purchaseDate:t,chargeDate:E.addDays(t,12),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'תוכנות ומנויים',scope:'עסקי',method:'אשראי',overrides:{}},{id:'demo_camera',desc:'עדשה חדשה',amountCents:600001,purchaseDate:t,chargeDate:E.addDays(t,18),kind:'installments',everyMonths:1,count:6,endDate:null,category:'ציוד ועדשות',scope:'עסקי',method:'אשראי',overrides:{}}];ui.tab='dashboard';status='תצוגת דוגמה — ללא שמירה';render();}
+async function ensureFirebase(){
+  if(fb)return fb;
+  const version='10.8.0',base=`https://www.gstatic.com/firebasejs/${version}/`;
+  const [app,auth,db]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-database.js')]);
+  const firebaseApp=app.initializeApp(FIREBASE_CONFIG);fb={app:firebaseApp,auth,db,authentication:auth.getAuth(firebaseApp),database:db.getDatabase(firebaseApp)};
+  authObserver=auth.onAuthStateChanged(fb.authentication,async next=>{
+    const generation=++authGeneration;if(unsub){unsub();unsub=null;}user=next;cloudReady=false;
+    if(!next){try{localStorage.removeItem('cashflow-restore-session');}catch(e){}if(mode==='cloud'){mode='local';state=loadLocal();status='נשמר במכשיר';render();}return;}
+    try{localStorage.setItem('cashflow-restore-session','1');}catch(e){}mode='cloud';state=E.empty();status='טוען מידע מהחשבון…';render();
+    if(modal.querySelector('[data-form=auth]'))closeModal();
+    const ref=fb.db.ref(fb.database,`users/${next.uid}/appData`);
+    unsub=fb.db.onValue(ref,snapshot=>{
+      if(generation!==authGeneration)return;
+      try{state=snapshot.exists()?E.validate(snapshot.val()):E.empty();cloudReady=true;status='מסונכרן לחשבון';render();}
+      catch(e){cloudReady=false;status='המידע בענן לא נטען';toast('לא ניתן לקרוא את המידע מהחשבון: '+e.message);render();}
+    },error=>{if(generation!==authGeneration)return;cloudReady=false;status='לא ניתן לקרוא מהענן';toast('בדוק שהפעלת את כללי ההרשאות בהגדרות. הנתונים המקומיים נשארו במכשיר.');render();});
   });
-
-  async function saveToCloud() {
-    try {
-      syncStatus = "שומר...";
-      render();
-      await set(dbRef, state);
-      syncStatus = "סנכרון פעיל ☁️";
-    } catch (e) {
-      syncStatus = "שגיאה בשמירה ❌";
-    }
-    render();
+  return fb;
+}
+function authMessage(e){const map={'auth/operation-not-allowed':'צריך להפעיל Email/Password ב־Firebase Authentication','auth/invalid-credential':'אימייל או סיסמה לא נכונים','auth/wrong-password':'אימייל או סיסמה לא נכונים','auth/user-not-found':'אימייל או סיסמה לא נכונים','auth/email-already-in-use':'האימייל כבר רשום. בחר התחברות','auth/invalid-email':'כתובת האימייל אינה תקינה','auth/weak-password':'בחר סיסמה של לפחות 6 תווים','auth/too-many-requests':'בוצעו ניסיונות רבים. נסה שוב מאוחר יותר','auth/network-request-failed':'לא ניתן להתחבר. בדוק את האינטרנט','auth/unauthorized-domain':'הוסף את דומיין האתר ל־Authorized domains ב־Firebase'};return map[e.code]||'לא ניתן להתחבר. בדוק את הגדרות Firebase והאינטרנט';}
+function loginForm(){openModal('התחברות לחשבון',`<form class="form" data-form="auth">${field('אימייל','email','','email','required autocomplete="email" dir="ltr"')}${field('סיסמה','password','','password','required minlength="6" autocomplete="current-password"')}${selectField('פעולה','operation',[{value:'login',label:'התחברות'},{value:'signup',label:'יצירת חשבון חדש'}],'login')}<p class="hint">אם זו הפעם הראשונה, בחר ״יצירת חשבון חדש״. המידע המקומי אינו מועבר אוטומטית; לאחר התחברות אפשר לייבא אותו דרך ההגדרות.</p><div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">המשך</button></div>${button('שכחתי סיסמה','reset-password')}</form>`);}
+async function legacyDownload(){if(!fb||!user)throw Error('התחבר קודם לחשבון');if(!confirm('לקרוא ולהוריד גיבוי של appData מהאתר הישן? הפעולה אינה משנה את המידע.'))return;const snap=await fb.db.get(fb.db.ref(fb.database,'appData'));if(!snap.exists())throw Error('אין מידע בנתיב הישן. אפשר לייצא JSON ישירות מ־Firebase Console');download(`cashflow-legacy-${E.today()}.json`,JSON.stringify(snap.val(),null,2));toast('הגיבוי הישן הורד. אפשר לייבא אותו דרך ההגדרות');}
+async function clickAction(btn){
+  const a=btn.dataset.action,id=btn.dataset.id;
+  if(a==='tab'){ui.tab=btn.dataset.tab;render();}
+  else if(a==='period'){ui.days=Number(btn.dataset.days);render();}
+  else if(a==='close')closeModal();
+  else if(a==='new-income')incomeForm();else if(a==='edit-income')incomeForm(id);
+  else if(a==='new-expense')expenseForm();else if(a==='edit-expense')expenseForm(id);
+  else if(a==='edit-occurrence')occurrenceForm(id);
+  else if(a==='bank')bankForm();else if(a==='preferences')preferenceForm();
+  else if(a==='pay-income')paymentForm('income',id);else if(a==='pay-expense')paymentForm('expense',id);
+  else if(a==='undo-income'||a==='undo-expense'){
+    const type=a==='undo-income'?'income':'expense',item=type==='income'?state.incomes.find(i=>i.id===id):state.receipts.find(r=>r.key===id),delta=item?.appliedEpoch===state.bank.epoch;
+    if(confirm(`לבטל את סימון התשלום? ${delta?'השינוי שבוצע ליתרת הבנק בסימון זה יבוטל גם הוא.':'יתרת הבנק לא תשתנה, כי התשלום כבר נכלל בעדכון יתרה או סומן ככלול.'}`))await commit(s=>E.undoPayment(s,type,id));
+  }else if(a==='delete-income'){if(confirm('למחוק את רישום ההכנסה? יתרת הבנק והרזרבה למס לא ישתנו.'))await commit(s=>s.incomes=s.incomes.filter(i=>i.id!==id));}
+  else if(a==='delete-expense'){if(confirm('למחוק את כל הסדרה ולבטל את החיובים שטרם אושרו? חיובים שאושרו נשמרים בהיסטוריה. יתרת הבנק לא תשתנה.'))await commit(s=>s.expenses=s.expenses.filter(e=>e.id!==id));}
+  else if(a==='cancel-occurrence'){const o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===id);if(!o)throw Error('החיוב אינו קיים');if(confirm('לבטל רק את החיוב הזה מהתחזית? ביטול ברישום אינו מבטל התחייבות מול הספק.'))await commit(s=>{const e=s.expenses.find(e=>e.id===o.expenseId);e.overrides[String(o.index)]={...(e.overrides[String(o.index)]||{}),canceled:true};});}
+  else if(a==='stop-series')stopSeries(id);
+  else if(a==='credit-date'){const f=modal.querySelector('form');if(f?.dataset.form!=='expense')return;if(f.elements.chargeDate.readOnly)throw Error('אי אפשר להזיז סדרה עם חיובים שאושרו');f.elements.chargeDate.value=E.creditDate(f.elements.purchaseDate.value,state.settings.creditDay);}
+  else if(a==='export-json')download(`cashflow-${E.today()}.json`,JSON.stringify(state,null,2));else if(a==='export-csv')exportCSV();else if(a==='download-source')exportSource();else if(a==='download-rules')download('database.rules.json',JSON.stringify(FIREBASE_RULES,null,2));
+  else if(a==='import-json')pickImport();else if(a==='import-local'){const raw=localStorage.getItem(LOCAL_KEY);if(!raw)throw Error('אין מידע מקומי להעברה');await importData(JSON.parse(raw));}
+  else if(a==='demo')demo();else if(a==='exit-demo'){mode='local';state=loadLocal();status='נשמר במכשיר';render();}
+  else if(a==='account'){ui.tab='settings';render();}else if(a==='login')loginForm();
+  else if(a==='logout'){if(confirm('להתנתק? המידע בחשבון יישאר שמור בענן.')){await fb.auth.signOut(fb.authentication);closeModal();}}
+  else if(a==='legacy-cloud'){try{await legacyDownload();}catch(e){throw Error('לא ניתן לקרוא מהנתיב הישן. אחרי חסימת appData יש לייצא דרך Firebase Console.');}}
+  else if(a==='reset-password'){const email=modal.querySelector('[name=email]')?.value.trim();if(!email||!modal.querySelector('[name=email]').checkValidity())throw Error('הזן קודם את האימייל שלך');if(!confirm(`לשלוח קישור לאיפוס סיסמה אל ${email}?`))return;try{const f=await ensureFirebase();await f.auth.sendPasswordResetEmail(f.authentication,email);toast('אם האימייל רשום, יישלח אליו קישור לאיפוס סיסמה');}catch(e){throw Error(authMessage(e));}}
+}
+async function submitForm(form){
+  const data=new FormData(form),get=n=>String(data.get(n)||'').trim(),type=form.dataset.form;
+  if(type==='auth'){
+    const operation=get('operation');form.querySelectorAll('button').forEach(b=>b.disabled=true);
+    try{const f=await ensureFirebase();if(operation==='signup')await f.auth.createUserWithEmailAndPassword(f.authentication,get('email'),get('password'));else await f.auth.signInWithEmailAndPassword(f.authentication,get('email'),get('password'));toast('ההתחברות הצליחה');}catch(e){throw Error(authMessage(e));}finally{form.querySelectorAll('button').forEach(b=>b.disabled=false);}return;
   }
-
-  function calc() {
-    const today = todayStr();
-    const thisMonth = monthKey(today);
-    
-    const paid = (state.incomes || []).filter((i) => i.status === "paid");
-    const pending = (state.incomes || []).filter((i) => i.status !== "paid").sort((a, b) => (a.expectedDate > b.expectedDate ? 1 : -1));
-    
-    const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
-    
-    // הוצאות עד היום (לא כולל תשלומים עתידיים עתידיים)
-    const expensesTillNow = (state.expenses || []).filter(e => e.date <= today).reduce((s, e) => s + Number(e.amount), 0);
-    
-    // סך כל ההוצאות וההכנסות הרשומות
-    const totalExpSoFar = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
-    const totalAllIncomes = (state.incomes || []).reduce((s, i) => s + Number(i.amount), 0);
-    
-    // יתרה נזילה אמיתית נכון להיום
-    const actualCurrentBalance = Number(state.openingBalance || 0) - expensesTillNow + totalPaid;
-    
-    const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
-    const monthExpectedIncome = pending.reduce((s, i) => s + Number(i.amount), 0);
-    const monthExpenses = (state.expenses || []).filter((e) => monthKey(e.date) === thisMonth).reduce((s, e) => s + Number(e.amount), 0);
-    
-    const finalExpectedBalance = actualCurrentBalance + monthExpectedIncome;
-
-    const safeToSpend = Math.max(0, actualCurrentBalance);
-    const overdueIncomes = pending.filter(i => daysUntil(i.expectedDate) < 0);
-    const overdueAmount = overdueIncomes.reduce((s, i) => s + Number(i.amount), 0);
-
-    return { 
-      openingBalance: Number(state.openingBalance || 0),
-      actualCurrentBalance,
-      finalExpectedBalance,
-      pending, 
-      monthPaidIncome, 
-      monthExpectedIncome, 
-      monthExpenses,
-      expensesTillNow,
-      totalExpSoFar,
-      totalAllIncomes,
-      safeToSpend,
-      overdueAmount,
-      overdueCount: overdueIncomes.length
-    };
+  if(type==='bank'){const amount=E.cents(get('balance'),true);await commit(s=>E.reconcile(s,amount),modalBase);}
+  else if(type==='preferences'){
+    const buffer=nonnegative(get('buffer')),reserve=nonnegative(get('reserve')),goal=nonnegative(get('goal')),tax=Number(get('taxPercent')),day=Number(get('creditDay'));if(!Number.isFinite(tax)||tax<0||tax>100||!Number.isInteger(day)||day<1||day>31)throw Error('בדוק את האחוז ואת יום החיוב');
+    await commit(s=>{if(reserve!==s.settings.taxReserveCents)s.settings.reserveEpoch=(s.settings.reserveEpoch||0)+1;Object.assign(s.settings,{bufferCents:buffer,taxReserveCents:reserve,taxBasisPoints:Math.round(tax*100),creditDay:day,goalCents:goal});},modalBase);
+  }else if(type==='income'){
+    const id=get('id'),date=get('date'),termDays=Number(get('termDays')),manual=data.has('manualDate'),amount=E.cents(get('amount')),client=get('client'),expected=manual?get('expectedDate'):E.dueDate(date,termDays);E.parseDate(date);E.parseDate(expected);if(!client)throw Error('יש להזין לקוח');
+    await commit(s=>{const i=s.incomes.find(i=>i.id===id);if(id&&!i)throw Error('ההכנסה נמחקה');if(i?.status==='paid'&&amount!==i.amountCents)throw Error('בטל את סימון התשלום לפני שינוי הסכום');if(i)Object.assign(i,{client,amountCents:amount,date,termDays,manualDate:manual,expectedDate:expected});else s.incomes.push({id:uid(),client,amountCents:amount,date,termDays,manualDate:manual,expectedDate:expected,status:'pending'});},modalBase);
+  }else if(type==='expense'){
+    const id=get('id'),old=state.expenses.find(e=>e.id===id),paid=state.receipts.some(r=>r.expenseId===id),kind=paid?old.kind:get('kind'),everyMonths=kind==='monthly'?(paid?old.everyMonths:Number(get('everyMonths'))):1,count=kind==='installments'?Number(get('count')):1;
+    const value={desc:get('desc'),amountCents:E.cents(get('amount')),purchaseDate:get('purchaseDate'),chargeDate:get('chargeDate'),kind,count,everyMonths,endDate:kind==='monthly'?(get('endDate')||null):null,category:get('category'),scope:get('scope'),method:get('method')};
+    E.parseDate(value.purchaseDate);E.parseDate(value.chargeDate);if(value.endDate){E.parseDate(value.endDate);if(value.endDate<value.chargeDate)throw Error('תאריך הסיום לפני החיוב הראשון');}if(!value.desc)throw Error('יש להזין תיאור');if(kind==='installments')E.split(value.amountCents,count);
+    await commit(s=>{const e=s.expenses.find(e=>e.id===id);if(id&&!e)throw Error('ההוצאה נמחקה');if(e&&s.receipts.some(r=>r.expenseId===id)){if(value.kind!==e.kind||value.chargeDate!==e.chargeDate||value.everyMonths!==e.everyMonths||value.count!==e.count)throw Error('אי אפשר לשנות את המבנה של סדרה עם חיובים שאושרו');if(e.kind!=='monthly'&&value.amountCents!==e.amountCents)throw Error('בטל קודם את סימון התשלום כדי לערוך את הסכום');}if(e)Object.assign(e,value);else s.expenses.push({id:uid(),...value,overrides:{}});},modalBase);
+  }else if(type==='occurrence'){
+    const key=get('key'),o=E.occurrences(state,E.addDays(E.today(),366)).find(o=>o.key===key),amount=E.cents(get('amount')),date=get('chargeDate');E.parseDate(date);if(!o)throw Error('החיוב אינו קיים');await commit(s=>{const e=s.expenses.find(e=>e.id===o.expenseId);e.overrides[String(o.index)]={amountCents:amount,chargeDate:date};},modalBase);
+  }else if(type==='payment'){
+    const paymentType=get('type'),taxAdded=paymentType==='income'?nonnegative(get('taxAdded')):0;
+    await commit(s=>E.applyPayment(s,paymentType,get('id'),get('paidDate'),data.has('included'),E.today(),taxAdded),modalBase);
+  }else if(type==='stop'){
+    const id=get('id'),date=get('endDate');E.parseDate(date);await commit(s=>{const e=s.expenses.find(e=>e.id===id);if(!e)throw Error('הסדרה אינה קיימת');if(date<e.chargeDate)throw Error('בחר תאריך שאינו קודם לתחילת הסדרה. לביטול כל הסדרה השתמש במחיקה');e.endDate=date;},modalBase);
   }
-
-  function render() {
-    const c = calc();
-    const root = document.getElementById("app");
-    root.innerHTML = `
-      <div class="brand">
-        <div class="brand-logo">
-          <div class="brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-          </div>
-          <span class="brand-text">תזרים לצלם</span>
-        </div>
-        <span class="sync-badge">${syncStatus}</span>
-      </div>
-      <div class="tabs">
-        <button class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}" data-action="tab" data-tab="dashboard">לוח בקרה</button>
-        <button class="tab-btn ${ui.tab === "income" ? "active" : ""}" data-action="tab" data-tab="income">הכנסות</button>
-        <button class="tab-btn ${ui.tab === "expenses" ? "active" : ""}" data-action="tab" data-tab="expenses">הוצאות</button>
-      </div>
-      <div class="section">
-        ${renderAIAssistant(c)}
-        ${ui.tab === "dashboard" ? renderDashboard(c) : ""}
-        ${ui.tab === "income" ? renderIncome(c) : ""}
-        ${ui.tab === "expenses" ? renderExpenses(c) : ""}
-      </div>
-    `;
-  }
-
-  function renderAIAssistant(c) {
-    let advice = "";
-
-    if (c.overdueCount > 0) {
-      advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). כרגע התזרים הנזיל שלך עומד על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. מומלץ ליצור קשר עם הלקוחות לפני שחיוב האשראי הבא יורד.`;
-    } else if (c.actualCurrentBalance > 5000) {
-      advice = `🟢 <strong>מצב תזרימי מצוין!</strong> יש לך יתרה נזילה חזקה של <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. תוכל להפריש כרגע כ-<strong>${fmtMoney(c.actualCurrentBalance * 0.3)}</strong> לחיסכון/כרית ביטחון או להתחדש בציוד.`;
-    } else if (c.actualCurrentBalance > 2000) {
-      advice = `💡 <strong>תזרים יציב:</strong> נשאר לך ביד <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. מומלץ לבזבז רק עד <strong>${fmtMoney(c.actualCurrentBalance * 0.5)}</strong> לרכישות פנאי/ציוד שאינן דחופות, ולשמור את היתרה לכיסוי הוצאות קבועות.`;
-    } else {
-      advice = `🛑 <strong>המלצה להדק חגורה:</strong> הנזילות כרגע נמוכה (<strong>${fmtMoney(c.actualCurrentBalance)}</strong>). כדאי להימנע מרכישות שאינן הכרחיות עד שייכנס התשלום הקרוב מלקוחות (צפוי להיכנס: <strong>${fmtMoney(c.monthExpectedIncome)}</strong>).`;
-    }
-
-    return `
-      <div class="ai-card">
-        <div class="ai-header">
-          <span class="ai-badge">AI FINANCIAL ADVISOR</span>
-          <span class="ai-title">היועץ הפיננסי שלך</span>
-        </div>
-        <div class="ai-text">${advice}</div>
-        <div class="ai-grid">
-          <div class="ai-stat">
-            <div class="ai-stat-label">בטוח לבזבוז מיידי</div>
-            <div class="ai-stat-value" style="color:var(--positive)">${fmtMoney(c.safeToSpend * 0.5)}</div>
-          </div>
-          <div class="ai-stat">
-            <div class="ai-stat-label">מומלץ להעביר לחיסכון</div>
-            <div class="ai-stat-value" style="color:var(--accent)">${c.actualCurrentBalance > 3000 ? fmtMoney(c.actualCurrentBalance * 0.2) : "₪0.00"}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderDashboard(c) {
-    return `
-      <div class="hero">
-        <div class="hero-label">נשאר ביד כרגע (אחרי הוצאות)</div>
-        <div class="hero-number" style="color:${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'}">${fmtMoney(c.actualCurrentBalance)}</div>
-        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה בחשבון</button>
-        ${ui.showBalanceEdit ? `
-          <div style="margin-top:16px;display:flex;gap:8px;">
-            <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${c.openingBalance}" placeholder="יתרת פתיחה בעו''ש"/>
-            <button class="submit-btn" style="padding:0 20px;margin-top:0" data-action="save-balance">עדכן</button>
-          </div>` : ""}
-      </div>
-
-      <div class="stat-row">
-        ${statCard("יתרה פותחת", fmtMoney(c.openingBalance), "var(--text-muted)")}
-        ${statCard("הוצאות חודש", fmtMoney(c.monthExpenses), "var(--negative)")}
-        ${statCard("הכנסות בדרך", fmtMoney(c.monthExpectedIncome), "var(--accent)")}
-      </div>
-
-      <div class="card">
-        <div class="card-title">📋 סיכום תזרים מזומנים מפורט</div>
-        <div class="summary-box">
-          <div class="summary-item">
-            <span>1. יתרת פתיחה שהוזנה בחשבון:</span>
-            <span><strong>${fmtMoney(c.openingBalance)}</strong></span>
-          </div>
-          <div class="summary-item sub" style="color:var(--negative)">
-            <span>פחות הוצאות עד כה (שירדו/ירדו באשראי):</span>
-            <span>-${fmtMoney(c.expensesTillNow)}</span>
-          </div>
-          <div class="summary-item" style="border-top:1px solid var(--border); padding-top:8px; font-weight:700; color:${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'};">
-            <span>נשאר לך ביד כרגע:</span>
-            <span>${fmtMoney(c.actualCurrentBalance)}</span>
-          </div>
-          
-          <div class="summary-item" style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
-            <span>2. הכנסות שצריכות להיכנס (לקוחות):</span>
-            <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
-          </div>
-
-          <div class="summary-item total">
-            <span>סה"כ צפוי בחשבון בסוף:</span>
-            <span style="color:var(--accent)">${fmtMoney(c.finalExpectedBalance)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">
-          <span>⏳ תשלומים בדרך אליך (ממתין מגבייה)</span>
-        </div>
-        ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע.</div>' :
-          c.pending.map((inc) => {
-            const d = daysUntil(inc.expectedDate);
-            return `<div class="row">
-              <div style="flex:1">
-                <div class="row-title">${esc(inc.client)}</div>
-                <div class="row-sub">צפוי ב-${fmtDate(inc.expectedDate)} · ${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}</div>
-              </div>
-              <div class="row-amount">${fmtMoney(inc.amount)}</div>
-              <div class="actions-group">
-                <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>
-                <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
-              </div>
-            </div>`;
-          }).join("")}
-      </div>
-    `;
-  }
-
-  function statCard(label, value, dot) {
-    return `<div class="stat-card"><div class="stat-dot-row"><span class="dot" style="background:${dot}"></span>${label}</div><div class="stat-value">${value}</div></div>`;
-  }
-
-  function renderIncome(c) {
-    const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
-    const editingItem = ui.editingIncomeId ? state.incomes.find(i => i.id === ui.editingIncomeId) : null;
-
-    return `
-      <div class="total-banner">
-        <span class="total-banner-label">סה"כ כל ההכנסות:</span>
-        <span class="total-banner-value" style="color:var(--positive)">${fmtMoney(c.totalAllIncomes)}</span>
-      </div>
-
-      <button class="add-btn" data-action="toggle-income-form">${ui.editingIncomeId ? "ביטול עריכה" : "+ הוספת עבודה / יום צילום"}</button>
-      
-      ${(ui.showIncomeForm || ui.editingIncomeId) ? `
-      <form class="form-box" id="income-form">
-        <div style="font-weight:700;font-size:16px;color:var(--accent);margin-bottom:6px;">
-          ${editingItem ? "✏️ עריכת הכנסה" : "➕ הוספת הכנסה חדשה"}
-        </div>
-        <input type="hidden" name="id" value="${editingItem ? editingItem.id : ''}"/>
-        <label class="label">לקוח / תיאור העבודה
-          <input class="input" name="client" placeholder="למשל: צילומי תדמית / פרסומת" value="${editingItem ? esc(editingItem.client) : ''}" required/>
-        </label>
-        <label class="label">סכום מדויק (₪)
-          <input class="input" name="amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}" required/>
-        </label>
-        <label class="label">תאריך הוצאת החשבונית
-          <input class="input" name="date" type="date" value="${editingItem ? editingItem.date : todayStr()}"/>
-        </label>
-        <label class="label">תנאי תשלום
-          <select class="input" name="termDays">
-            ${TERMS.map((t) => `<option value="${t.days}" ${editingItem && editingItem.termDays == t.days ? 'selected' : ''}>${t.label}</option>`).join("")}
-          </select>
-        </label>
-        <button type="submit" class="submit-btn">${editingItem ? "עדכן הכנסה" : "שמור הכנסה"}</button>
-        ${editingItem ? `<button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>` : ''}
-      </form>` : ""}
-
-      <div class="card" style="padding:0 20px;">
-        ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו עבודות.</div>' : sorted.map((inc) => `
-          <div class="row">
-            <div style="flex:1">
-              <div class="row-title">${esc(inc.client)}</div>
-              <div class="row-sub">${fmtDate(inc.date)} · ${inc.status === "paid" ? `<span style="color:var(--positive)">שולם ב-${fmtDate(inc.paidDate)}</span>` : `<span style="color:var(--accent)">צפוי ב-${fmtDate(inc.expectedDate)}</span>`}</div>
-            </div>
-            <div class="row-amount">${fmtMoney(inc.amount)}</div>
-            <div class="actions-group">
-              ${inc.status !== "paid" ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>` : ""}
-              <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
-              <button class="icon-btn-muted icon-btn-danger" data-action="delete-income" data-id="${inc.id}" title="מחיקה">🗑</button>
-            </div>
-          </div>`).join("")}
-      </div>
-    `;
-  }
-
-  function renderExpenses(c) {
-    const sorted = [...(state.expenses || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
-    const editingItem = ui.editingExpenseId ? state.expenses.find(e => e.id === ui.editingExpenseId) : null;
-    const f = ui.expenseFormState;
-    
-    return `
-      <div class="total-banner">
-        <span class="total-banner-label">סה"כ כל ההוצאות:</span>
-        <span class="total-banner-value" style="color:var(--negative)">-${fmtMoney(c.totalExpSoFar)}</span>
-      </div>
-
-      <button class="add-btn" data-action="toggle-expense-form">${ui.editingExpenseId ? "ביטול עריכה" : "+ הוספת הוצאה חדשה"}</button>
-      
-      ${(ui.showExpenseForm || ui.editingExpenseId) ? `
-      <form class="form-box" id="expense-form">
-        <div style="font-weight:700;font-size:16px;color:var(--accent);margin-bottom:6px;">
-          ${editingItem ? "✏️ עריכת הוצאה" : "➕ הוספת הוצאה חדשה"}
-        </div>
-        <input type="hidden" name="id" value="${editingItem ? editingItem.id : ''}"/>
-        <label class="label">תיאור ההוצאה
-          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${editingItem ? esc(editingItem.desc) : esc(f.desc)}" required/>
-        </label>
-        <label class="label">סכום מדויק (₪)
-          <input class="input" name="amount" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : f.amount}" required/>
-        </label>
-        <label class="label">תאריך הרכישה
-          <input class="input" name="date" id="exp-date" type="date" value="${editingItem ? editingItem.date : (f.date || todayStr())}"/>
-        </label>
-
-        <label class="label">בחירת קטגוריה
-          <div class="category-grid">
-            ${CATEGORIES.map((c) => {
-              const currentCat = editingItem ? editingItem.category : f.category;
-              return `
-              <div class="cat-card ${currentCat === c.name ? "selected" : ""}" data-action="select-category" data-cat="${c.name}">
-                <span class="cat-icon">${c.icon}</span>
-                <span class="cat-name">${c.name}</span>
-              </div>`;
-            }).join("")}
-          </div>
-        </label>
-        
-        ${!editingItem ? `
-        <label class="label checkbox-label">
-          <input type="checkbox" id="installments-check" style="width:18px;height:18px;accent-color:var(--accent)" ${ui.isInstallments ? "checked" : ""}/> 
-          חלק לתשלומים חודשיים
-        </label>
-
-        ${ui.isInstallments ? `
-          <div style="background:var(--surface-input);padding:14px;border-radius:14px;border:1px solid var(--border)">
-            <label class="label">מספר תשלומים
-              <input class="input" name="installmentsCount" id="exp-installmentsCount" type="number" min="2" max="36" value="${f.installmentsCount || 3}" required/>
-            </label>
-          </div>
-        ` : `
-          <label class="label checkbox-label">
-            <input type="checkbox" name="recurring" id="exp-recurring" style="width:18px;height:18px;accent-color:var(--accent)" ${f.recurring ? "checked" : ""}/> הוצאה חודשית קבועה (מתחדשת)
-          </label>
-        `}
-        ` : ''}
-
-        <button type="submit" class="submit-btn">${editingItem ? "עדכן הוצאה" : "שמור הוצאה"}</button>
-        ${editingItem ? `<button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>` : ''}
-      </form>` : ""}
-
-      <div class="card" style="padding:0 20px;">
-        ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו הוצאות.</div>' : sorted.map((exp) => {
-          const catObj = CATEGORIES.find(c => c.name === exp.category);
-          const icon = catObj ? catObj.icon : "📦";
-          return `
-          <div class="row">
-            <div style="flex:1">
-              <div class="row-title">${icon} ${esc(exp.desc)}</div>
-              <div class="row-sub">${fmtDate(exp.date)} · ${exp.category}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
-            </div>
-            <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
-            <div class="actions-group">
-              <button class="icon-btn-muted" data-action="edit-expense" data-id="${exp.id}" title="ערוך">✏️</button>
-              <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${exp.id}" title="מחיקה">🗑</button>
-            </div>
-          </div>`;
-        }).join("")}
-      </div>
-    `;
-  }
-
-  function saveCurrentExpenseState() {
-    const descEl = document.getElementById("exp-desc");
-    const amountEl = document.getElementById("exp-amount");
-    const dateEl = document.getElementById("exp-date");
-    const instCountEl = document.getElementById("exp-installmentsCount");
-    const recEl = document.getElementById("exp-recurring");
-
-    if (descEl) ui.expenseFormState.desc = descEl.value;
-    if (amountEl) ui.expenseFormState.amount = amountEl.value;
-    if (dateEl) ui.expenseFormState.date = dateEl.value;
-    if (instCountEl) ui.expenseFormState.installmentsCount = instCountEl.value;
-    if (recEl) ui.expenseFormState.recurring = recEl.checked;
-  }
-
-  document.getElementById("app").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const action = btn.dataset.action;
-    
-    if (action === "tab") { 
-      ui.tab = btn.dataset.tab; 
-      render(); 
-    } else if (action === "toggle-balance-edit") { 
-      ui.showBalanceEdit = !ui.showBalanceEdit; 
-      render(); 
-    } else if (action === "save-balance") {
-      const input = document.getElementById("balance-input");
-      state.openingBalance = parseFloat(input.value) || 0;
-      ui.showBalanceEdit = false;
-      saveToCloud();
-    } else if (action === "toggle-income-form") { 
-      ui.showIncomeForm = !ui.showIncomeForm; 
-      ui.editingIncomeId = null;
-      render(); 
-    } else if (action === "toggle-expense-form") { 
-      ui.showExpenseForm = !ui.showExpenseForm; 
-      ui.editingExpenseId = null;
-      ui.isInstallments = false;
-      ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
-      render(); 
-    } else if (action === "edit-income") {
-      ui.tab = "income";
-      ui.editingIncomeId = btn.dataset.id;
-      ui.showIncomeForm = false;
-      render();
-    } else if (action === "edit-expense") {
-      ui.tab = "expenses";
-      ui.editingExpenseId = btn.dataset.id;
-      ui.showExpenseForm = false;
-      render();
-    } else if (action === "cancel-edit") {
-      ui.editingIncomeId = null;
-      ui.editingExpenseId = null;
-      render();
-    } else if (action === "select-category") {
-      if (!ui.editingExpenseId) saveCurrentExpenseState();
-      ui.expenseFormState.category = btn.dataset.cat;
-      if (ui.editingExpenseId) {
-        const item = state.expenses.find(e => e.id === ui.editingExpenseId);
-        if (item) item.category = btn.dataset.cat;
-      }
-      render();
-    } else if (action === "mark-paid") {
-      const inc = state.incomes.find((i) => i.id === btn.dataset.id);
-      if (inc) { 
-        inc.status = "paid"; 
-        inc.paidDate = todayStr(); 
-        saveToCloud(); 
-      }
-    } else if (action === "delete-income") {
-      state.incomes = state.incomes.filter((i) => i.id !== btn.dataset.id); 
-      saveToCloud();
-    } else if (action === "delete-expense") {
-      state.expenses = state.expenses.filter((e) => e.id !== btn.dataset.id); 
-      saveToCloud();
-    }
-  });
-
-  document.getElementById("app").addEventListener("change", (e) => {
-    if (e.target.id === "installments-check") {
-      saveCurrentExpenseState();
-      ui.isInstallments = e.target.checked;
-      render();
-    }
-  });
-
-  document.getElementById("app").addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (e.target.id === "income-form") {
-      const fd = new FormData(e.target);
-      const id = fd.get("id");
-      const date = fd.get("date") || todayStr();
-      const termDays = Number(fd.get("termDays"));
-      const expectedDate = calcExpectedDate(date, termDays);
-      
-      state.incomes = state.incomes || [];
-
-      if (id) {
-        const idx = state.incomes.findIndex(i => i.id === id);
-        if (idx !== -1) {
-          state.incomes[idx].client = fd.get("client");
-          state.incomes[idx].amount = Number(fd.get("amount"));
-          state.incomes[idx].date = date;
-          state.incomes[idx].termDays = termDays;
-          state.incomes[idx].expectedDate = expectedDate;
-        }
-        ui.editingIncomeId = null;
-      } else {
-        state.incomes.push({
-          id: uid(), 
-          client: fd.get("client"), 
-          amount: Number(fd.get("amount")), 
-          date, 
-          termDays, 
-          expectedDate,
-          status: termDays === 0 ? "paid" : "pending", 
-          paidDate: termDays === 0 ? date : null,
-        });
-        ui.showIncomeForm = false; 
-      }
-      saveToCloud();
-    } else if (e.target.id === "expense-form") {
-      const fd = new FormData(e.target);
-      const id = fd.get("id");
-      const totalAmount = Number(fd.get("amount"));
-      const startDate = fd.get("date") || todayStr();
-      const desc = fd.get("desc");
-      
-      state.expenses = state.expenses || [];
-
-      if (id) {
-        const idx = state.expenses.findIndex(exp => exp.id === id);
-        if (idx !== -1) {
-          state.expenses[idx].desc = desc;
-          state.expenses[idx].amount = totalAmount;
-          state.expenses[idx].date = startDate;
-          state.expenses[idx].category = ui.expenseFormState.category;
-        }
-        ui.editingExpenseId = null;
-      } else {
-        const category = ui.expenseFormState.category || CATEGORIES[0].name;
-        if (ui.isInstallments) {
-          const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
-          const monthlyAmount = Number((totalAmount / count).toFixed(2));
-          
-          for (let i = 0; i < count; i++) {
-            state.expenses.push({
-              id: uid(),
-              desc: `${desc}`,
-              amount: monthlyAmount,
-              date: addMonths(startDate, i),
-              category: category,
-              installmentInfo: `${i + 1}/${count}`
-            });
-          }
-        } else {
-          state.expenses.push({
-            id: uid(), 
-            desc: desc, 
-            amount: totalAmount, 
-            date: startDate,
-            category: category, 
-            recurring: fd.get("recurring") === "on",
-          });
-        }
-        ui.showExpenseForm = false; 
-        ui.isInstallments = false;
-      }
-
-      ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
-      saveToCloud();
-    }
-  });
+  closeModal();toast('נשמר בהצלחה');
+}
+function onChange(e){const el=e.target,action=el.dataset.change;if(action){if(action==='income-range')ui.incomeRange=el.value;else if(action==='income-status')ui.incomeStatus=el.value;else if(action==='expense-status')ui.expenseStatus=el.value;else if(action==='expense-scope')ui.expenseScope=el.value;render();}
+  const form=el.closest('[data-form=income]');if(form&&['date','termDays','manualDate'].includes(el.name)){const manual=form.elements.manualDate.checked;form.elements.expectedDate.readOnly=!manual;if(!manual)try{form.elements.expectedDate.value=E.dueDate(form.elements.date.value,Number(form.elements.termDays.value));}catch(e){toast(e.message);}}
+}
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-action]');if(btn&&!busy)clickAction(btn).catch(e=>toast(e.message));});
+document.addEventListener('change',onChange);
+document.addEventListener('submit',e=>{if(!e.target.matches('[data-form]'))return;e.preventDefault();submitForm(e.target).catch(error=>toast(error.message));});
+modal.addEventListener('cancel',event=>{if(busy){event.preventDefault();return;}modal.innerHTML='';});
+window.addEventListener('storage',e=>{if(e.key===LOCAL_KEY&&mode==='local'){state=loadLocal();status='עודכן בחלונית אחרת';render();if(modal.open)toast('הנתונים השתנו בחלונית אחרת. פתח מחדש את הטופס לפני שמירה');}});
+let lastDay=E.today();setInterval(()=>{const now=E.today();if(now!==lastDay){lastDay=now;render();}},60000);
+// Restore a previous authenticated session without copying local data into the cloud.
+let restoreSession=false;try{restoreSession=localStorage.getItem('cashflow-restore-session')==='1';}catch(e){}
+if(restoreSession){mode='cloud';state=E.empty();status='משחזר חיבור לחשבון…';render();ensureFirebase().catch(()=>{mode='local';state=loadLocal();status='אין חיבור — מוצג מידע מהמכשיר';render();toast('לא ניתן לשחזר את החיבור לענן. התחבר שוב כשיחזור האינטרנט.');});}else render();
 </script>
 </body>
 </html>
