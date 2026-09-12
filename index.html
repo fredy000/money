@@ -77,15 +77,16 @@
   </style>
 </head>
 <body>
-<div id="app">לוען נתונים מענן Firebase...</div>
+<div id="app">טוען נתונים מענן Firebase...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
     authDomain: "money-1d58a.firebaseapp.com",
+    databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "money-1d58a",
     storageBucket: "money-1d58a.firebasestorage.app",
     messagingSenderId: "1038447297202",
@@ -94,8 +95,8 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const docRef = doc(db, "users", "default_user");
+  const db = getDatabase(app);
+  const dbRef = ref(db, "appData");
 
   const TERMS = [
     { days: 0, label: "מיידי" },
@@ -128,18 +129,24 @@
   const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(d));
   const monthKey = (d) => d.slice(0, 7);
   const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  // האזנה לשינויים ב-Firebase בזמן אמת
-  onSnapshot(docRef, (docSnap) => {
-    if (docSnap.exists()) {
-      state = docSnap.data();
+  // האזנה בזמן אמת ל-Firebase
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      state = {
+        openingBalance: data.openingBalance || 0,
+        incomes: data.incomes || [],
+        expenses: data.expenses || []
+      };
     } else {
-      saveToCloud(); // שמירת מבנה ראשוני אם המסמך לא קיים
+      saveToCloud();
     }
     render();
   }, (err) => {
-    syncStatus = "שגיאת סנכרון ⚠️";
+    console.error("Firebase Error:", err);
+    syncStatus = "שגיאת הרשאות ⚠️";
     render();
   });
 
@@ -147,9 +154,10 @@
     try {
       syncStatus = "שומר...";
       render();
-      await setDoc(docRef, state);
+      await set(dbRef, state);
       syncStatus = "סנכרון פעיל ☁️";
     } catch (e) {
+      console.error("Save Error:", e);
       syncStatus = "שגיאה בשמירה ❌";
     }
     render();
@@ -416,7 +424,7 @@
     } else if (e.target.id === "expense-form") {
       const fd = new FormData(e.target);
       const totalAmount = Number(fd.get("amount"));
-      const startDate = fd.get("date") || me = fd.get("date") || todayStr();
+      const startDate = fd.get("date") || todayStr();
       const desc = fd.get("desc");
       const category = fd.get("category");
       
