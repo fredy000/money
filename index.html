@@ -14,6 +14,8 @@
 
 .cash-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cash-stat{display:flex;flex-direction:column;align-items:flex-start;gap:12px}.cash-number{font-size:clamp(23px,4vw,32px);font-weight:800;line-height:1.3;direction:ltr;unicode-bidi:isolate}.cash-stat .hint{flex:1}.cash-title{text-align:center}.cash-title h2{font-size:26px;margin:0 0 4px}.cash-flow-row{display:flex;align-items:center;gap:14px;padding:22px 0;border-bottom:1px solid var(--border)}.cash-flow-row:last-of-type{border-bottom:0}.flow-icon{font-size:30px;width:35px;flex-shrink:0;text-align:center}.cash-row-amount{font-size:24px;white-space:nowrap;direction:ltr;unicode-bidi:isolate}.cash-result{margin-top:18px}.cash-result .hero-label{font-size:17px;color:var(--text);font-weight:600}.cash-outcome{margin:14px 0 9px;font-size:14px}.savings-details summary{cursor:pointer;font-weight:600}.cash-footer{text-align:center;display:grid;justify-items:center;gap:10px}.cash-calculation h2{margin-bottom:0}
 @media(max-width:600px){.cash-summary-grid{gap:10px}.cash-stat{padding:15px 12px}.cash-stat .muted{font-size:13px}.cash-stat button{font-size:12px;padding:7px 9px}.cash-flow-row{flex-wrap:wrap;gap:10px}.cash-flow-row .row-main{min-width:125px}.cash-flow-row button{margin-inline-start:45px;font-size:12px}.cash-row-amount{font-size:22px}.cash-title h2{font-size:23px}.period{flex-wrap:wrap}.period button{font-size:12px}.cash-number{overflow-wrap:anywhere}}
+.simple-dashboard{display:grid;grid-template-columns:1fr 1fr;gap:18px}.simple-total{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:245px;padding:28px}.simple-label{font-size:20px;font-weight:600}.simple-number{font-size:clamp(30px,5vw,45px);font-weight:800;direction:ltr;unicode-bidi:isolate;line-height:1.25;overflow-wrap:anywhere}.simple-total button{margin-top:auto;font-size:13px}.simple-note{font-size:13px;line-height:1.6;color:var(--muted)}.spending-total{background:#17251b;border:1px solid #3c6447}.upcoming-income{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:14px;padding:16px 22px}.upcoming-income .hint{width:100%}.upcoming-income button{margin-inline-start:auto}.dashboard-footnote{text-align:center;margin:0}
+@media(max-width:600px){.simple-dashboard{grid-template-columns:1fr;gap:12px}.simple-total{min-height:0;padding:22px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}.simple-label{font-size:18px}.simple-number{font-size:32px}.simple-total .hint,.simple-total .simple-note{grid-column:1/-1}.simple-total button{justify-self:start;grid-column:1/-1;margin-top:5px}.upcoming-income{padding:16px}}
 </style>
 </head>
 <body>
@@ -23,7 +25,7 @@
 <script>
 'use strict';
 /*
-  תזרים לצלם, v2. הכל בקובץ אחד. אין חובה להתחבר כדי להשתמש מקומית.
+  תזרים לצלם, v2. הכל בקובץ אחד. שמירה מקומית או זיהוי אוטומטי בענן, בלי מסכי משתמשים.
   כסף נשמר באגורות. תאריכים הם YYYY-MM-DD; אין המרה של תאריך מקומי ל-UTC.
   יתרת הבנק אינה מחושבת מעסקאות עבר: כל אישור תשלום שואל האם הוא כבר כלול.
   כל חישוב חיסכון מוגבל לתקופה שנבחרה ולהוצאות שהוזנו.
@@ -205,16 +207,16 @@ async function commit(change,expectedRevision=state.revision){
   busy=true;status='שומר…';setBusy(true);
   try{
     if(mode==='cloud'){
-      if(!cloudReady||!user)throw Error('החיבור לענן אינו מוכן. התחבר מחדש');
+      if(!cloudReady||!user)throw Error('החיבור לענן אינו מוכן. נסה לחבר שוב את השמירה');
       if(!navigator.onLine)throw Error('אין אינטרנט. השינוי לא נשמר; אפשר לנסות שוב כשיחזור החיבור');
       const accountId=user.uid,sessionGeneration=authGeneration;
       const result=await fb.db.runTransaction(fb.db.ref(fb.database,`users/${accountId}/appData`),current=>{
         const revision=current?.revision||0;if(revision!==expectedRevision)return;
         return draft;
       },{applyLocally:false});
-      if(mode!=='cloud'||user?.uid!==accountId||authGeneration!==sessionGeneration)throw Error('החשבון השתנה בזמן השמירה. התחבר מחדש כדי לראות את הנתונים');
+      if(mode!=='cloud'||user?.uid!==accountId||authGeneration!==sessionGeneration)throw Error('חיבור השמירה השתנה בזמן השמירה. נסה לחבר שוב את השמירה כדי לראות את הנתונים');
       if(!result.committed)throw Error('המידע השתנה בזמן השמירה. סגור את הטופס ופתח אותו מחדש');
-      state=E.validate(result.snapshot.val());status='מסונכרן לחשבון';
+      state=E.validate(result.snapshot.val());cacheCloud(state);status='נשמר בענן הפרטי';
     }else if(mode==='local'){
       const saved=localStorage.getItem(LOCAL_KEY);if(saved&&(JSON.parse(saved).revision||0)!==expectedRevision)throw Error('המידע השתנה בחלונית אחרת. רענן ונסה שוב');
       localStorage.setItem(LOCAL_KEY,JSON.stringify(draft));state=draft;status='נשמר במכשיר';
@@ -241,20 +243,6 @@ function period(){
   const items=[['month','עד סוף החודש'],['30','30 יום'],['60','60 יום'],['90','90 יום']];
   return `<div class="period" aria-label="עד מתי לחשב">${items.map(([key,label])=>button(label,'period',`data-period="${key}" aria-pressed="${key===ui.period}"`,key===ui.period?'active':'')).join('')}</div>`;
 }
-function stats(f){
-  const paid=paidThisMonth(f.now).reduce((sum,r)=>sum+r.amountCents,0);
-  return `<div class="cash-summary-grid">
-    <div class="card cash-stat"><div class="muted">כמה יש עכשיו בבנק</div>
-      <strong class="cash-number">${state.bank.verified?money(state.bank.balanceCents):'צריך להזין יתרה'}</strong>
-      ${button('עדכון היתרה מהבנק','bank')}
-    </div>
-    <div class="card cash-stat"><div class="muted">כבר ירד החודש, לפי הרישומים</div>
-      <strong class="cash-number red">${money(paid)}</strong>
-      <div class="hint">מ־1 בחודש ועד היום. זה כבר כלול ביתרה הנוכחית.</div>
-      ${button('לראות מה ירד','cash-detail','data-kind="paid"')}
-    </div>
-  </div>`;
-}
 function chart(f){
   const width=860,height=270,left=76,right=25,top=23,bottom=40,plotW=width-left-right,plotH=height-top-bottom;
   const threshold=state.settings.bufferCents+state.settings.taxReserveCents;
@@ -266,40 +254,22 @@ function chart(f){
   return `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="גרף יתרה: כולל גבייה מתוכננת, וללא גבייה חדשה. היתרה המינימלית לאחר רזרבה למס היא ${esc(money(f.minAvailable))}">${grids}<line x1="${left}" x2="${width-right}" y1="${y(threshold)}" y2="${y(threshold)}" stroke="#66ca7e" stroke-dasharray="5 5"/><path d="${path('cash')}" fill="none" stroke="#a39b8e" stroke-width="2" stroke-dasharray="6 4"/><path d="${path('balance')}" fill="none" stroke="#ff7024" stroke-width="3"/>${ticks}</svg><div class="chart-key"><span><i class="line-key"></i>כולל הכנסות צפויות</span><span><i class="line-key cash"></i>בלי גבייה חדשה</span><span class="green">קו ירוק: כרית + רזרבה נוכחית למס</span></div>`;
 }
 function dashboard(f){
-  const ready=state.bank.verified;
-  const endText=ui.period==='month'?'בסוף החודש':`ב־${dateLabel(f.end)}`;
-  const overdue=f.overdue.reduce((sum,i)=>sum+i.amountCents,0);
-  return `<div class="cash-title"><h2>כמה כסף יישאר לך?</h2><div class="hint">מהיום ועד ${dateLabel(f.end)}</div></div>
-  ${period()}
-  ${!ready?`<div class="notice">כדי לחשב כמה יישאר לך, הזן את היתרה שמופיעה עכשיו בבנק. ההכנסות וההוצאות שכבר מילאת נשמרות. ${button('להזין כמה יש בבנק','bank','','primary')}${mode==='local'?button('לראות דוגמה','demo'):''}</div>`:''}
-  ${stats(f)}
-  <div class="card cash-calculation"><h2>מה עוד יקרה עד ${dateLabel(f.end)}?</h2>
-    <div class="cash-flow-row"><div class="flow-icon green" aria-hidden="true">+</div>
-      <div class="row-main"><div class="row-title">צפוי להיכנס מלקוחות</div><div class="hint">${f.ins.length} תשלומים שמועדיהם בתקופה הזאת</div></div>
-      <b class="cash-row-amount green">${money(f.incoming)}</b>
-      ${button('פירוט','cash-detail','data-kind="income"')}
+  const ready=state.bank.verified, show=value=>ready?money(value):'—';
+  return `<div class="cash-title"><h2>הכסף שלך, ברור.</h2><div class="hint">החישוב מהיום ועד ${dateLabel(f.end)}</div></div>
+    ${period()}
+    ${!ready?`<div class="notice">ההכנסות וההוצאות נשמרו. חסר רק הסכום שמופיע עכשיו בבנק. ${button('הזנת יתרה בבנק','bank','','primary')}</div>`:''}
+    <div class="simple-dashboard">
+      <article class="card simple-total"><div class="simple-label">יש לי עכשיו</div><strong class="simple-number">${show(state.bank.balanceCents)}</strong><div class="hint">היתרה הנוכחית בבנק</div>${button('עדכון יתרה','bank')}</article>
+      <article class="card simple-total"><div class="simple-label">עוד יֵצא ממני</div><strong class="simple-number red">${money(f.outgoing)}</strong><div class="hint">החיובים שעוד ירדו עד ${dateLabel(f.end)}</div>${button('מה כלול בסכום?','cash-detail','data-kind="expense"')}</article>
+      <article class="card simple-total"><div class="simple-label">יישאר לי בחשבון</div><strong class="simple-number ${ready&&f.cashEnd<0?'red':''}">${show(f.cashEnd)}</strong><div class="hint">מה שיש עכשיו פחות מה שעוד יֵצא</div><div class="simple-note">לקוחות שעדיין לא שילמו לא נספרים כאן.</div></article>
+      <article class="card simple-total spending-total"><div class="simple-label">פנוי לי לבזבוז</div><strong class="simple-number ${ready&&f.conservativeSavings>0?'green':'orange'}">${show(f.conservativeSavings)}</strong><div class="hint">אחרי החיובים, כרית הביטחון והכסף למס</div><div class="simple-note">${!ready?'יוצג אחרי עדכון יתרת הבנק.':f.conservativeSavings>0?'זה הסכום הפנוי הכולל לתקופה. אפשר לבזבז אותו או לחסוך אותו.':'לפי ההוצאות שהזנת, כרגע אין כסף פנוי לבזבוז מעבר להן.'}</div>${button('מה משאירים בצד?','spending-detail')}</article>
     </div>
-    <div class="cash-flow-row"><div class="flow-icon red" aria-hidden="true">−</div>
-      <div class="row-main"><div class="row-title">עוד צפוי לרדת ממך</div><div class="hint">חיובים ותשלומים שעדיין לא אושרו כירדו</div></div>
-      <b class="cash-row-amount red">${money(f.outgoing)}</b>
-      ${button('פירוט','cash-detail','data-kind="expense"')}
-    </div>
-    <div class="hero cash-result"><div class="hero-label">צפוי להישאר בחשבון ${endText}</div>
-      <div class="value ${ready&&f.balance<0?'red':'green'}">${ready?money(f.balance):'—'}</div>
-      <div class="hint">היתרה עכשיו + הכסף שצפוי להיכנס − הכסף שעוד צפוי לרדת.</div>
-      ${ready?`<div class="cash-outcome">${f.balance<0?`צפוי חוסר של ${money(Math.abs(f.balance))} בחשבון.`:'הסכום הזה מניח שהלקוחות ישלמו בתאריכים שהזנת.'}</div>
-      <div class="hint">בלי תקבולים נוספים, יישאר בחשבון: <b class="${f.cashEnd<0?'red':''}">${money(f.cashEnd)}</b></div>`:'<p class="hint">הסכום יוצג לאחר הזנת יתרת הבנק.</p>'}
-    </div>
-  </div>
-  ${overdue?`<div class="notice">יש גם ${money(overdue)} מלקוחות שמועד התשלום שלהם עבר. עדכן להם מועד גבייה חדש כדי שייכנסו לחישוב.</div>`:''}
-  <details class="card savings-details"><summary>וכמה אפשר להעביר לחיסכון?</summary>
-    <div class="cash-number green" style="margin-top:16px">${ready?money(f.conservativeSavings):'צריך להזין יתרה'}</div>
-    <p class="hint">מתוך הכסף שכבר בבנק, אחרי ההוצאות הממתינות בתקופה הזאת, כרית ביטחון של ${money(state.settings.bufferCents)} ורזרבה למס של ${money(state.settings.taxReserveCents)}.</p>
-    <p class="hint">הסכום מבוסס על ההוצאות שהזנת עד ${dateLabel(f.end)}.</p>
-    ${button('עריכת הכרית והרזרבה','preferences')}
-  </details>
-  <div class="cash-footer">${button('לראות את התחזית לפי תאריכים','open-forecast')}
-  <div class="hint">בדוק שהזנת גם הוצאות אישיות וחיובי אשראי מהחשבון הזה.</div></div>`;
+    <div class="card upcoming-income"><span>בנוסף, צפוי להיכנס מלקוחות: <b class="green">${money(f.incoming)}</b></span>${button('פירוט','cash-detail','data-kind="income"')}<div class="hint">ברגע שהתשלום מתקבל ונרשם, הוא יכול להגדיל את הכסף הפנוי.</div></div>
+    <p class="hint dashboard-footnote">החישוב מבוסס על החיובים שהזנת לתקופה הזאת. הוצאה שכבר ירדה צריכה להיות מסומנת ככזו כדי שלא תיספר שוב.</p>`;
+}
+function spendingDetail(){
+  const f=E.forecast(state,selectedDays());
+  openModal('איך מחושב הכסף הפנוי?',`<div class="summary-row"><span>יישאר מהכסף שכבר בבנק</span><b>${state.bank.verified?money(f.cashEnd):'—'}</b></div><div class="summary-row"><span>משאירים כרית ביטחון</span><b>−${money(state.settings.bufferCents)}</b></div><div class="summary-row"><span>משאירים כסף למס</span><b>−${money(state.settings.taxReserveCents)}</b></div><div class="summary-row total"><span>פנוי לבזבוז או לחיסכון</span><b class="green">${state.bank.verified?money(f.conservativeSavings):'—'}</b></div><p class="hint">לא משתמשים בהכנסות שעדיין ממתינות לתשלום. אם היתרה אחרי ההוצאות נמוכה מהכסף ששומרים בצד, הפנוי הוא 0.</p><div class="form-actions">${button('שינוי הסכום ששומרים בצד','preferences')}${button('סגירה','close')}</div>`);
 }
 function cashDetail(kind){
   const f=E.forecast(state,selectedDays());
@@ -337,11 +307,15 @@ function settingsPage(){
   const s=state.settings,goalProgress=s.goalCents?Math.min(100,Math.max(0,E.forecast(state,ui.days).conservativeSavings/s.goalCents*100)):0;
   return `<div class="two"><div class="card"><h2>הבנק והכסף ששומרים בצד</h2><div class="summary-row"><span>יתרה לפי העדכון שלך</span><b>${state.bank.verified?money(state.bank.balanceCents):'טרם הוזנה'}</b></div><div class="summary-row"><span>כרית ביטחון</span><b>${money(s.bufferCents)}</b></div><div class="summary-row"><span>רזרבה נוכחית למס</span><b>${money(s.taxReserveCents)}</b></div><div class="summary-row"><span>הפרשה מהכנסות חדשות</span><b>${s.taxBasisPoints/100}%</b></div><div class="summary-row"><span>יום חיוב אשראי ברירת מחדל</span><b>${s.creditDay}</b></div><div class="flex" style="margin-top:15px">${button('עדכון יתרה','bank','','primary')}${button('עריכת הגדרות','preferences')}</div><p class="hint">רזרבה למס היא כסף בתוך החשבון הזה. אל תכלול כסף שכבר נמצא בחשבון מס נפרד. תשלומי מס שהזנת כהוצאות כבר מופחתים מהתזרים; התאם את הרזרבה כך שלא תשריין את אותו כסף פעמיים. האחוז הוא בחירה שלך ואינו חישוב של חבות מס.</p></div>
   <div class="card"><h2>יעד חיסכון לתקופה</h2><div class="summary-row"><span>היעד שבחרת</span><b>${money(s.goalCents)}</b></div><p class="hint">מראה כמה מהיעד ניתן לכסות כרגע מתוך הכסף הפנוי ב־${ui.days} יום. אינו סופר חיסכון שכבר הועבר לחשבון אחר.</p><div class="progress" role="progressbar" aria-valuenow="${Math.round(goalProgress)}" aria-valuemin="0" aria-valuemax="100" aria-label="כסף פנוי ביחס ליעד"><span style="width:${goalProgress}%"></span></div><p class="hint">${Math.round(goalProgress)}% מהיעד זמין לפי הנתונים.</p>${button('עריכת יעד','preferences')}</div></div>
-  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${mode==='cloud'?button('ייבוא המידע מהמכשיר','import-local'):''}${button('שחזור מהאתר הישן','recover-legacy')}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">ייבוא מהאתר הישן והעברה מהמכשיר מוסיפים רשומות בלי למחוק מידע קיים. ייבוא גיבוי מלא מהגרסה החדשה מחליף את הנתונים הפעילים; הורד גיבוי לפניו. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
-  <div class="card"><h2>חיבור לחשבון וסנכרון</h2>${mode==='cloud'?`<p class="hint">מחובר: ${esc(user?.email||'')} · המידע נשמר בחשבון שלך.</p><div class="flex">${button('התנתקות','logout')}${button('הורדת המידע מהאתר הישן','legacy-cloud')}</div>`:`<p class="hint">${mode==='demo'?'זו תצוגת דוגמה. הנתונים בה אינם נשמרים.':'המידע נשמר כרגע בדפדפן הזה. מומלץ להוריד גיבוי.'} אפשר להתחבר באמצעות אימייל וסיסמה לאחר הפעלת Firebase Authentication.</p>${button('התחברות / יצירת חשבון','login','','primary')}`}
-  <details style="margin-top:18px"><summary>הוראות חיבור Firebase והעברת המידע הישן</summary><div class="hint"><ol><li>בפרויקט Firebase שלך, פתח Authentication → Sign-in method והפעל Email/Password.</li><li>ב־Authentication → Settings → Authorized domains הוסף את הדומיין של האתר. בעת בדיקה מקומית אפשר להוסיף localhost.</li><li>לפני שינוי ההרשאות, הורד JSON של הנתונים הישנים דרך Realtime Database → ⋮ → Export JSON. המידע הישן נמצא תחת appData. שמור גיבוי במקום בטוח.</li><li>ב־Realtime Database → Rules החלף את הכללים בכללים שלמטה ולחץ Publish. הנתיב הישן appData ייחסם; הנתונים החדשים נשמרים בנפרד לכל משתמש.</li><li>פתח את האתר דרך HTTP/HTTPS, התחבר או צור חשבון, וייבא את הגיבוי דרך ההגדרות. לאחר הייבוא עדכן את היתרה הנוכחית בבנק ובדוק את תאריכי הירידה של האשראי.</li></ol><p>הגדרת Firebase שבקוד היא מהפרויקט המקורי שלך. אם החלפת פרויקט, עדכן את FIREBASE_CONFIG.</p><pre dir="ltr" style="overflow:auto;background:var(--input);padding:15px;border-radius:12px;font-size:12px;text-align:left">${esc(JSON.stringify(FIREBASE_RULES,null,2))}</pre>${button('הורדת כללי ההרשאות','download-rules')}<p><a href="https://firebase.google.com/docs/auth/web/password-auth" target="_blank" rel="noopener">מדריך Firebase להתחברות באימייל וסיסמה</a></p><p>אם הורדת נתונים מתוך הנתיב הישן לפני חסימתו, אפשר להשתמש גם בכפתור ״הורדת המידע מהאתר הישן״. הפעולה קוראת בלבד; היא אינה מוחקת או משנה את המידע הישן.</p></div></details></div>`;
+  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${button('שחזור מהאתר הישן','recover-legacy')}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">ייבוא מהאתר הישן והעברה מהמכשיר מוסיפים רשומות בלי למחוק מידע קיים. ייבוא גיבוי מלא מהגרסה החדשה מחליף את הנתונים הפעילים; הורד גיבוי לפניו. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
+  <div class="card"><h2>שמירה בלי הרשמה</h2><p class="hint">${mode==='cloud'?(cloudReady?'המידע מסונכרן לשמירה פרטית בענן. עותק אחרון נשמר גם בדפדפן.':'מוצג עותק אחרון מהמכשיר. החיבור לענן עדיין אינו זמין.'):mode==='demo'?'נתוני הדוגמה אינם נשמרים.':'המידע נשמר אוטומטית בדפדפן הזה. אין צורך במשתמש או בסיסמה כדי להשתמש באתר.'}</p>
+    <div class="flex">${button(mode==='cloud'?'בדיקה מחדש של השמירה בענן':'חיבור לשמירה פרטית בענן','connect-secure','','primary')}${button('גיבוי מוצפן עם סיסמה','encrypted-backup')}</div>
+    <p class="hint">שמירה בענן משתמשת בזיהוי אוטומטי של הדפדפן, בלי מסכי התחברות. מחיקת נתוני הדפדפן עלולה למחוק את מפתח הגישה: שמור גם גיבוי כדי שתוכל לשחזר במכשיר אחר. השמירה המקומית הרגילה אינה מוצפנת; לגיבוי מוצפן יש סיסמה שאתה בוחר.</p>
+    <details style="margin-top:18px"><summary>הגדרה חד־פעמית לשמירה מוגנת בענן</summary><div class="hint"><ol><li>לפני שינוי הכללים, הורד גיבוי JSON של ההכנסות וההוצאות דרך הכפתור למעלה. כך אפשר לשחזר גם אם הנתיב הישן נחסם.</li><li>ב־Firebase → Authentication → Sign-in method הפעל Anonymous. אין צורך להפעיל הרשמה באימייל.</li><li>ב־Realtime Database → Rules הדבק את הכללים שלמטה ולחץ Publish. הם חוסמים גישה ציבורית וגם את הנתיב הישן appData. הנתונים במקור אינם נמחקים.</li><li>פתח את האתר דרך HTTPS או localhost ולחץ ״חיבור לשמירה פרטית בענן״. הנתונים שכבר הזנת יועברו אוטומטית בלי למחוק רשומות קיימות.</li></ol><p>הקוד לא יכול לשנות את כללי Firebase בעצמו. עד להפעלתם, הנתונים במאגר הישן עלולים להישאר נגישים לפי הכללים הישנים. האתר לא יתחיל לכתוב לענן אם בדיקת הקריאה ללא זיהוי מצליחה.</p><pre dir="ltr" style="overflow:auto;background:var(--input);padding:15px;border-radius:12px;font-size:12px;text-align:left">${esc(JSON.stringify(FIREBASE_RULES,null,2))}</pre>${button('הורדת כללי ההרשאות','download-rules')}<p><a href="https://firebase.google.com/docs/auth/web/anonymous-auth" target="_blank" rel="noopener">הגדרת הזיהוי האוטומטי ב־Firebase</a></p></div></details>
+    ${recoveryNotice()}
+  </div>`;
 }
-function render(){ui.days=selectedDays();const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):mode==='cloud'?button('החשבון שלי','account'):button('התחברות','login')}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${recoveryNotice()}${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
+function render(){ui.days=selectedDays();const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):''}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
 </script>
 <script>
 function incomeForm(id){
@@ -371,7 +345,7 @@ async function importData(raw){
   const imported=legacy?E.migrateLegacy(source):E.validate(source);
   const question=legacy?
     'להוסיף את ההכנסות וההוצאות מהגיבוי הישן? הנתונים הקיימים יישמרו, ורשומות שכבר שוחזרו לא יוכפלו. לאחר מכן בדוק את יתרת הבנק ואת תאריכי חיוב האשראי.':
-    `הייבוא יחליף את המידע הפעיל ${mode==='cloud'?'בחשבון שלך':'בדפדפן הזה'}. הורדת גיבוי?`;
+    `הייבוא יחליף את המידע הפעיל ${mode==='cloud'?'בענן הפרטי':'בדפדפן הזה'}. הורדת גיבוי?`;
   if(!confirm(question))return;
   await commit(draft=>{
     if(legacy){Object.assign(draft,E.mergeLegacy(draft,imported));}
@@ -381,30 +355,100 @@ async function importData(raw){
   toast(legacy?'ההכנסות וההוצאות הישנות נוספו ונשמרו':'הגיבוי יובא בהצלחה');
   if(legacy&&!state.bank.verified)bankForm();
 }
-function pickImport(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.addEventListener('change',async()=>{const file=input.files[0];if(!file)return;try{if(file.size>10000000)throw Error('הגיבוי גדול מ־10MB');await importData(JSON.parse(await file.text()));}catch(e){toast('הייבוא נכשל: '+e.message);}});input.click();}
-function demo(){if(mode==='cloud')throw Error('כדי לראות דוגמה, התנתק תחילה');mode='demo';state=E.empty();E.reconcile(state,1250000);state.settings.bufferCents=300000;state.settings.taxReserveCents=100000;state.settings.taxBasisPoints=1500;state.settings.goalCents=500000;const t=E.today();state.incomes=[{id:'demo_income_1',client:'צילום פרסומת — לקוח א׳',amountCents:800000,date:t,termDays:30,manualDate:true,expectedDate:E.addDays(t,25),status:'pending'},{id:'demo_income_2',client:'צילום מוצר — לקוח ב׳',amountCents:350000,date:E.addDays(t,-40),termDays:30,manualDate:true,expectedDate:E.addDays(t,-4),status:'pending'}];state.expenses=[{id:'demo_rent',desc:'העברה לחשבון המשותף',amountCents:430000,purchaseDate:t,chargeDate:E.addDays(t,8),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'שכירות וחשבונות',scope:'אישי',method:'העברה',overrides:{}},{id:'demo_adobe',desc:'תוכנות עריכה',amountCents:23000,purchaseDate:t,chargeDate:E.addDays(t,12),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'תוכנות ומנויים',scope:'עסקי',method:'אשראי',overrides:{}},{id:'demo_camera',desc:'עדשה חדשה',amountCents:600001,purchaseDate:t,chargeDate:E.addDays(t,18),kind:'installments',everyMonths:1,count:6,endDate:null,category:'ציוד ועדשות',scope:'עסקי',method:'אשראי',overrides:{}}];ui.tab='dashboard';status='תצוגת דוגמה — ללא שמירה';render();}
-async function ensureFirebase(){
-  if(fb)return fb;
-  const version='10.8.0',base=`https://www.gstatic.com/firebasejs/${version}/`;
-  const [app,auth,db]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-database.js')]);
-  const firebaseApp=app.initializeApp(FIREBASE_CONFIG);fb={app:firebaseApp,auth,db,authentication:auth.getAuth(firebaseApp),database:db.getDatabase(firebaseApp)};
-  authObserver=auth.onAuthStateChanged(fb.authentication,async next=>{
-    const generation=++authGeneration;if(unsub){unsub();unsub=null;}user=next;cloudReady=false;
-    if(!next){try{localStorage.removeItem('cashflow-restore-session');}catch(e){}if(mode==='cloud'){mode='local';state=loadLocal();status='נשמר במכשיר';render();}return;}
-    try{localStorage.setItem('cashflow-restore-session','1');}catch(e){}mode='cloud';state=E.empty();status='טוען מידע מהחשבון…';render();
-    if(modal.querySelector('[data-form=auth]'))closeModal();
-    const ref=fb.db.ref(fb.database,`users/${next.uid}/appData`);
-    unsub=fb.db.onValue(ref,snapshot=>{
-      if(generation!==authGeneration)return;
-      try{state=snapshot.exists()?E.validate(snapshot.val()):E.empty();cloudReady=true;status='מסונכרן לחשבון';render();}
-      catch(e){cloudReady=false;status='המידע בענן לא נטען';toast('לא ניתן לקרוא את המידע מהחשבון: '+e.message);render();}
-    },error=>{if(generation!==authGeneration)return;cloudReady=false;status='לא ניתן לקרוא מהענן';toast('בדוק שהפעלת את כללי ההרשאות בהגדרות. הנתונים המקומיים נשארו במכשיר.');render();});
-  });
-  return fb;
+function pickImport(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.addEventListener('change',async()=>{const file=input.files[0];if(!file)return;try{if(file.size>10000000)throw Error('הגיבוי גדול מ־10MB');const raw=JSON.parse(await file.text());if(raw.format==='cashflow-encrypted-v1'){pendingEncryptedBackup=raw;openModal('פתיחת הגיבוי המוצפן',`<form class="form" data-form="unlock-backup">${field('סיסמת הגיבוי','backupPassword','','password','required autocomplete="off"')}<p class="hint">סיסמה שגויה לא משנה את הנתונים שלך.</p>${actionsEnd()}</form>`);}else await importData(raw);}catch(e){toast('הייבוא נכשל: '+e.message);}});input.click();}
+function demo(){if(mode==='cloud')throw Error('הדוגמה זמינה כשהשמירה מקומית');mode='demo';state=E.empty();E.reconcile(state,1250000);state.settings.bufferCents=300000;state.settings.taxReserveCents=100000;state.settings.taxBasisPoints=1500;state.settings.goalCents=500000;const t=E.today();state.incomes=[{id:'demo_income_1',client:'צילום פרסומת — לקוח א׳',amountCents:800000,date:t,termDays:30,manualDate:true,expectedDate:E.addDays(t,25),status:'pending'},{id:'demo_income_2',client:'צילום מוצר — לקוח ב׳',amountCents:350000,date:E.addDays(t,-40),termDays:30,manualDate:true,expectedDate:E.addDays(t,-4),status:'pending'}];state.expenses=[{id:'demo_rent',desc:'העברה לחשבון המשותף',amountCents:430000,purchaseDate:t,chargeDate:E.addDays(t,8),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'שכירות וחשבונות',scope:'אישי',method:'העברה',overrides:{}},{id:'demo_adobe',desc:'תוכנות עריכה',amountCents:23000,purchaseDate:t,chargeDate:E.addDays(t,12),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'תוכנות ומנויים',scope:'עסקי',method:'אשראי',overrides:{}},{id:'demo_camera',desc:'עדשה חדשה',amountCents:600001,purchaseDate:t,chargeDate:E.addDays(t,18),kind:'installments',everyMonths:1,count:6,endDate:null,category:'ציוד ועדשות',scope:'עסקי',method:'אשראי',overrides:{}}];ui.tab='dashboard';status='תצוגת דוגמה — ללא שמירה';render();}
+let firebaseLoading=null,secureConnecting=false,pendingEncryptedBackup=null;
+function cacheCloud(value){
+  try{localStorage.setItem(LOCAL_KEY,JSON.stringify(value));}
+  catch(e){toast('נשמר בענן, אך העותק במכשיר לא עודכן. כדאי להוריד גיבוי.');}
 }
-function authMessage(e){const map={'auth/operation-not-allowed':'צריך להפעיל Email/Password ב־Firebase Authentication','auth/invalid-credential':'אימייל או סיסמה לא נכונים','auth/wrong-password':'אימייל או סיסמה לא נכונים','auth/user-not-found':'אימייל או סיסמה לא נכונים','auth/email-already-in-use':'האימייל כבר רשום. בחר התחברות','auth/invalid-email':'כתובת האימייל אינה תקינה','auth/weak-password':'בחר סיסמה של לפחות 6 תווים','auth/too-many-requests':'בוצעו ניסיונות רבים. נסה שוב מאוחר יותר','auth/network-request-failed':'לא ניתן להתחבר. בדוק את האינטרנט','auth/unauthorized-domain':'הוסף את דומיין האתר ל־Authorized domains ב־Firebase'};return map[e.code]||'לא ניתן להתחבר. בדוק את הגדרות Firebase והאינטרנט';}
-function loginForm(){openModal('התחברות לחשבון',`<form class="form" data-form="auth">${field('אימייל','email','','email','required autocomplete="email" dir="ltr"')}${field('סיסמה','password','','password','required minlength="6" autocomplete="current-password"')}${selectField('פעולה','operation',[{value:'login',label:'התחברות'},{value:'signup',label:'יצירת חשבון חדש'}],'login')}<p class="hint">אם זו הפעם הראשונה, בחר ״יצירת חשבון חדש״. המידע המקומי אינו מועבר אוטומטית; לאחר התחברות אפשר לייבא אותו דרך ההגדרות.</p><div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">המשך</button></div>${button('שכחתי סיסמה','reset-password')}</form>`);}
-async function legacyDownload(){if(!fb||!user)throw Error('התחבר קודם לחשבון');if(!confirm('לקרוא ולהוריד גיבוי של appData מהאתר הישן? הפעולה אינה משנה את המידע.'))return;const snap=await fb.db.get(fb.db.ref(fb.database,'appData'));if(!snap.exists())throw Error('אין מידע בנתיב הישן. אפשר לייצא JSON ישירות מ־Firebase Console');download(`cashflow-legacy-${E.today()}.json`,JSON.stringify(snap.val(),null,2));toast('הגיבוי הישן הורד. אפשר לייבא אותו דרך ההגדרות');}
+async function assertPrivateRead(uid){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const response=await fetch(FIREBASE_CONFIG.databaseURL.replace(/\/$/,'')+`/users/${encodeURIComponent(uid)}/appData.json?shallow=true`,{cache:'no-store',credentials:'omit',signal:controller.signal});
+    if(response.status!==401&&response.status!==403)throw Error('הענן עדיין אינו מוגן או שלא ניתן לבדוק אותו. פרסם את כללי ההרשאות שבהגדרות ואז נסה שוב.');
+  }finally{clearTimeout(timer);}
+}
+async function ensureFirebase(){
+  if(fb)return fb;if(firebaseLoading)return firebaseLoading;
+  firebaseLoading=(async()=>{
+    const base='https://www.gstatic.com/firebasejs/10.8.0/';
+    const [app,auth,db]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-database.js')]);
+    const firebaseApp=app.initializeApp(FIREBASE_CONFIG),authentication=auth.getAuth(firebaseApp);
+    await auth.setPersistence(authentication,auth.browserLocalPersistence);
+    fb={app:firebaseApp,auth,db,authentication,database:db.getDatabase(firebaseApp)};
+    return fb;
+  })();
+  try{return await firebaseLoading;}finally{firebaseLoading=null;}
+}
+async function connectSecure(){
+  if(secureConnecting||busy||mode==='demo')return;
+  secureConnecting=true;busy=true;cloudReady=false;
+  const generation=++authGeneration;if(unsub){unsub();unsub=null;}
+  status='בודק שמירה פרטית…';render();
+  try{
+    if(recoveryPending)throw Error('הנתונים הישנים עדיין נטענים. נסה שוב לאחר השחזור.');
+    if(!navigator.onLine)throw Error('אין אינטרנט. הנתונים במכשיר נשארים שמורים.');
+    const f=await ensureFirebase();
+    // Reuse any existing Firebase session, so previously saved records stay accessible.
+    await new Promise((resolve,reject)=>{let stop;stop=f.auth.onAuthStateChanged(f.authentication,()=>{resolve();setTimeout(()=>stop?.(),0);},reject);});
+    const currentUser=f.authentication.currentUser||(await f.auth.signInAnonymously(f.authentication)).user;
+    await assertPrivateRead(currentUser.uid);
+    const ref=f.db.ref(f.database,`users/${currentUser.uid}/appData`);
+    const marker=LOCAL_KEY+'-cloud-imported-'+currentUser.uid;
+    const source=clone(state),sourceRevision=state.revision,firstTransfer=!localStorage.getItem(marker);
+    let loaded;
+    if(firstTransfer){
+      const result=await f.db.runTransaction(ref,remote=>{
+        const destination=remote?E.validate(remote):E.empty();
+        const merged=E.mergeLegacy(destination,source);merged.revision=destination.revision+1;return merged;
+      },{applyLocally:false});
+      if(!result.committed)throw Error('המידע לא הועבר. הנתונים במכשיר נשארו שמורים.');
+      loaded=E.validate(result.snapshot.val());
+    }else{
+      // A reconnect reads only. Never recreate a missing remote from an empty SDK cache.
+      const snapshot=await f.db.get(ref);
+      if(!snapshot.exists())throw Error('הנתונים בענן חסרים. העותק במכשיר נשמר; אפשר לשחזר גיבוי דרך ההגדרות.');
+      loaded=E.validate(snapshot.val());
+    }
+    if(mode==='local'&&state.revision!==sourceRevision)throw Error('נוסף מידע במכשיר בזמן החיבור. נסה שוב כדי להעביר גם אותו.');
+    localStorage.setItem(marker,'1');localStorage.setItem('cashflow-secure-enabled','1');
+    localStorage.setItem('cashflow-restore-session','1');
+    user=currentUser;mode='cloud';state=loaded;cloudReady=true;cacheCloud(state);status='נשמר בענן הפרטי';render();
+    unsub=f.db.onValue(ref,snapshot=>{
+      if(generation!==authGeneration)return;
+      try{if(!snapshot.exists())throw Error('הנתונים בענן חסרים. העותק במכשיר נשמר');state=E.validate(snapshot.val());cloudReady=true;cacheCloud(state);status=navigator.onLine?'נשמר בענן הפרטי':'אין אינטרנט — מוצג עותק אחרון';render();}
+      catch(e){cloudReady=false;status='לא ניתן לטעון מהענן';toast(e.message);render();}
+    },()=>{if(generation!==authGeneration)return;cloudReady=false;status='אין גישה לענן — מוצג עותק אחרון';toast('המידע במכשיר נשמר. בדוק את כללי Firebase ונסה לחבר שוב את השמירה.');render();});
+    toast('השמירה הפרטית מחוברת. אין צורך בהרשמה.');
+  }catch(e){
+    status=mode==='cloud'?'אין גישה לענן — מוצג עותק אחרון':'נשמר במכשיר — הענן לא מחובר';render();
+    toast(e.code==='auth/operation-not-allowed'?'הפעל Anonymous ב־Firebase Authentication, כפי שמוסבר בהגדרות.':e.message||'לא ניתן להתחבר. המידע נשאר שמור במכשיר.');
+  }finally{secureConnecting=false;busy=false;setBusy(false);}
+}
+function encryptedBackupForm(){
+  if(!crypto.subtle)throw Error('גיבוי מוצפן דורש HTTPS או localhost');
+  openModal('גיבוי מוצפן — בלי חשבון',`<form class="form" data-form="encrypted-backup">${field('סיסמה לגיבוי (לפחות 10 תווים)','backupPassword','','password','required minlength="10" autocomplete="new-password"')}${field('הקלדת הסיסמה שוב','backupRepeat','','password','required minlength="10" autocomplete="new-password"')}<p class="hint">הסיסמה מצפינה את כל ההכנסות וההוצאות בקובץ. היא אינה נשלחת לשום שרת. אי אפשר לפתוח את הגיבוי בלי הסיסמה.</p>${actionsEnd()}</form>`);
+}
+function encode64(bytes){let text='';for(const b of bytes)text+=String.fromCharCode(b);return btoa(text);}
+function decode64(text){if(typeof text!=='string'||text.length>14000000)throw Error('מבנה גיבוי לא תקין');return Uint8Array.from(atob(text),c=>c.charCodeAt(0));}
+async function backupKey(password,salt){
+  const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptBackup(value,password){
+  if(!crypto.subtle)throw Error('הצפנה דורשת HTTPS או localhost');
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await backupKey(password,salt),data=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode('cashflow-encrypted-v1')},key,new TextEncoder().encode(JSON.stringify(value)));
+  return {format:'cashflow-encrypted-v1',cipher:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:600000,salt:encode64(salt),iv:encode64(iv),data:encode64(new Uint8Array(data))};
+}
+async function decryptBackup(raw,password){
+  if(!crypto.subtle)throw Error('פתיחת גיבוי מוצפן דורשת HTTPS או localhost');
+  if(!raw||raw.format!=='cashflow-encrypted-v1'||raw.cipher!=='AES-256-GCM'||raw.kdf!=='PBKDF2-SHA256'||raw.iterations!==600000)throw Error('פורמט ההצפנה אינו נתמך');
+  const salt=decode64(raw.salt),iv=decode64(raw.iv);if(salt.length!==16||iv.length!==12)throw Error('מבנה הגיבוי לא תקין');
+  try{const key=await backupKey(password,salt),plain=await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode(raw.format)},key,decode64(raw.data));return E.validate(JSON.parse(new TextDecoder().decode(plain)));}
+  catch(e){throw Error('סיסמה שגויה או קובץ פגום. הנתונים הקיימים לא השתנו.');}
+}
 async function clickAction(btn){
   const a=btn.dataset.action,id=btn.dataset.id;
   if(a==='tab'){ui.tab=btn.dataset.tab;render();}
@@ -426,18 +470,21 @@ async function clickAction(btn){
   else if(a==='stop-series')stopSeries(id);
   else if(a==='credit-date'){const f=modal.querySelector('form');if(f?.dataset.form!=='expense')return;if(f.elements.chargeDate.readOnly)throw Error('אי אפשר להזיז סדרה עם חיובים שאושרו');f.elements.chargeDate.value=E.creditDate(f.elements.purchaseDate.value,state.settings.creditDay);}
   else if(a==='export-json')download(`cashflow-${E.today()}.json`,JSON.stringify(state,null,2));else if(a==='export-csv')exportCSV();else if(a==='download-source')exportSource();else if(a==='download-rules')download('database.rules.json',JSON.stringify(FIREBASE_RULES,null,2));
-  else if(a==='recover-legacy')await recoverLegacy(true);else if(a==='import-json')pickImport();else if(a==='import-local'){const raw=localStorage.getItem(LOCAL_KEY);if(!raw)throw Error('אין מידע מקומי להעברה');const incoming=E.validate(JSON.parse(raw));if(confirm('להעביר את המידע מהמכשיר לחשבון שלך? הנתונים הקיימים בחשבון יישמרו, ונוסיף רק רשומות שאינן קיימות בו.')){await commit(s=>Object.assign(s,E.mergeLegacy(s,incoming)));ui.expenseStatus='series';render();toast('המידע מהמכשיר נוסף לחשבון שלך');}}
+  else if(a==='recover-legacy')await recoverLegacy(true);else if(a==='import-json')pickImport();
   else if(a==='demo')demo();else if(a==='exit-demo'){mode='local';state=loadLocal();status='נשמר במכשיר';render();}
-  else if(a==='account'){ui.tab='settings';render();}else if(a==='login')loginForm();
-  else if(a==='logout'){if(confirm('להתנתק? המידע בחשבון יישאר שמור בענן.')){await fb.auth.signOut(fb.authentication);closeModal();}}
-  else if(a==='legacy-cloud'){try{await legacyDownload();}catch(e){throw Error('לא ניתן לקרוא מהנתיב הישן. אחרי חסימת appData יש לייצא דרך Firebase Console.');}}
-  else if(a==='reset-password'){const email=modal.querySelector('[name=email]')?.value.trim();if(!email||!modal.querySelector('[name=email]').checkValidity())throw Error('הזן קודם את האימייל שלך');if(!confirm(`לשלוח קישור לאיפוס סיסמה אל ${email}?`))return;try{const f=await ensureFirebase();await f.auth.sendPasswordResetEmail(f.authentication,email);toast('אם האימייל רשום, יישלח אליו קישור לאיפוס סיסמה');}catch(e){throw Error(authMessage(e));}}
+  else if(a==='connect-secure')await connectSecure();
+  else if(a==='encrypted-backup')encryptedBackupForm();
+  else if(a==='spending-detail')spendingDetail();
 }
 async function submitForm(form){
   const data=new FormData(form),get=n=>String(data.get(n)||'').trim(),type=form.dataset.form;
-  if(type==='auth'){
-    const operation=get('operation');form.querySelectorAll('button').forEach(b=>b.disabled=true);
-    try{const f=await ensureFirebase();if(operation==='signup')await f.auth.createUserWithEmailAndPassword(f.authentication,get('email'),get('password'));else await f.auth.signInWithEmailAndPassword(f.authentication,get('email'),get('password'));toast('ההתחברות הצליחה');}catch(e){throw Error(authMessage(e));}finally{form.querySelectorAll('button').forEach(b=>b.disabled=false);}return;
+  if(type==='encrypted-backup'){
+    const password=get('backupPassword');if(password.length<10)throw Error('בחר סיסמה של לפחות 10 תווים');
+    if(password!==get('backupRepeat'))throw Error('הסיסמאות אינן זהות');
+    const encrypted=await encryptBackup(state,password);download(`cashflow-encrypted-${E.today()}.json`,JSON.stringify(encrypted,null,2));closeModal();toast('הגיבוי המוצפן הורד. שמור את הסיסמה בנפרד');return;
+  }
+  if(type==='unlock-backup'){
+    const restored=await decryptBackup(pendingEncryptedBackup,get('backupPassword'));await importData(restored);closeModal();pendingEncryptedBackup=null;return;
   }
   if(type==='bank'){const amount=E.cents(get('balance'),true);await commit(s=>E.reconcile(s,amount),modalBase);}
   else if(type==='preferences'){
@@ -476,10 +523,6 @@ let recoveryPending=false,recoveryFailed=false;
 function recoveryNotice(){
   if(mode==='demo')return '';
   const saved=loadRecoveryLocal();
-  if(mode==='cloud'&&!state.incomes.length&&!state.expenses.length&&
-     saved&&(saved.incomes.length||saved.expenses.length)){
-    return `<div class="notice">המידע הקיים שמור במכשיר: ${saved.incomes.length} הכנסות ו־${saved.expenses.length} הוצאות. החשבון החדש עדיין ריק. ${button('העברת המידע לחשבון שלי','import-local','','primary')}</div>`;
-  }
   if(state.legacyRecovery&&!state.bank.verified){
     const r=state.legacyRecovery;
     return `<div class="notice">שוחזרו ${r.incomeCount} הכנסות ו־${r.expenseCount} הוצאות מהאתר הישן. הן מופיעות בלשוניות ההכנסות וההוצאות.</div>`;
@@ -526,11 +569,14 @@ async function recoverLegacy(force=false){
   }catch(e){recoveryFailed=true;toast(e.message||'השחזור לא הושלם. אפשר לייבא את הגיבוי');}
   finally{clearTimeout(timer);recoveryPending=false;render();}
 }
-// Restore an authenticated session. Recovery first preserves the owner's legacy records
-// locally; moving them into a signed-in account requires the explicit transfer button.
-let restoreSession=false;try{restoreSession=localStorage.getItem('cashflow-restore-session')==='1';}catch(e){}
-if(restoreSession){mode='cloud';state=E.empty();status='משחזר חיבור לחשבון…';render();ensureFirebase().catch(()=>{mode='local';state=loadLocal();status='אין חיבור — מוצג מידע מהמכשיר';render();toast('לא ניתן לשחזר את החיבור לענן. התחבר שוב כשיחזור האינטרנט.');});}else render();
-recoverLegacy();
+// Keep the last confirmed device data visible while reconnecting.
+let secureEnabled=false;try{secureEnabled=localStorage.getItem('cashflow-secure-enabled')==='1'||localStorage.getItem('cashflow-restore-session')==='1';}catch(e){}
+if(secureEnabled){mode='cloud';cloudReady=false;status='מוצג עותק אחרון — מחבר שמירה פרטית…';}
+render();
+(async()=>{
+  await recoverLegacy();
+  if(secureEnabled){state=loadLocal();render();await connectSecure();}
+})();
 </script>
 </body>
 </html>
