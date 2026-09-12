@@ -174,7 +174,6 @@
   const uid = () => Math.random().toString(36).slice(2, 10);
   const todayStr = () => new Date().toISOString().slice(0, 10);
   
-  // חישוב תאריך יעד אמיתי לפי תנאי שוטף (סוף החודש הנוכחי + X ימים)
   const calcExpectedDate = (invoiceDateStr, termDays) => {
     if (Number(termDays) === 0) return invoiceDateStr;
     const date = new Date(invoiceDateStr);
@@ -240,10 +239,16 @@
     const pending = (state.incomes || []).filter((i) => i.status !== "paid").sort((a, b) => (a.expectedDate > b.expectedDate ? 1 : -1));
     
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
+    
+    // הוצאות עד היום (לא כולל תשלומים עתידיים עתידיים)
+    const expensesTillNow = (state.expenses || []).filter(e => e.date <= today).reduce((s, e) => s + Number(e.amount), 0);
+    
+    // סך כל ההוצאות וההכנסות הרשומות
     const totalExpSoFar = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
     const totalAllIncomes = (state.incomes || []).reduce((s, i) => s + Number(i.amount), 0);
     
-    const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpSoFar + totalPaid;
+    // יתרה נזילה אמיתית נכון להיום
+    const actualCurrentBalance = Number(state.openingBalance || 0) - expensesTillNow + totalPaid;
     
     const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
     const monthExpectedIncome = pending.reduce((s, i) => s + Number(i.amount), 0);
@@ -263,6 +268,7 @@
       monthPaidIncome, 
       monthExpectedIncome, 
       monthExpenses,
+      expensesTillNow,
       totalExpSoFar,
       totalAllIncomes,
       safeToSpend,
@@ -336,7 +342,7 @@
     return `
       <div class="hero">
         <div class="hero-label">נשאר ביד כרגע (אחרי הוצאות)</div>
-        <div class="hero-number" style="color:var(--positive)">${fmtMoney(c.actualCurrentBalance)}</div>
+        <div class="hero-number" style="color:${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'}">${fmtMoney(c.actualCurrentBalance)}</div>
         <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה בחשבון</button>
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;gap:8px;">
@@ -359,10 +365,10 @@
             <span><strong>${fmtMoney(c.openingBalance)}</strong></span>
           </div>
           <div class="summary-item sub" style="color:var(--negative)">
-            <span>פחות הוצאות חודש (שירדו/ירדו באשראי):</span>
-            <span>-${fmtMoney(c.totalExpSoFar)}</span>
+            <span>פחות הוצאות עד כה (שירדו/ירדו באשראי):</span>
+            <span>-${fmtMoney(c.expensesTillNow)}</span>
           </div>
-          <div class="summary-item" style="border-top:1px solid var(--border); padding-top:8px; font-weight:700; color:var(--positive);">
+          <div class="summary-item" style="border-top:1px solid var(--border); padding-top:8px; font-weight:700; color:${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'};">
             <span>נשאר לך ביד כרגע:</span>
             <span>${fmtMoney(c.actualCurrentBalance)}</span>
           </div>
