@@ -165,13 +165,13 @@
   const addDays = (d, days) => { const x = new Date(d); x.setDate(x.getDate() + Number(days)); return x.toISOString().slice(0, 10); };
   const addMonths = (d, months) => { const x = new Date(d); x.setMonth(x.getMonth() + Number(months)); return x.toISOString().slice(0, 10); };
   
-  // הגדרה מעודכנת: מציג תמיד את הסכום המדויק עם אגורות במידה וקיימות
+  // פונקציית העיצוב המתוקנת: מציגה בדיוק את מה שהכנסת ללא אפסים מיותרים
   const fmtMoney = (n) => {
     const val = Number(n || 0);
     return new Intl.NumberFormat("he-IL", { 
       style: "currency", 
       currency: "ILS", 
-      minimumFractionDigits: val % 1 === 0 ? 0 : 2, 
+      minimumFractionDigits: 0, 
       maximumFractionDigits: 2 
     }).format(val);
   };
@@ -316,7 +316,7 @@
         <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה מדויקת</button>
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;gap:8px;">
-            <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${state.openingBalance || ''}" placeholder="סכום מדויק (למשל: 12540.50)"/>
+            <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${state.openingBalance || ''}" placeholder="סכום מדויק (למשל: 12540.5)"/>
             <button class="submit-btn" style="padding:0 20px;margin-top:0" data-action="save-balance">עדכן</button>
           </div>` : ""}
       </div>
