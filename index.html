@@ -3,72 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>תזרים לצלם - מעקב הכנסות, הוצאות וחיסכון</title>
+  <title>תזרים לצלם - מעקב הכנסות, הוצאות ותשלומים</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
     
     :root {
-      --bg: #16140F;
-      --surface: #211E17;
-      --surface-2: #2A261C;
-      --text: #F1EBDD;
-      --text-muted: #A79C87;
-      --accent: #E2793D;
-      --positive: #7FA37A;
-      --negative: #C2695C;
-      --border: #3A3428;
+      --bg: #12110E;
+      --surface: #1C1A14;
+      --surface-2: #26231B;
+      --text: #F5F0E6;
+      --text-muted: #9E9484;
+      --accent: #E07A38;
+      --accent-hover: #F08947;
+      --positive: #6E9D68;
+      --negative: #D15A4A;
+      --border: #332E24;
+      --shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
     
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); font-family: 'Rubik', system-ui, sans-serif; min-height: 100vh; }
-    #app { width: 100%; max-width: 640px; margin: 0 auto; padding: 28px 18px 60px; }
+    body { margin: 0; background: var(--bg); font-family: 'Rubik', system-ui, sans-serif; min-height: 100vh; color: var(--text); }
+    #app { width: 100%; max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; }
     
     input, select, button { font-family: inherit; outline: none; }
     input:focus, select:focus, button:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
-    ::placeholder { color: #6E6553; }
+    ::placeholder { color: #615848; }
     
-    .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
     .brand svg { color: var(--accent); }
-    .brand-text { font-weight: 600; font-size: 21px; color: var(--text); }
+    .brand-text { font-weight: 700; font-size: 22px; color: var(--text); tracking: -0.5px; }
     
-    .tabs { display: flex; gap: 6px; background: var(--surface); padding: 4px; border-radius: 10px; margin-bottom: 22px; }
-    .tab-btn { flex: 1; padding: 9px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 7px; font-size: 14px; cursor: pointer; }
-    .tab-btn.active { background: var(--surface-2); color: var(--text); }
+    .tabs { display: flex; gap: 6px; background: var(--surface); padding: 5px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 10px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 8px; font-size: 14.5px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
     
-    .section { display: flex; flex-direction: column; gap: 16px; }
+    .section { display: flex; flex-direction: column; gap: 18px; }
     
-    .hero { background: linear-gradient(160deg, var(--surface) 0%, var(--surface) 70%, #2E2311 100%); border: 1px solid var(--border); border-radius: 18px; padding: 26px 22px; text-align: center; }
+    .hero { background: linear-gradient(145deg, #242018 0%, #1A1711 100%); border: 1px solid var(--border); border-radius: 20px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
     .hero-label { color: var(--text-muted); font-size: 13.5px; margin-bottom: 6px; }
-    .hero-number { font-weight: 700; font-size: 44px; color: var(--accent); line-height: 1.1; font-variant-numeric: tabular-nums; }
-    .link-btn { margin-top: 10px; background: none; border: none; color: var(--text-muted); font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+    .hero-number { font-weight: 700; font-size: 42px; color: var(--accent); line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .link-btn { margin-top: 12px; background: none; border: none; color: var(--text-muted); font-size: 12.5px; text-decoration: underline; cursor: pointer; }
     
     .stat-row { display: flex; gap: 10px; }
-    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-    .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; }
-    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    .stat-value { font-size: 17px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 12px; }
+    .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .stat-value { font-size: 16px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
     
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-    .card-title { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; font-weight: 600; margin-bottom: 10px; }
-    .p { color: var(--text-muted); font-size: 14px; line-height: 1.7; margin: 0 0 8px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+    .card-title { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 15.5px; font-weight: 600; margin-bottom: 12px; }
+    .p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin: 0 0 8px; }
     
-    .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .row:last-child { border-bottom: none; }
-    .row-title { color: var(--text); font-size: 14.5px; }
-    .row-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
-    .row-amount { color: var(--text); font-variant-numeric: tabular-nums; font-size: 14.5px; font-weight: 600; white-space: nowrap; margin-right: auto; }
+    .row-title { color: var(--text); font-size: 14.5px; font-weight: 500; }
+    .row-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 3px; }
+    .row-amount { color: var(--text); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; white-space: nowrap; margin-right: auto; }
     
-    .icon-btn { background: var(--positive); border: none; color: #12160F; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; font-weight: bold; }
-    .icon-btn-muted { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--accent); color: #221204; border: none; border-radius: 10px; padding: 11px 0; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+    .icon-btn { background: var(--positive); border: none; color: #101B0E; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; font-weight: bold; }
+    .icon-btn-muted { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--accent); color: #1A0D03; border: none; border-radius: 12px; padding: 12px 0; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .add-btn:hover { background: var(--accent-hover); }
     
-    .form-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .form-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
     .label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-muted); }
-    .input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; color: var(--text); font-size: 14.5px; }
-    .submit-btn { background: var(--accent); color: #221204; border: none; border-radius: 8px; padding: 10px 0; font-size: 14.5px; font-weight: 600; cursor: pointer; }
-    .empty { color: var(--text-muted); font-size: 14px; padding: 8px 0; }
-    .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 8px; display: flex; cursor: pointer; }
+    .input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 14.5px; width: 100%; }
+    .submit-btn { background: var(--accent); color: #1A0D03; border: none; border-radius: 10px; padding: 11px 0; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .empty { color: var(--text-muted); font-size: 14px; padding: 10px 0; text-align: center; }
+    .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 8px; display: flex; cursor: pointer; user-select: none; }
     .save-error { margin-top: 14px; font-size: 12.5px; color: var(--negative); text-align: center; }
+    .installments-box { background: var(--surface-2); padding: 12px; border-radius: 10px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
   </style>
 </head>
 <body>
@@ -93,7 +97,7 @@ const CATEGORIES = [
   "אחר"
 ];
 
-const LOCAL_KEY = "tazrim-tzalam-data";
+const LOCAL_KEY = "tazrim-tzalam-data-v2";
 
 let state = { openingBalance: 0, incomes: [], expenses: [] };
 try {
@@ -101,7 +105,14 @@ try {
   if (raw) state = JSON.parse(raw);
 } catch (e) { /* ברירת מחדל */ }
 
-let ui = { tab: "dashboard", showIncomeForm: false, showExpenseForm: false, showBalanceEdit: false, saveError: false };
+let ui = { 
+  tab: "dashboard", 
+  showIncomeForm: false, 
+  showExpenseForm: false, 
+  showBalanceEdit: false, 
+  isInstallments: false,
+  saveError: false 
+};
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -112,7 +123,13 @@ const addDays = (d, days) => {
   return x.toISOString().slice(0, 10); 
 };
 
-const fmtMoney = (n) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(n || 0);
+const addMonths = (d, months) => {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + Number(months));
+  return x.toISOString().slice(0, 10);
+};
+
+const fmtMoney = (n) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(d));
 const monthKey = (d) => d.slice(0, 7);
 const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
@@ -174,7 +191,7 @@ function render() {
   const root = document.getElementById("app");
   root.innerHTML = `
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
       <span class="brand-text">תזרים לצלם</span>
     </div>
     <div class="tabs">
@@ -199,9 +216,9 @@ function renderDashboard(c) {
       <div class="hero-number">${fmtMoney(c.availableNow)}</div>
       <button class="link-btn" data-action="toggle-balance-edit">עדכון יתרת פתיחה</button>
       ${ui.showBalanceEdit ? `
-        <div style="margin-top:10px;display:flex;gap:8px;">
-          <input class="input" style="flex:1" id="balance-input" type="number" inputmode="decimal" value="${state.openingBalance}" placeholder="יתרת בנק נוכחית"/>
-          <button class="submit-btn" style="padding:0 16px" data-action="save-balance">עדכון</button>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${state.openingBalance}" placeholder="יתרת בנק נוכחית"/>
+          <button class="submit-btn" style="padding:0 18px" data-action="save-balance">עדכון</button>
         </div>` : ""}
     </div>
     <div class="stat-row">
@@ -211,13 +228,13 @@ function renderDashboard(c) {
     </div>
     <div class="card">
       <div class="card-title">בדרך אליך (שוטף ממתין)</div>
-      ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע. כל מה שהזנת כבר שולם.</div>' :
+      ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע.</div>' :
         c.pending.map((inc) => {
           const d = daysUntil(inc.expectedDate);
           return `<div class="row">
             <div style="flex:1">
               <div class="row-title">${esc(inc.client)}</div>
-              <div class="row-sub">צפוי ב${fmtDate(inc.expectedDate)} · ${d >= 0 ? "בעוד " + d + " ימים" : "באיחור של " + (-d) + " ימים"}</div>
+              <div class="row-sub">צפוי ב-${fmtDate(inc.expectedDate)} · ${d >= 0 ? "בעוד " + d + " ימים" : "באיחור של " + (-d) + " ימים"}</div>
             </div>
             <div class="row-amount">${fmtMoney(inc.amount)}</div>
             <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>
@@ -230,10 +247,9 @@ function renderDashboard(c) {
         ? '<div class="empty">אחרי שיצטברו לך חודש-חודשיים של נתונים, תופיע כאן הערכה כמה אפשר לשים בצד לחיסכון.</div>'
         : `<p class="p">בממוצע על ${c.monthsCounted} ${c.monthsCounted === 1 ? "חודש" : "חודשים"} נרשמו הכנסות של כ-${fmtMoney(c.avgIncome)} והוצאות של כ-${fmtMoney(c.avgExpense)}.</p>
            ${c.avgSurplus > 0
-             ? `<p class="p">נשאר עודף ממוצע של <strong style="color:var(--positive)">${fmtMoney(c.avgSurplus)}</strong> לחודש. בגלל השוטף +30/+60, מומלץ קודם כל לבנות "כרית ביטחון" של 1-2 חודשי הוצאות בצד, ורק לאחר מכן להעביר את העודף לחיסכון קבוע.</p>`
-             : `<p class="p">בממוצע ההוצאות עולות על ההכנסות שכבר התקבלו ב-<strong style="color:var(--negative)">${fmtMoney(-c.avgSurplus)}</strong> לחודש. מומלץ לבדוק צמצום הוצאות קבועות או להדק מעקב גבייה.</p>`}`}
+             ? `<p class="p">נשאר עודף ממוצע של <strong style="color:var(--positive)">${fmtMoney(c.avgSurplus)}</strong> לחודש. מומלץ לבנות "כרית ביטחון" לניהול השוטף פלוס לפני העברה לחיסכון קבוע.</p>`
+             : `<p class="p">בממוצע ההוצאות עולות על ההכנסות שכבר התקבלו ב-<strong style="color:var(--negative)">${fmtMoney(-c.avgSurplus)}</strong> לחודש. מומלץ לבדוק צמצום הוצאות או הגברת הגבייה.</p>`}`}
     </div>
-    ${!hasData ? '<p class="p" style="text-align:center">התחל בהוספת עבודה בלשונית הכנסות, או הוצאה בלשונית הוצאות.</p>' : ""}
   `;
 }
 
@@ -247,8 +263,8 @@ function renderIncome() {
     <button class="add-btn" data-action="toggle-income-form">+ הוספת עבודה / יום צילום</button>
     ${ui.showIncomeForm ? `
     <form class="form-box" id="income-form">
-      <label class="label">לקוח / תיאור העבודה<input class="input" name="client" placeholder="למשל: חתונה - משפחת כהן / צילומי תדמית" required/></label>
-      <label class="label">סכום (₪)<input class="input" name="amount" type="number" placeholder="0" required/></label>
+      <label class="label">לקוח / תיאור העבודה<input class="input" name="client" placeholder="למשל: צילומי אירוע / פרסומת" required/></label>
+      <label class="label">סכום (₪)<input class="input" name="amount" type="number" step="0.01" placeholder="0.00" required/></label>
       <label class="label">תאריך העבודה / החשבונית<input class="input" name="date" type="date" value="${todayStr()}"/></label>
       <label class="label">תנאי תשלום
         <select class="input" name="termDays" id="term-select">
@@ -257,7 +273,7 @@ function renderIncome() {
       </label>
       <button type="submit" class="submit-btn">שמירה</button>
     </form>` : ""}
-    <div>
+    <div class="card" style="padding:0 18px;">
       ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו עבודות.</div>' : sorted.map((inc) => `
         <div class="row">
           <div style="flex:1">
@@ -278,21 +294,38 @@ function renderExpenses() {
     <button class="add-btn" data-action="toggle-expense-form">+ הוספת הוצאה</button>
     ${ui.showExpenseForm ? `
     <form class="form-box" id="expense-form">
-      <label class="label">תיאור ההוצאה<input class="input" name="desc" placeholder="למשל: מנוי אדובי / ביטוח ציוד / דלק" required/></label>
-      <label class="label">סכום (₪)<input class="input" name="amount" type="number" placeholder="0" required/></label>
-      <label class="label">תאריך<input class="input" name="date" type="date" value="${todayStr()}"/></label>
+      <label class="label">תיאור ההוצאה<input class="input" name="desc" placeholder="למשל: עדשה חדשה / מנוי תוכנה" required/></label>
+      <label class="label">סכום כולל (₪)<input class="input" name="amount" type="number" step="0.01" placeholder="0.00" required/></label>
+      <label class="label">תאריך התחלה / קנייה<input class="input" name="date" type="date" value="${todayStr()}"/></label>
       <label class="label">קטגוריה
         <select class="input" name="category">${CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join("")}</select>
       </label>
-      <label class="label checkbox-label"><input type="checkbox" name="recurring" style="width:16px;height:16px"/> הוצאה חודשית קבועה</label>
+      
+      <label class="label checkbox-label">
+        <input type="checkbox" id="installments-check" name="isInstallments" style="width:17px;height:17px;accent-color:var(--accent)" ${ui.isInstallments ? "checked" : ""}/> 
+        חלק לתשלומים חודשיים
+      </label>
+
+      ${ui.isInstallments ? `
+        <div class="installments-box">
+          <label class="label">מספר תשלומים
+            <input class="input" name="installmentsCount" type="number" min="2" max="36" value="3" required/>
+          </label>
+        </div>
+      ` : `
+        <label class="label checkbox-label">
+          <input type="checkbox" name="recurring" style="width:17px;height:17px;accent-color:var(--accent)"/> הוצאה חודשית קבועה (מתחדשת)
+        </label>
+      `}
+
       <button type="submit" class="submit-btn">שמירה</button>
     </form>` : ""}
-    <div>
+    <div class="card" style="padding:0 18px;">
       ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו הוצאות.</div>' : sorted.map((exp) => `
         <div class="row">
           <div style="flex:1">
             <div class="row-title">${esc(exp.desc)}</div>
-            <div class="row-sub">${fmtDate(exp.date)} · ${exp.category}${exp.recurring ? " · קבועה" : ""}</div>
+            <div class="row-sub">${fmtDate(exp.date)} · ${exp.category}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
           </div>
           <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
           <button class="icon-btn-muted" data-action="delete-expense" data-id="${exp.id}" title="מחיקה">🗑</button>
@@ -322,6 +355,7 @@ document.getElementById("app").addEventListener("click", (e) => {
     render(); 
   } else if (action === "toggle-expense-form") { 
     ui.showExpenseForm = !ui.showExpenseForm; 
+    ui.isInstallments = false;
     render(); 
   } else if (action === "mark-paid") {
     const inc = state.incomes.find((i) => i.id === btn.dataset.id);
@@ -336,6 +370,13 @@ document.getElementById("app").addEventListener("click", (e) => {
   } else if (action === "delete-expense") {
     state.expenses = state.expenses.filter((e) => e.id !== btn.dataset.id); 
     persist();
+  }
+});
+
+document.getElementById("app").addEventListener("change", (e) => {
+  if (e.target.id === "installments-check") {
+    ui.isInstallments = e.target.checked;
+    render();
   }
 });
 
@@ -362,16 +403,38 @@ document.getElementById("app").addEventListener("submit", (e) => {
     persist();
   } else if (e.target.id === "expense-form") {
     const fd = new FormData(e.target);
-    state.expenses.push({
-      id: uid(), 
-      desc: fd.get("desc"), 
-      amount: Number(fd.get("amount")), 
-      date: fd.get("date") || todayStr(),
-      category: fd.get("category"), 
-      recurring: fd.get("recurring") === "on",
-    });
+    const totalAmount = Number(fd.get("amount"));
+    const startDate = fd.get("date") || todayStr();
+    const desc = fd.get("desc");
+    const category = fd.get("category");
+    
+    if (ui.isInstallments) {
+      const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
+      const monthlyAmount = Number((totalAmount / count).toFixed(2));
+      
+      for (let i = 0; i < count; i++) {
+        state.expenses.push({
+          id: uid(),
+          desc: `${desc}`,
+          amount: monthlyAmount,
+          date: addMonths(startDate, i),
+          category: category,
+          installmentInfo: `${i + 1}/${count}`
+        });
+      }
+    } else {
+      state.expenses.push({
+        id: uid(), 
+        desc: desc, 
+        amount: totalAmount, 
+        date: startDate,
+        category: category, 
+        recurring: fd.get("recurring") === "on",
+      });
+    }
     
     ui.showExpenseForm = false; 
+    ui.isInstallments = false;
     persist();
   }
 });
