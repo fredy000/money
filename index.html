@@ -18,6 +18,7 @@
 @media(max-width:600px){.simple-dashboard{grid-template-columns:1fr;gap:12px}.simple-total{min-height:0;padding:22px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}.simple-label{font-size:18px}.simple-number{font-size:32px}.simple-total .hint,.simple-total .simple-note{grid-column:1/-1}.simple-total button{justify-self:start;grid-column:1/-1;margin-top:5px}.upcoming-income{padding:16px}}
 .minimal-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.minimal-stat{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px;min-height:205px}.minimal-stat>span{font-size:16px;font-weight:600}.minimal-stat>strong{font-size:clamp(24px,3.5vw,36px);font-weight:800;direction:ltr;unicode-bidi:isolate;line-height:1.3}.minimal-stat>button{font-size:12px;margin-top:auto}.minimal-stat .hint{font-size:12px}.minimal-spending{display:flex;justify-content:space-between;align-items:center;gap:16px;background:#17251b;border-color:#3c6447}.minimal-spending>div{display:grid;gap:6px}.minimal-spending strong{font-size:25px;direction:ltr;unicode-bidi:isolate}.minimal-spending span{font-size:14px}.mini-forecast-grid{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px}.mini-forecast-grid>div{display:grid;gap:8px;text-align:center;border-inline-start:1px solid var(--border);padding:0 12px}.mini-forecast-grid>div:first-child{border:0}.mini-forecast-grid strong{font-size:24px;direction:ltr;unicode-bidi:isolate}.mini-forecast-grid small{color:var(--muted);font-size:13px}.mini-forecast-grid .hint{font-size:11px}.mini-forecast h2{margin:0}.mini-forecast .card-head{flex-wrap:wrap}.summary-row{flex-wrap:wrap}
 @media(max-width:650px){.minimal-overview{grid-template-columns:1fr}.minimal-stat{display:grid;grid-template-columns:1fr auto;min-height:0;align-items:center;padding:20px}.minimal-stat .hint{grid-column:1/-1}.minimal-stat>strong{font-size:30px}.minimal-stat>button{justify-self:start;margin:0}.minimal-spending{flex-wrap:wrap}.mini-forecast-grid>div{padding:0 6px}.mini-forecast-grid strong{font-size:19px}.mini-forecast-grid .hint{font-size:10px}}
+.purchase-calculator .card-head{flex-wrap:wrap}.purchase-budget{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:20px}.purchase-budget strong{font-size:clamp(23px,4vw,34px);direction:ltr;unicode-bidi:isolate}.purchase-calculator form{margin-top:20px}.purchase-answer{margin-top:20px;background:#17251b;border:1px solid #3c6447;border-radius:13px;padding:18px}.purchase-caution{background:#292014;border-color:#604126}.purchase-answer h3{font-size:18px;margin-bottom:14px}.purchase-answer .insights{margin-top:15px}.purchase-scenarios{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}.purchase-scenarios summary{cursor:pointer;font-size:14px}.purchase-answer b{direction:ltr;unicode-bidi:isolate}.purchase-calculator .form-actions button{white-space:normal}
 </style>
 </head>
 <body>
@@ -137,6 +138,26 @@ const CashFlow = (() => {
     return {position,recorded,pending,commitments,forecasts,outgoingCents,remainingCents,
       spendableCents:position.ready&&!position.estimated?Math.max(0,remainingCents-s.settings.bufferCents-s.settings.taxReserveCents):0};
   }
+  function purchasePlan(s,amountCents=0,delayDays=30,now=today()){
+    integer(amountCents);integer(delayDays,0,90);
+    const summary=cashSummary(s,now),position=summary.position;
+    const reserves=s.settings.bufferCents+s.settings.taxReserveCents;
+    const afterPurchaseCents=summary.remainingCents-amountCents;
+    const reserveGapCents=Math.max(0,reserves-afterPurchaseCents);
+    // This is a hypothetical purchase, not an expense saved to the ledger.
+    // A delayed payment is a scenario, never an assumption that it is paid.
+    const delayed={...s,incomes:s.incomes.map(i=>i.status==='pending'&&i.expectedDate>=now?{...i,expectedDate:addDays(i.expectedDate,delayDays)}:i)};
+    const onTime=summary.forecasts[2],late=forecast(delayed,90,now);
+    const overdue=s.incomes.filter(i=>i.status==='pending'&&i.expectedDate<now);
+    const largest=[...summary.commitments].sort((a,b)=>b.amountCents-a.amountCents)[0]||null;
+    return {amountCents,delayDays,summary,reserves,afterPurchaseCents,reserveGapCents,
+      limitCents:summary.spendableCents,
+      result:!position.ready||position.estimated?'unknown':amountCents<=summary.spendableCents?'within-budget':'over-budget',
+      existingShortfallCents:Math.max(0,reserves-summary.remainingCents),
+      onTime:{endCents:onTime.balance-amountCents,minimumCents:onTime.minAvailable-s.settings.bufferCents-amountCents,date:onTime.minDate},
+      late:{endCents:late.balance-amountCents,minimumCents:late.minAvailable-s.settings.bufferCents-amountCents,date:late.minDate},
+      overdueCents:overdue.reduce((sum,i)=>sum+i.amountCents,0),largest};
+  }
   function applyPayment(s,type,itemId,date,alreadyIncluded,now=today(),taxAdded=0){
     parseDate(date);if(date>now)throw Error('אפשר לאשר רק תשלום שכבר התקבל או ירד');if(!cashPosition(s).ready&&!alreadyIncluded)throw Error('קודם עדכן יתרה מהבנק בלוח הבקרה');
     const epoch=alreadyIncluded?null:s.bank.epoch;
@@ -202,7 +223,7 @@ const CashFlow = (() => {
     next.revision=target.revision+1;
     return validate(next);
   }
-  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,cashPosition,cashSummary,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
+  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,cashPosition,cashSummary,purchasePlan,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
 })();
 window.CashFlow=CashFlow;
 </script>
@@ -236,7 +257,7 @@ function selectField(label,name,items,value){return `<label>${label}<select name
 function positiveInput(label,name,value,extra=''){return field(label,name,value,'number',`step="0.01" min="0.01" max="1000000000" required ${extra}`);}
 const actionsEnd=()=>`<div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">שמירה</button></div>`;
 let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=null,user=null,unsub=null,cloudReady=false,modalBase=0,authObserver=null,authGeneration=0;
-const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all'};
+const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all',purchaseAmount:'',paymentDelay:'30'};
 const root=document.getElementById('app'),modal=document.getElementById('modal');
 function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
 function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך כפתור גיבוי.'),100);return E.empty();}}
@@ -291,10 +312,34 @@ function dashboard(){
       <article class="card minimal-stat"><span>סך ההוצאות שהזנתי</span><strong class="red">${money(c.recorded.totalCents)}</strong>${button('כל '+c.recorded.count+' ההוצאות','recorded-expenses')}<small class="hint">כל הרשומות, בלי סינון תאריכים</small></article>
       <article class="card minimal-stat"><span>יישאר מהכסף שכבר יש</span><strong class="${p.ready&&c.remainingCents<0?'red':''}">${show(c.remainingCents)}</strong>${button('איך זה חושב?','all-commitments')}<small class="hint">אחרי כל החיובים הממתינים הרשומים, וקבועות ל־90 יום</small></article>
     </div>
-    <div class="card minimal-spending"><div><span>פנוי לבזבוז או לחיסכון</span><strong class="${c.spendableCents>0?'green':'orange'}">${!p.ready?'—':p.estimated?'צריך לאשר יתרה בבנק':money(c.spendableCents)}</strong></div>${button(p.estimated?'אישור יתרה מהבנק':'כסף ששומרים בצד',p.estimated?'bank':'cash-reserves')}</div>
-    <section class="card mini-forecast"><div class="card-head"><h2>מבט קדימה</h2><span class="hint">בהנחה שהלקוחות ישלמו במועד</span></div><div class="mini-forecast-grid">${c.forecasts.map(f=>`<div><small>בעוד ${f.days} יום</small><strong class="${p.ready&&f.balance<0?'red':''}">${show(f.balance)}</strong><span class="hint">נכנס ${money(f.incoming)} · יוצא ${money(f.outgoing)}</span></div>`).join('')}</div></section>
+    ${purchaseCalculator()}
     <p class="hint dashboard-footnote">המספרים מחושבים מחדש בכל שמירה. הוצאות שכבר נכללות ביתרת הבנק אינן מופחתות שוב.</p>`;
 }
+function purchaseCalculator(){
+  const plan=E.purchasePlan(state),p=plan.summary.position;
+  return `<section class="card purchase-calculator"><div class="card-head"><h2>כמה כדאי לי להוציא?</h2>${button('כסף ששומרים בצד','cash-reserves')}</div>
+    <div class="purchase-budget"><span>פנוי לבזבוז או לחיסכון</span><strong class="${plan.limitCents>0?'green':'orange'}">${!p.ready?'—':p.estimated?'צריך לאשר יתרה בבנק':money(plan.limitCents)}</strong></div>
+    <p class="hint">אחרי כל החיובים שעוד ממתינים, הוצאות קבועות ל־90 יום, כרית ביטחון וכסף למס. הכנסות שטרם שולמו אינן נחשבות כסף פנוי.</p>
+    <form class="form" data-form="purchase"><div class="fields">${positiveInput('כמה אתה שוקל להוציא עכשיו? (₪)','purchaseAmount',ui.purchaseAmount,'data-input="purchase" placeholder="למשל 1000"')}${selectField('בדיקה נוספת: אם לקוחות יאחרו בתשלום','paymentDelay',[{value:30,label:'איחור של 30 יום'},{value:60,label:'איחור של 60 יום'},{value:90,label:'איחור של 90 יום'}],ui.paymentDelay)}</div><div class="form-actions"><button class="primary" type="submit">חשב אם ההוצאה מתאימה לתקציב</button></div></form>
+    <div id="purchase-result" aria-live="polite">${purchaseResult()}</div><p class="hint">הבדיקה מדמה רכישה בלבד. הוצאות שלא הזנת אינן נכללות בחישוב.</p></section>`;
+}
+function purchaseResult(){
+  let amount;
+  try{amount=ui.purchaseAmount.trim()?E.cents(ui.purchaseAmount):0;}catch(e){return '<p class="hint">הזן סכום חיובי עם עד שתי ספרות אחרי הנקודה.</p>';}
+  const plan=E.purchasePlan(state,amount,Number(ui.paymentDelay)),p=plan.summary.position;
+  if(plan.result==='unknown')return `<div class="notice" style="margin-top:16px">כדי להמליץ על סכום להוצאה, צריך את היתרה שמופיעה עכשיו בבנק. ${button('עדכון מהבנק','bank')}</div>`;
+  const tips=[];
+  if(plan.existingShortfallCents>0)tips.push(`כבר לפני רכישה חדשה, חסרים ${money(plan.existingShortfallCents)} כדי לכסות את החיובים ולהשאיר את הכסף ששומרים בצד. כדאי לבדוק גבייה מלקוחות או דחיית הוצאה לפני התחייבות נוספת.`);
+  else if(plan.result==='over-budget')tips.push(`אפשר לצמצם את הרכישה לתקציב של עד ${money(plan.limitCents)}, או לבדוק שוב אחרי שכסף יתקבל בפועל.`);
+  else tips.push(amount?`לפי הרישומים, הרכישה משאירה ${money(Math.max(0,plan.afterPurchaseCents-plan.reserves))} מעבר לכסף ששומרים בצד.`:`התקציב כרגע להוצאה חדשה או להעברה לחיסכון הוא עד ${money(plan.limitCents)}. אם תעביר כסף לחיסכון, רשום את ההעברה כהוצאה או עדכן את יתרת הבנק.`);
+  if(plan.overdueCents>0)tips.push(`יש ${money(plan.overdueCents)} מלקוחות שמועד התשלום שלהם עבר. כדאי לבדוק איתם מתי ישלמו; הכסף הזה אינו נכלל בתחזית עד לעדכון תאריך.`);
+  if(plan.late.minimumCents<0)tips.push(`בתרחיש איחור של ${plan.delayDays} יום, ב־${dateLabel(plan.late.date)} היתרה יורדת ${money(-plan.late.minimumCents)} מתחת לכסף ששומרים בצד. בדוק שהחיובים הקרובים מכוסים גם אם הלקוחות מתעכבים.`);
+  if(plan.result==='over-budget'&&plan.largest)tips.push(`החיוב הממתין הגדול ביותר הוא ״${plan.largest.title}״: ${money(plan.largest.amountCents)} ב־${dateLabel(plan.largest.date)}. בדוק אם יש גמישות במועד או בסכום שלו.`);
+  const title=!amount?'מה כדאי לבדוק עכשיו':plan.result==='within-budget'?'ההוצאה נכנסת לתקציב המחושב':'כדאי להמתין או להקטין את ההוצאה';
+  return `<div class="purchase-answer ${plan.result==='over-budget'?'purchase-caution':''}"><h3>${title}</h3>${amount?`<div class="summary-row"><span>הוצאה שבדקת</span><b>${money(amount)}</b></div><div class="summary-row"><span>יישאר אחרי הרכישה וכל החיובים הרשומים</span><b class="${plan.afterPurchaseCents<0?'red':''}">${money(plan.afterPurchaseCents)}</b></div><div class="summary-row"><span>כסף שרוצים להשאיר בחשבון</span><b>${money(plan.reserves)}</b></div>`:''}<div class="insights">${tips.map(t=>`<p>${esc(t)}</p>`).join('')}</div>
+    <details class="purchase-scenarios"><summary>מה יקרה אם הלקוחות ישלמו בזמן או יאחרו?</summary><p class="hint">יתרה צפויה בעוד 90 יום, ${amount?'כולל הרכישה שבדקת':'לפני רכישה חדשה'}. זו הערכה לפי מועדי התשלום, ולא כסף שכבר התקבל.</p><div class="summary-row"><span>אם ישלמו בתאריך שהזנת</span><b>${money(plan.onTime.endCents)}</b></div><div class="summary-row"><span>אם יאחרו ב־${plan.delayDays} יום</span><b class="${plan.late.endCents<0?'red':''}">${money(plan.late.endCents)}</b></div><p class="hint">גם אם היתרה בסוף התקופה חיובית, הבדיקה בוחנת מחסור בדרך. הוצאות חד־פעמיות ותשלומים מעבר ל־90 יום נכללים בתקציב הראשי.</p></details></div>`;
+}
+function updatePurchaseResult(){const target=document.getElementById('purchase-result');if(target)target.innerHTML=purchaseResult();}
 function allCommitmentsDetail(){
   const c=E.cashSummary(state),p=c.position;
   openModal('מה נשאר אחרי החיובים?',`<div class="summary-row"><span>${p.estimated?'יתרה מחושבת לפי הרישומים':'יתרה נוכחית'}</span><b>${p.ready?money(p.amountCents):'—'}</b></div><div class="summary-row"><span>כל החיובים שעוד ממתינים</span><b class="red">−${money(c.outgoingCents)}</b></div><div class="summary-row total"><span>יישאר מהכסף שכבר יש</span><b>${p.ready?money(c.remainingCents):'—'}</b></div><p class="hint">כולל את כל התשלומים וההוצאות החד־פעמיות הרשומים, גם מעבר ל־90 יום, והחיובים הקבועים ל־90 הימים הבאים. כל חיוב נספר פעם אחת. כסף מלקוחות שטרם שילמו אינו מתווסף כאן.</p>
@@ -530,6 +575,7 @@ async function clickAction(btn){
 }
 async function submitForm(form){
   const data=new FormData(form),get=n=>String(data.get(n)||'').trim(),type=form.dataset.form;
+  if(type==='purchase'){E.cents(get('purchaseAmount'));ui.purchaseAmount=get('purchaseAmount');ui.paymentDelay=get('paymentDelay')||'30';updatePurchaseResult();return;}
   if(type==='encrypted-backup'){
     const password=get('backupPassword');if(password.length<10)throw Error('בחר סיסמה של לפחות 10 תווים');
     if(password!==get('backupRepeat'))throw Error('הסיסמאות אינן זהות');
@@ -562,11 +608,13 @@ async function submitForm(form){
   closeModal();toast('נשמר בהצלחה');
 }
 function onChange(e){const el=e.target,action=el.dataset.change;if(action){if(action==='income-range')ui.incomeRange=el.value;else if(action==='income-status')ui.incomeStatus=el.value;else if(action==='expense-status')ui.expenseStatus=el.value;else if(action==='expense-scope')ui.expenseScope=el.value;render();}
+  if(el.name==='paymentDelay'&&el.closest('[data-form=purchase]')){ui.paymentDelay=el.value;updatePurchaseResult();}
   const expense=el.closest('[data-form=expense]');if(expense&&el.name==='kind'){const count=expense.elements.count;count.min=el.value==='installments'?'2':'1';if(el.value==='installments'&&Number(count.value)<2)count.value='2';}
   const form=el.closest('[data-form=income]');if(form&&['date','termDays','manualDate'].includes(el.name)){const manual=form.elements.manualDate.checked;form.elements.expectedDate.readOnly=!manual;if(!manual)try{form.elements.expectedDate.value=E.dueDate(form.elements.date.value,Number(form.elements.termDays.value));}catch(e){toast(e.message);}}
 }
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-action]');if(btn&&!busy)clickAction(btn).catch(e=>toast(e.message));});
 document.addEventListener('change',onChange);
+document.addEventListener('input',e=>{if(e.target.dataset.input==='purchase'){ui.purchaseAmount=e.target.value;updatePurchaseResult();}});
 document.addEventListener('submit',e=>{if(!e.target.matches('[data-form]'))return;e.preventDefault();submitForm(e.target).catch(error=>toast(error.message));});
 modal.addEventListener('cancel',event=>{if(busy){event.preventDefault();return;}modal.innerHTML='';});
 window.addEventListener('storage',e=>{if(e.key===LOCAL_KEY&&mode==='local'){state=loadLocal();status='עודכן בחלונית אחרת';render();if(modal.open)toast('הנתונים השתנו בחלונית אחרת. פתח מחדש את הטופס לפני שמירה');}});
