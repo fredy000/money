@@ -53,8 +53,9 @@ const CashFlow = (() => {
     const ids=new Set(), id=(x)=>{if(typeof x!=='string'||!/^[-a-zA-Z0-9_]{1,100}$/.test(x))throw Error('מזהה לא תקין');},text=(x)=>{if(typeof x!=='string'||!x.trim()||x.length>500)throw Error('תיאור לא תקין');};
     function unique(x,prefix){id(x);if(ids.has(prefix+x))throw Error('מזהה כפול בגיבוי');ids.add(prefix+x);}
     for(const i of d.incomes){unique(i.id,'i');text(i.client);integer(i.amountCents,1);parseDate(i.date);parseDate(i.expectedDate);if(![0,30,60,90].includes(i.termDays)||!['pending','paid'].includes(i.status))throw Error('פרטי הכנסה לא תקינים');if(i.status==='paid'){i.appliedEpoch=i.appliedEpoch??null;parseDate(i.paidDate);if(i.appliedEpoch!==null)integer(i.appliedEpoch);if(i.taxAddedCents!==undefined)integer(i.taxAddedCents,0,i.amountCents);if(i.taxEpoch!==undefined)integer(i.taxEpoch);}if(typeof i.manualDate!=='boolean')throw Error('תאריך גבייה לא תקין');}
-    for(const e of d.expenses){unique(e.id,'e');text(e.desc);text(e.category);if(!['עסקי','אישי'].includes(e.scope))throw Error('סוג הוצאה לא תקין');if(!['אשראי','העברה','מזומן','הוראת קבע'].includes(e.method))throw Error('אמצעי תשלום לא תקין');integer(e.amountCents,1);parseDate(e.purchaseDate);parseDate(e.chargeDate);if(!['once','monthly','installments'].includes(e.kind))throw Error('סדרה לא תקינה');integer(e.count,1,120);integer(e.everyMonths,1,12);if(e.kind==='installments')split(e.amountCents,e.count);if(e.endDate)parseDate(e.endDate);e.overrides=e.overrides||{};if(typeof e.overrides!=='object'||Array.isArray(e.overrides)||Object.keys(e.overrides).length>2000)throw Error('חריגים לא תקינים');for(const [k,o] of Object.entries(e.overrides)){if(!/^\d{1,4}$/.test(k)||Number(k)>1212)throw Error('תשלום לא תקין');if(o.amountCents!==undefined)integer(o.amountCents,1);if(o.chargeDate)parseDate(o.chargeDate);if(o.canceled!==undefined&&typeof o.canceled!=='boolean')throw Error('ביטול לא תקין');}}
+    for(const e of d.expenses){unique(e.id,'e');text(e.desc);text(e.category);if(!['עסקי','אישי'].includes(e.scope))throw Error('סוג הוצאה לא תקין');if(!['אשראי','העברה','מזומן','הוראת קבע'].includes(e.method))throw Error('אמצעי תשלום לא תקין');integer(e.amountCents,1);parseDate(e.purchaseDate);parseDate(e.chargeDate);if(!['once','monthly','installments'].includes(e.kind))throw Error('סדרה לא תקינה');integer(e.count,1,120);integer(e.everyMonths,1,12);if(e.kind==='installments')split(e.amountCents,e.count);if(e.endDate)parseDate(e.endDate);if(e.notBeforeDate)parseDate(e.notBeforeDate);e.overrides=e.overrides||{};if(typeof e.overrides!=='object'||Array.isArray(e.overrides)||Object.keys(e.overrides).length>2000)throw Error('חריגים לא תקינים');for(const [k,o] of Object.entries(e.overrides)){if(!/^\d{1,4}$/.test(k)||Number(k)>1212)throw Error('תשלום לא תקין');if(o.amountCents!==undefined)integer(o.amountCents,1);if(o.chargeDate)parseDate(o.chargeDate);if(o.canceled!==undefined&&typeof o.canceled!=='boolean')throw Error('ביטול לא תקין');}}
     for(const r of d.receipts){r.appliedEpoch=r.appliedEpoch??null;unique(r.key,'r');id(r.expenseId);integer(r.index,0,1212);if(r.key!==r.expenseId+'_'+r.index)throw Error('קבלה לא תקינה');text(r.title);integer(r.amountCents,1);parseDate(r.paidDate);parseDate(r.chargeDate);if(r.appliedEpoch!==null)integer(r.appliedEpoch);}
+    if(d.legacyRecovery){const r=d.legacyRecovery;if(r.source!=='money-1d58a/appData')throw Error('מקור שחזור לא תקין');integer(r.incomeCount,0,20000);integer(r.expenseCount,0,20000);if(!Number.isFinite(Date.parse(r.recoveredAt)))throw Error('מועד שחזור לא תקין');}
     return d;
   }
   function occurrences(s,end){
@@ -68,10 +69,11 @@ const CashFlow = (() => {
         const o=e.overrides[String(index)]||{},date=o.chargeDate||base;
         if(e.kind==='monthly'&&base>end&&index>maxOverride)break;
         if(e.endDate&&base>e.endDate)continue;
+        if(e.notBeforeDate&&index>0&&base<e.notBeforeDate)continue;
         if(date>end||o.canceled)continue;
         const key=e.id+'_'+index;
         if(paid.has(key))continue;
-        result.push({key,expenseId:e.id,index,date,baseDate:base,amountCents:o.amountCents||amounts?.[index]||e.amountCents,title:e.desc,category:e.category,scope:e.scope,kind:e.kind,method:e.method,label:e.kind==='installments'?`תשלום ${index+1}/${e.count}`:e.kind==='monthly'?(e.everyMonths===1?'חודשי':`כל ${e.everyMonths} חודשים`):'חד־פעמי'});
+        result.push({key,expenseId:e.id,index,date,baseDate:base,amountCents:o.amountCents||amounts?.[index]||e.amountCents,title:e.desc,category:e.category,scope:e.scope,kind:e.kind,method:e.method,label:e.kind==='installments'?`תשלום ${index+1}/${e.count}`:e.kind==='monthly'?(e.everyMonths===1?'חודשי':`כל ${e.everyMonths} חודשים`):e.legacyInstallmentInfo?`תשלום ${e.legacyInstallmentInfo}`:'חד־פעמי'});
       }
     }
     return result.sort((a,b)=>a.date.localeCompare(b.date)||a.key.localeCompare(b.key));
@@ -103,15 +105,59 @@ const CashFlow = (() => {
   }
   function reconcile(s,amount){s.bank={balanceCents:amount,verified:true,epoch:s.bank.epoch+1,updatedAt:new Date().toISOString()};}
   function migrateLegacy(raw,now=today()){
-    if(!raw||!('openingBalance' in raw))throw Error('פורמט הגיבוי הישן אינו מוכר');const s=empty();const list=x=>Array.isArray(x)?x:Object.values(x||{});const id=()=>globalThis.crypto.randomUUID().replace(/-/g,'');
-    s.incomes=list(raw.incomes).map(i=>({id:id(),client:String(i.client||'לקוח'),amountCents:cents(i.amount),date:i.date,termDays:Number(i.termDays)||0,expectedDate:dueDate(i.date,Number(i.termDays)||0),manualDate:false,status:i.status==='paid'?'paid':'pending',...(i.status==='paid'?{paidDate:i.paidDate||i.date,appliedEpoch:null}:{})}));
-    s.expenses=list(raw.expenses).map(e=>({id:id(),desc:String(e.desc||'הוצאה')+(e.installmentInfo?` (תשלום ${e.installmentInfo})`:''),amountCents:cents(e.amount),purchaseDate:e.date,chargeDate:e.date,kind:e.recurring?'monthly':'once',count:1,everyMonths:1,endDate:null,category:String(e.category||'אחר / כללי'),scope:'עסקי',method:'העברה',overrides:{}}));
-    // Legacy app treated all expenses through today as already deducted. Keep that history,
-    // but require a fresh actual bank balance; openingBalance is ambiguous and is NOT reused.
-    for(const o of occurrences(s,now))s.receipts.push({key:o.key,expenseId:o.expenseId,index:o.index,title:o.title,amountCents:o.amountCents,paidDate:o.date,chargeDate:o.date,category:o.category,scope:o.scope,appliedEpoch:null});
+    if(!raw||!('openingBalance' in raw))throw Error('פורמט הגיבוי הישן אינו מוכר');
+    const s=empty(),list=x=>Array.isArray(x)?x:Object.values(x||{});
+    const stableId=(prefix,item,index)=>prefix+(/^[-a-zA-Z0-9_]{1,70}$/.test(String(item.id||''))?item.id:'row_'+index);
+    const incomes=list(raw.incomes),expenses=list(raw.expenses);
+    s.incomes=incomes.map((i,index)=>({
+      id:stableId('legacy_i_',i,index),legacyId:String(i.id||index),
+      client:String(i.client||'לקוח'),amountCents:cents(i.amount),date:i.date,
+      termDays:Number(i.termDays)||0,
+      expectedDate:dueDate(i.date,Number(i.termDays)||0),manualDate:false,
+      status:i.status==='paid'?'paid':'pending',
+      ...(i.status==='paid'?{paidDate:i.paidDate||i.date,appliedEpoch:null}:{})
+    }));
+    s.expenses=expenses.map((e,index)=>({
+      id:stableId('legacy_e_',e,index),legacyId:String(e.id||index),
+      desc:String(e.desc||'הוצאה'),amountCents:cents(e.amount),
+      purchaseDate:e.date,chargeDate:e.date,kind:e.recurring?'monthly':'once',
+      count:1,everyMonths:1,endDate:null,category:String(e.category||'אחר / כללי'),
+      scope:'עסקי',method:'העברה',overrides:{},
+      legacyInstallmentInfo:e.installmentInfo||null,
+      // Forecast new recurring charges forward, without inventing past transactions.
+      ...(e.recurring?{notBeforeDate:now}:{})
+    }));
+    // Only original rows dated through today were deducted by the legacy app.
+    for(const e of s.expenses){
+      if(e.chargeDate<=now)s.receipts.push({
+        key:e.id+'_0',expenseId:e.id,index:0,title:e.desc,
+        amountCents:e.amountCents,paidDate:e.chargeDate,chargeDate:e.chargeDate,
+        category:e.category,scope:e.scope,appliedEpoch:null
+      });
+    }
+    // Keep the complete source snapshot, including original dates and installment labels.
+    // This lives in saved user data, never in the public HTML source.
+    s.legacySnapshot=JSON.parse(JSON.stringify(raw));
+    s.legacyRecovery={source:'money-1d58a/appData',incomeCount:incomes.length,
+      expenseCount:expenses.length,recoveredAt:new Date().toISOString()};
+    // openingBalance in v1 is ambiguous, so do not call it an actual bank balance.
     return validate(s);
   }
-  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,applyPayment,undoPayment,reconcile,migrateLegacy};
+  function mergeLegacy(target,migrated){
+    const next=validate(target),source=validate(migrated);
+    const incomeIds=new Set(next.incomes.map(i=>i.id));
+    const expenseIds=new Set(next.expenses.map(e=>e.id));
+    const receiptKeys=new Set(next.receipts.map(r=>r.key));
+    for(const i of source.incomes)if(!incomeIds.has(i.id)){next.incomes.push(i);incomeIds.add(i.id);}
+    for(const e of source.expenses)if(!expenseIds.has(e.id)){next.expenses.push(e);expenseIds.add(e.id);}
+    for(const r of source.receipts)if(!receiptKeys.has(r.key)){next.receipts.push(r);receiptKeys.add(r.key);}
+    if(source.legacySnapshot)next.legacySnapshot=source.legacySnapshot;
+    if(source.legacyRecovery)next.legacyRecovery=source.legacyRecovery;
+    if(!target.bank.verified&&!target.incomes.length&&!target.expenses.length&&!target.receipts.length){next.bank=source.bank;next.settings=source.settings;}
+    next.revision=target.revision+1;
+    return validate(next);
+  }
+  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
 })();
 window.CashFlow=CashFlow;
 </script>
@@ -145,7 +191,7 @@ function selectField(label,name,items,value){return `<label>${label}<select name
 function positiveInput(label,name,value,extra=''){return field(label,name,value,'number',`step="0.01" min="0.01" max="1000000000" required ${extra}`);}
 const actionsEnd=()=>`<div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">שמירה</button></div>`;
 let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=null,user=null,unsub=null,cloudReady=false,modalBase=0,authObserver=null,authGeneration=0;
-const ui={tab:'dashboard',days:90,incomeRange:'all',incomeStatus:'all',expenseStatus:'pending',expenseScope:'all'};
+const ui={tab:'dashboard',days:90,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all'};
 const root=document.getElementById('app'),modal=document.getElementById('modal');
 function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
 function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך ההגדרות.'),100);return E.empty();}}
@@ -209,19 +255,19 @@ function incomePage(){
 }
 function expensePage(){
   const end=E.addDays(E.today(),366),all=E.occurrences(state,end),list=all.filter(o=>ui.expenseScope==='all'||o.scope===ui.expenseScope),history=state.receipts.filter(r=>ui.expenseScope==='all'||r.scope===ui.expenseScope).sort((a,b)=>b.paidDate.localeCompare(a.paidDate));
-  return `<div class="card"><div class="card-head"><h2>חיובים והוצאות</h2>${button('+ הוצאה','new-expense','','primary')}</div><p class="hint">רכישה ותאריך ירידה מהבנק הם שני תאריכים נפרדים. באשראי הזן את החיוב בפועל. כדי למנוע כפילות, בחר אם להזין חיוב אשראי כולל או את הרכישות המרכיבות אותו.</p><div class="filter-row"><select class="filter" data-change="expense-status" aria-label="סינון הוצאות">${options([{value:'pending',label:'ממתין לחיוב — שנה קדימה'},{value:'paid',label:'חיובים שאושרו'},{value:'series',label:'ניהול סדרות והוצאות'}],ui.expenseStatus)}</select><select class="filter" data-change="expense-scope" aria-label="תחום הוצאה">${options([{value:'all',label:'עסקי ואישי'},{value:'עסקי',label:'עסקי'},{value:'אישי',label:'אישי'}],ui.expenseScope)}</select></div><div class="list">${ui.expenseStatus==='pending'?(list.length?list.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)} · ${esc(o.category)} · ${esc(o.scope)}<br>${esc(o.method)} ${o.date<E.today()?'<span class="red">· מועד החיוב עבר, טרם אושר</span>':''}</div></div><div class="amount red">−${money(o.amountCents)}</div><div class="actions">${button('✓ ירד מהבנק','pay-expense',`data-id="${o.key}"`)}${button('עריכת חיוב','edit-occurrence',`data-id="${o.key}"`)}${button('ביטול חיוב','cancel-occurrence',`data-id="${o.key}"`,'danger')}</div></div>`).join(''):'<div class="empty">אין חיובים ממתינים לשנה הקרובה.</div>'):ui.expenseStatus==='paid'?(history.length?history.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">ירד: ${dateLabel(r.paidDate)} · ${esc(r.category||'כללי')} · ${esc(r.scope||'עסקי')}</div></div><div class="amount red">−${money(r.amountCents)}</div><div class="actions">${button('ביטול סימון','undo-expense',`data-id="${r.key}"`)}</div></div>`).join(''):'<div class="empty">אין חיובים שאושרו.</div>'):renderSeries()}</div></div>`;
+  return `<div class="card"><div class="card-head"><h2>חיובים והוצאות <small class="muted">(${state.expenses.length} רשומות)</small></h2>${button('+ הוצאה','new-expense','','primary')}</div><p class="hint">רכישה ותאריך ירידה מהבנק הם שני תאריכים נפרדים. באשראי הזן את החיוב בפועל. כדי למנוע כפילות, בחר אם להזין חיוב אשראי כולל או את הרכישות המרכיבות אותו.</p><div class="filter-row"><select class="filter" data-change="expense-status" aria-label="סינון הוצאות">${options([{value:'pending',label:'ממתין לחיוב — שנה קדימה'},{value:'paid',label:'חיובים שאושרו'},{value:'series',label:'כל ההוצאות והסדרות'}],ui.expenseStatus)}</select><select class="filter" data-change="expense-scope" aria-label="תחום הוצאה">${options([{value:'all',label:'עסקי ואישי'},{value:'עסקי',label:'עסקי'},{value:'אישי',label:'אישי'}],ui.expenseScope)}</select></div><div class="list">${ui.expenseStatus==='pending'?(list.length?list.map(o=>`<div class="row"><div class="row-main"><div class="row-title">${esc(o.title)}</div><div class="row-sub">${dateLabel(o.date)} · ${esc(o.label)} · ${esc(o.category)} · ${esc(o.scope)}<br>${esc(o.method)} ${o.date<E.today()?'<span class="red">· מועד החיוב עבר, טרם אושר</span>':''}</div></div><div class="amount red">−${money(o.amountCents)}</div><div class="actions">${button('✓ ירד מהבנק','pay-expense',`data-id="${o.key}"`)}${button('עריכת חיוב','edit-occurrence',`data-id="${o.key}"`)}${button('ביטול חיוב','cancel-occurrence',`data-id="${o.key}"`,'danger')}</div></div>`).join(''):'<div class="empty">אין חיובים ממתינים לשנה הקרובה.</div>'):ui.expenseStatus==='paid'?(history.length?history.map(r=>`<div class="row"><div class="row-main"><div class="row-title">${esc(r.title)}</div><div class="row-sub">ירד: ${dateLabel(r.paidDate)} · ${esc(r.category||'כללי')} · ${esc(r.scope||'עסקי')}</div></div><div class="amount red">−${money(r.amountCents)}</div><div class="actions">${button('ביטול סימון','undo-expense',`data-id="${r.key}"`)}</div></div>`).join(''):'<div class="empty">אין חיובים שאושרו.</div>'):renderSeries()}</div></div>`;
 }
-function renderSeries(){const list=state.expenses.filter(e=>ui.expenseScope==='all'||e.scope===ui.expenseScope);return list.length?list.map(e=>`<div class="row"><div class="row-main"><div class="row-title">${esc(e.desc)}</div><div class="row-sub">${esc(KIND.find(k=>k.value===e.kind)?.label)} · חיוב ראשון: ${dateLabel(e.chargeDate)} · ${esc(e.scope)}${e.kind==='installments'?` · ${e.count} תשלומים`:''}${e.endDate?` · מסתיים: ${dateLabel(e.endDate)}`:''}<br>${e.kind==='installments'?'סכום הרכישה הכולל':e.kind==='monthly'?'סכום בכל חיוב':'סכום החיוב'}: ${money(e.amountCents)}</div></div><div class="actions">${button('עריכת סדרה','edit-expense',`data-id="${e.id}"`)}${e.kind==='monthly'?button('סיום סדרה','stop-series',`data-id="${e.id}"`):''}${button('מחיקת סדרה','delete-expense',`data-id="${e.id}"`,'danger')}</div></div>`).join(''):'<div class="empty">עדיין אין הוצאות. הוסף חד־פעמיות, תשלומים או הוצאות קבועות.</div>';}
+function renderSeries(){const list=state.expenses.filter(e=>ui.expenseScope==='all'||e.scope===ui.expenseScope);return list.length?list.map(e=>`<div class="row"><div class="row-main"><div class="row-title">${esc(e.desc)}</div><div class="row-sub">${esc(e.legacyInstallmentInfo?'תשלום '+e.legacyInstallmentInfo:KIND.find(k=>k.value===e.kind)?.label)} · חיוב ראשון: ${dateLabel(e.chargeDate)} · ${esc(e.scope)}${e.kind==='installments'?` · ${e.count} תשלומים`:''}${e.endDate?` · מסתיים: ${dateLabel(e.endDate)}`:''}<br>${e.kind==='installments'?'סכום הרכישה הכולל':e.kind==='monthly'?'סכום בכל חיוב':'סכום החיוב'}: ${money(e.amountCents)}</div></div><div class="actions">${button('עריכת סדרה','edit-expense',`data-id="${e.id}"`)}${e.kind==='monthly'?button('סיום סדרה','stop-series',`data-id="${e.id}"`):''}${button('מחיקת סדרה','delete-expense',`data-id="${e.id}"`,'danger')}</div></div>`).join(''):'<div class="empty">עדיין אין הוצאות. הוסף חד־פעמיות, תשלומים או הוצאות קבועות.</div>';}
 function forecastPage(f){return `<div class="card">${period()}<h2>תחזית עד ${dateLabel(f.end)}</h2>${chart(f)}<div class="summary-row total"><span>יתרה בסוף התקופה לפני הפרדה למס ולכרית</span><b class="${f.balance<0?'red':'green'}">${money(f.balance)}</b></div><p class="hint">רזרבה למס בסוף התחזית: ${money(f.reserveEnd)}. תחזית הגבייה מניחה שהלקוחות ישלמו במועד. חיובים שלא אושרו ומועדיהם עברו מופיעים כהוצאה היום.</p></div><div class="card"><h2>מה נכנס ומה יוצא</h2><div class="table-wrap"><table><thead><tr><th>תאריך</th><th>תיאור</th><th>נכנס</th><th>יוצא</th><th>יתרה בבנק</th><th>אחרי רזרבה למס</th></tr></thead><tbody><tr><td>היום</td><td>יתרה לפי העדכון שלך</td><td>—</td><td>—</td><td>${money(state.bank.balanceCents)}</td><td>${money(state.bank.balanceCents-state.settings.taxReserveCents)}</td></tr>${f.timeline.map(e=>`<tr><td>${dateLabel(e.date)}${e.originalDate&&e.originalDate<f.now?' *':''}</td><td>${esc(e.title)}</td><td class="green">${e.type==='income'?money(e.amountCents):'—'}</td><td class="red">${e.type==='expense'?money(e.amountCents):'—'}</td><td class="${e.balance<0?'red':''}">${money(e.balance)}</td><td class="${e.available<state.settings.bufferCents?'orange':''}">${money(e.available)}</td></tr>`).join('')}</tbody></table></div>${!f.timeline.length?'<div class="empty">אין תנועות צפויות בתקופה שנבחרה.</div>':''}<p class="hint">* חיוב שמועדו עבר ועדיין לא אושר. באותו יום ההוצאות מחושבות לפני ההכנסות, כדי להציג גם מחסור אפשרי במהלך היום.</p></div>`;}
 function settingsPage(){
   const s=state.settings,goalProgress=s.goalCents?Math.min(100,Math.max(0,E.forecast(state,ui.days).conservativeSavings/s.goalCents*100)):0;
   return `<div class="two"><div class="card"><h2>הבנק והכסף ששומרים בצד</h2><div class="summary-row"><span>יתרה לפי העדכון שלך</span><b>${state.bank.verified?money(state.bank.balanceCents):'טרם הוזנה'}</b></div><div class="summary-row"><span>כרית ביטחון</span><b>${money(s.bufferCents)}</b></div><div class="summary-row"><span>רזרבה נוכחית למס</span><b>${money(s.taxReserveCents)}</b></div><div class="summary-row"><span>הפרשה מהכנסות חדשות</span><b>${s.taxBasisPoints/100}%</b></div><div class="summary-row"><span>יום חיוב אשראי ברירת מחדל</span><b>${s.creditDay}</b></div><div class="flex" style="margin-top:15px">${button('עדכון יתרה','bank','','primary')}${button('עריכת הגדרות','preferences')}</div><p class="hint">רזרבה למס היא כסף בתוך החשבון הזה. אל תכלול כסף שכבר נמצא בחשבון מס נפרד. תשלומי מס שהזנת כהוצאות כבר מופחתים מהתזרים; התאם את הרזרבה כך שלא תשריין את אותו כסף פעמיים. האחוז הוא בחירה שלך ואינו חישוב של חבות מס.</p></div>
   <div class="card"><h2>יעד חיסכון לתקופה</h2><div class="summary-row"><span>היעד שבחרת</span><b>${money(s.goalCents)}</b></div><p class="hint">מראה כמה מהיעד ניתן לכסות כרגע מתוך הכסף הפנוי ב־${ui.days} יום. אינו סופר חיסכון שכבר הועבר לחשבון אחר.</p><div class="progress" role="progressbar" aria-valuenow="${Math.round(goalProgress)}" aria-valuemin="0" aria-valuemax="100" aria-label="כסף פנוי ביחס ליעד"><span style="width:${goalProgress}%"></span></div><p class="hint">${Math.round(goalProgress)}% מהיעד זמין לפי הנתונים.</p>${button('עריכת יעד','preferences')}</div></div>
-  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${mode==='cloud'?button('ייבוא המידע מהמכשיר','import-local'):''}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">הייבוא מחליף את הנתונים הפעילים. הורד גיבוי לפני ייבוא. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
+  <div class="card"><h2>גיבוי והעברת מידע</h2><div class="flex" style="flex-wrap:wrap">${button('הורדת גיבוי JSON','export-json','','primary')}${button('הורדת CSV','export-csv')}${button('ייבוא גיבוי','import-json')}${mode==='cloud'?button('ייבוא המידע מהמכשיר','import-local'):''}${button('שחזור מהאתר הישן','recover-legacy')}${button('ייצוא כל הקוד של האתר','download-source')}</div><p class="hint">ייבוא מהאתר הישן והעברה מהמכשיר מוסיפים רשומות בלי למחוק מידע קיים. ייבוא גיבוי מלא מהגרסה החדשה מחליף את הנתונים הפעילים; הורד גיבוי לפניו. אפשר לייבא גם JSON מהאתר הישן; תידרש יתרת בנק חדשה. קובץ הקוד לבדו אינו מכיל את הנתונים האישיים שהזנת.</p></div>
   <div class="card"><h2>חיבור לחשבון וסנכרון</h2>${mode==='cloud'?`<p class="hint">מחובר: ${esc(user?.email||'')} · המידע נשמר בחשבון שלך.</p><div class="flex">${button('התנתקות','logout')}${button('הורדת המידע מהאתר הישן','legacy-cloud')}</div>`:`<p class="hint">${mode==='demo'?'זו תצוגת דוגמה. הנתונים בה אינם נשמרים.':'המידע נשמר כרגע בדפדפן הזה. מומלץ להוריד גיבוי.'} אפשר להתחבר באמצעות אימייל וסיסמה לאחר הפעלת Firebase Authentication.</p>${button('התחברות / יצירת חשבון','login','','primary')}`}
   <details style="margin-top:18px"><summary>הוראות חיבור Firebase והעברת המידע הישן</summary><div class="hint"><ol><li>בפרויקט Firebase שלך, פתח Authentication → Sign-in method והפעל Email/Password.</li><li>ב־Authentication → Settings → Authorized domains הוסף את הדומיין של האתר. בעת בדיקה מקומית אפשר להוסיף localhost.</li><li>לפני שינוי ההרשאות, הורד JSON של הנתונים הישנים דרך Realtime Database → ⋮ → Export JSON. המידע הישן נמצא תחת appData. שמור גיבוי במקום בטוח.</li><li>ב־Realtime Database → Rules החלף את הכללים בכללים שלמטה ולחץ Publish. הנתיב הישן appData ייחסם; הנתונים החדשים נשמרים בנפרד לכל משתמש.</li><li>פתח את האתר דרך HTTP/HTTPS, התחבר או צור חשבון, וייבא את הגיבוי דרך ההגדרות. לאחר הייבוא עדכן את היתרה הנוכחית בבנק ובדוק את תאריכי הירידה של האשראי.</li></ol><p>הגדרת Firebase שבקוד היא מהפרויקט המקורי שלך. אם החלפת פרויקט, עדכן את FIREBASE_CONFIG.</p><pre dir="ltr" style="overflow:auto;background:var(--input);padding:15px;border-radius:12px;font-size:12px;text-align:left">${esc(JSON.stringify(FIREBASE_RULES,null,2))}</pre>${button('הורדת כללי ההרשאות','download-rules')}<p><a href="https://firebase.google.com/docs/auth/web/password-auth" target="_blank" rel="noopener">מדריך Firebase להתחברות באימייל וסיסמה</a></p><p>אם הורדת נתונים מתוך הנתיב הישן לפני חסימתו, אפשר להשתמש גם בכפתור ״הורדת המידע מהאתר הישן״. הפעולה קוראת בלבד; היא אינה מוחקת או משנה את המידע הישן.</p></div></details></div>`;
 }
-function render(){const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):mode==='cloud'?button('החשבון שלי','account'):button('התחברות','login')}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
+function render(){const f=E.forecast(state,ui.days);root.innerHTML=`<header class="brand"><div class="flex"><span class="brand-icon" aria-hidden="true">📷</span><div><h1>תזרים לצלם</h1><small>לדעת מה יש, ומה כבר מחויב</small></div></div><div class="flex"><span id="sync" class="badge" role="status">${esc(status)}</span>${mode==='demo'?button('יציאה מהדוגמה','exit-demo'):mode==='cloud'?button('החשבון שלי','account'):button('התחברות','login')}</div></header><nav class="tabs" aria-label="ניווט">${TABS.map(([key,label])=>button(label,'tab',`data-tab="${key}" ${ui.tab===key?'aria-current="page"':''}`,ui.tab===key?'active':'')).join('')}</nav>${mode==='demo'?'<p class="notice">נתוני דוגמה בלבד — אפשר לשנות ולנסות, והמידע האישי שלך נשאר שמור.</p>':''}<div class="section">${recoveryNotice()}${ui.tab==='dashboard'?dashboard(f):ui.tab==='income'?incomePage():ui.tab==='expenses'?expensePage():ui.tab==='forecast'?forecastPage(f):settingsPage()}</div><div class="footer">תזרים לצלם · סכומים בש״ח · תחזית לפי המידע שהזנת</div>`;if(busy)setBusy(true);}
 </script>
 <script>
 function incomeForm(id){
@@ -246,7 +292,21 @@ function download(name,content,type='application/json'){const blob=new Blob([con
 function csvCell(v){let s=String(v??'');if(/^[\s]*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}
 function exportCSV(){const rows=[['סוג','תיאור','תאריך רכישה / חשבונית','מועד תזרים','סכום ₪','סטטוס','תחום / הערה']];for(const i of state.incomes)rows.push(['הכנסה',i.client,i.date,i.status==='paid'?i.paidDate:i.expectedDate,amountInput(i.amountCents),i.status==='paid'?'שולם':'ממתין','']);for(const o of E.occurrences(state,E.addDays(E.today(),366)))rows.push(['הוצאה',o.title,state.expenses.find(e=>e.id===o.expenseId)?.purchaseDate,o.date,amountInput(o.amountCents),'ממתין לחיוב',o.scope+' · '+o.label]);for(const r of state.receipts)rows.push(['הוצאה',r.title,'',r.paidDate,amountInput(r.amountCents),'ירד',r.scope||'']);download(`cashflow-${E.today()}.csv`,'\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
 function exportSource(){const copy=document.documentElement.cloneNode(true);copy.querySelector('#app').textContent='';copy.querySelector('#modal').textContent='';copy.querySelector('#modal').removeAttribute('open');copy.querySelector('#toast').textContent='';download('index.html','<!DOCTYPE html>\n'+copy.outerHTML,'text/html;charset=utf-8');}
-async function importData(raw){let source=raw.appData||raw,legacy=source.schemaVersion!==2;const imported=legacy?E.migrateLegacy(source):E.validate(source);if(!confirm(`הייבוא יחליף את המידע הפעיל ${mode==='cloud'?'בחשבון שלך':'בדפדפן הזה'}. הורדת גיבוי?${legacy?'\nבייבוא מהגרסה הישנה תידרש יתרת בנק חדשה. הוצאות עבר ייחשבו ככאלה שכבר ירדו; בדוק במיוחד חיובי אשראי.':''}`))return;await commit(draft=>{const revision=draft.revision;Object.keys(draft).forEach(k=>delete draft[k]);Object.assign(draft,imported,{revision});});toast(legacy?'המידע הועבר. כעת עדכן יתרה מהבנק ובדוק חיובי אשראי.':'הגיבוי יובא בהצלחה');if(legacy)bankForm();}
+async function importData(raw){
+  const source=raw.appData||raw,legacy=source.schemaVersion!==2;
+  const imported=legacy?E.migrateLegacy(source):E.validate(source);
+  const question=legacy?
+    'להוסיף את ההכנסות וההוצאות מהגיבוי הישן? הנתונים הקיימים יישמרו, ורשומות שכבר שוחזרו לא יוכפלו. לאחר מכן בדוק את יתרת הבנק ואת תאריכי חיוב האשראי.':
+    `הייבוא יחליף את המידע הפעיל ${mode==='cloud'?'בחשבון שלך':'בדפדפן הזה'}. הורדת גיבוי?`;
+  if(!confirm(question))return;
+  await commit(draft=>{
+    if(legacy){Object.assign(draft,E.mergeLegacy(draft,imported));}
+    else{const revision=draft.revision;Object.keys(draft).forEach(k=>delete draft[k]);Object.assign(draft,imported,{revision});}
+  });
+  ui.expenseStatus='series';render();
+  toast(legacy?'ההכנסות וההוצאות הישנות נוספו ונשמרו':'הגיבוי יובא בהצלחה');
+  if(legacy&&!state.bank.verified)bankForm();
+}
 function pickImport(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.addEventListener('change',async()=>{const file=input.files[0];if(!file)return;try{if(file.size>10000000)throw Error('הגיבוי גדול מ־10MB');await importData(JSON.parse(await file.text()));}catch(e){toast('הייבוא נכשל: '+e.message);}});input.click();}
 function demo(){if(mode==='cloud')throw Error('כדי לראות דוגמה, התנתק תחילה');mode='demo';state=E.empty();E.reconcile(state,1250000);state.settings.bufferCents=300000;state.settings.taxReserveCents=100000;state.settings.taxBasisPoints=1500;state.settings.goalCents=500000;const t=E.today();state.incomes=[{id:'demo_income_1',client:'צילום פרסומת — לקוח א׳',amountCents:800000,date:t,termDays:30,manualDate:true,expectedDate:E.addDays(t,25),status:'pending'},{id:'demo_income_2',client:'צילום מוצר — לקוח ב׳',amountCents:350000,date:E.addDays(t,-40),termDays:30,manualDate:true,expectedDate:E.addDays(t,-4),status:'pending'}];state.expenses=[{id:'demo_rent',desc:'העברה לחשבון המשותף',amountCents:430000,purchaseDate:t,chargeDate:E.addDays(t,8),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'שכירות וחשבונות',scope:'אישי',method:'העברה',overrides:{}},{id:'demo_adobe',desc:'תוכנות עריכה',amountCents:23000,purchaseDate:t,chargeDate:E.addDays(t,12),kind:'monthly',everyMonths:1,count:1,endDate:null,category:'תוכנות ומנויים',scope:'עסקי',method:'אשראי',overrides:{}},{id:'demo_camera',desc:'עדשה חדשה',amountCents:600001,purchaseDate:t,chargeDate:E.addDays(t,18),kind:'installments',everyMonths:1,count:6,endDate:null,category:'ציוד ועדשות',scope:'עסקי',method:'אשראי',overrides:{}}];ui.tab='dashboard';status='תצוגת דוגמה — ללא שמירה';render();}
 async function ensureFirebase(){
@@ -290,7 +350,7 @@ async function clickAction(btn){
   else if(a==='stop-series')stopSeries(id);
   else if(a==='credit-date'){const f=modal.querySelector('form');if(f?.dataset.form!=='expense')return;if(f.elements.chargeDate.readOnly)throw Error('אי אפשר להזיז סדרה עם חיובים שאושרו');f.elements.chargeDate.value=E.creditDate(f.elements.purchaseDate.value,state.settings.creditDay);}
   else if(a==='export-json')download(`cashflow-${E.today()}.json`,JSON.stringify(state,null,2));else if(a==='export-csv')exportCSV();else if(a==='download-source')exportSource();else if(a==='download-rules')download('database.rules.json',JSON.stringify(FIREBASE_RULES,null,2));
-  else if(a==='import-json')pickImport();else if(a==='import-local'){const raw=localStorage.getItem(LOCAL_KEY);if(!raw)throw Error('אין מידע מקומי להעברה');await importData(JSON.parse(raw));}
+  else if(a==='recover-legacy')await recoverLegacy(true);else if(a==='import-json')pickImport();else if(a==='import-local'){const raw=localStorage.getItem(LOCAL_KEY);if(!raw)throw Error('אין מידע מקומי להעברה');const incoming=E.validate(JSON.parse(raw));if(confirm('להעביר את המידע מהמכשיר לחשבון שלך? הנתונים הקיימים בחשבון יישמרו, ונוסיף רק רשומות שאינן קיימות בו.')){await commit(s=>Object.assign(s,E.mergeLegacy(s,incoming)));ui.expenseStatus='series';render();toast('המידע מהמכשיר נוסף לחשבון שלך');}}
   else if(a==='demo')demo();else if(a==='exit-demo'){mode='local';state=loadLocal();status='נשמר במכשיר';render();}
   else if(a==='account'){ui.tab='settings';render();}else if(a==='login')loginForm();
   else if(a==='logout'){if(confirm('להתנתק? המידע בחשבון יישאר שמור בענן.')){await fb.auth.signOut(fb.authentication);closeModal();}}
@@ -334,9 +394,67 @@ document.addEventListener('submit',e=>{if(!e.target.matches('[data-form]'))retur
 modal.addEventListener('cancel',event=>{if(busy){event.preventDefault();return;}modal.innerHTML='';});
 window.addEventListener('storage',e=>{if(e.key===LOCAL_KEY&&mode==='local'){state=loadLocal();status='עודכן בחלונית אחרת';render();if(modal.open)toast('הנתונים השתנו בחלונית אחרת. פתח מחדש את הטופס לפני שמירה');}});
 let lastDay=E.today();setInterval(()=>{const now=E.today();if(now!==lastDay){lastDay=now;render();}},60000);
-// Restore a previous authenticated session without copying local data into the cloud.
+// Read-only recovery from the exact project approved by the owner.
+// The source database is never updated or cleared by this operation.
+let recoveryPending=false,recoveryFailed=false;
+function recoveryNotice(){
+  if(mode==='demo')return '';
+  const saved=loadRecoveryLocal();
+  if(mode==='cloud'&&!state.incomes.length&&!state.expenses.length&&
+     saved&&(saved.incomes.length||saved.expenses.length)){
+    return `<div class="notice">המידע הקיים שמור במכשיר: ${saved.incomes.length} הכנסות ו־${saved.expenses.length} הוצאות. החשבון החדש עדיין ריק. ${button('העברת המידע לחשבון שלי','import-local','','primary')}</div>`;
+  }
+  if(state.legacyRecovery&&!state.bank.verified){
+    const r=state.legacyRecovery;
+    return `<div class="notice">שוחזרו ${r.incomeCount} הכנסות ו־${r.expenseCount} הוצאות מהאתר הישן. הן מופיעות בלשוניות ההכנסות וההוצאות. עדכן עכשיו את היתרה הנוכחית בבנק כדי לדייק את התחזית. ${button('עדכון יתרה','bank','','primary')}</div>`;
+  }
+  if(recoveryPending)return '<div class="notice">בודק את הנתונים הקיימים באתר הישן…</div>';
+  if(recoveryFailed&&!saved?.legacyRecovery&&!state.legacyRecovery){
+    return `<div class="notice">לא ניתן לטעון כרגע את המידע הישן. הנתונים במקור אינם משתנים. ${button('ניסיון שחזור נוסף','recover-legacy')}${button('ייבוא גיבוי JSON','import-json')}</div>`;
+  }
+  return '';
+}
+function loadRecoveryLocal(){
+  try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):null;}
+  catch(e){return null;}
+}
+async function recoverLegacy(force=false){
+  if(recoveryPending||mode==='demo')return;
+  const prior=loadRecoveryLocal();
+  if(prior?.legacyRecovery?.source==='money-1d58a/appData'&&!force)return;
+  recoveryPending=true;recoveryFailed=false;render();
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+    const url=FIREBASE_CONFIG.databaseURL.replace(/\/$/,'')+'/appData.json';
+    // A read-only request. No credentials or financial records are embedded in the source.
+    const response=await fetch(url,{signal:controller.signal,cache:'no-store'});
+    if(!response.ok)throw Error('לא ניתן לקרוא את הנתונים הישנים. אפשר לייבא את הגיבוי');
+    const raw=await response.json();
+    if(!raw||!('openingBalance' in raw))throw Error('לא נמצאו נתונים בפורמט של האתר הישן');
+    const migrated=E.migrateLegacy(raw);
+    // Re-read after the request so edits made while loading cannot be overwritten.
+    const oldText=localStorage.getItem(LOCAL_KEY);
+    const latest=oldText?E.validate(JSON.parse(oldText)):E.empty();
+    // When already restored, keep edits/deletions and never insert source rows again.
+    if(latest.legacyRecovery?.source==='money-1d58a/appData'){
+      toast('המידע הישן כבר שוחזר ונשמר במכשיר');return;
+    }
+    const merged=E.mergeLegacy(latest,migrated);
+    // Write immutable backups before changing the active local data.
+    localStorage.setItem(LOCAL_KEY+'-original-backup',JSON.stringify(raw));
+    if(oldText)localStorage.setItem(LOCAL_KEY+'-before-recovery',oldText);
+    localStorage.setItem(LOCAL_KEY,JSON.stringify(merged));
+    if(mode==='local'){state=merged;status='המידע הישן שוחזר ונשמר במכשיר';}
+    ui.expenseStatus='series';
+    toast(`שוחזרו ${migrated.incomes.length} הכנסות ו־${migrated.expenses.length} הוצאות`);
+  }catch(e){recoveryFailed=true;toast(e.message||'השחזור לא הושלם. אפשר לייבא את הגיבוי');}
+  finally{clearTimeout(timer);recoveryPending=false;render();}
+}
+// Restore an authenticated session. Recovery first preserves the owner's legacy records
+// locally; moving them into a signed-in account requires the explicit transfer button.
 let restoreSession=false;try{restoreSession=localStorage.getItem('cashflow-restore-session')==='1';}catch(e){}
 if(restoreSession){mode='cloud';state=E.empty();status='משחזר חיבור לחשבון…';render();ensureFirebase().catch(()=>{mode='local';state=loadLocal();status='אין חיבור — מוצג מידע מהמכשיר';render();toast('לא ניתן לשחזר את החיבור לענן. התחבר שוב כשיחזור האינטרנט.');});}else render();
+recoverLegacy();
 </script>
 </body>
 </html>
