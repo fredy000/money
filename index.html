@@ -19,6 +19,8 @@
 .minimal-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.minimal-stat{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px;min-height:205px}.minimal-stat>span{font-size:16px;font-weight:600}.minimal-stat>strong{font-size:clamp(24px,3.5vw,36px);font-weight:800;direction:ltr;unicode-bidi:isolate;line-height:1.3}.minimal-stat>button{font-size:12px;margin-top:auto}.minimal-stat .hint{font-size:12px}.minimal-spending{display:flex;justify-content:space-between;align-items:center;gap:16px;background:#17251b;border-color:#3c6447}.minimal-spending>div{display:grid;gap:6px}.minimal-spending strong{font-size:25px;direction:ltr;unicode-bidi:isolate}.minimal-spending span{font-size:14px}.mini-forecast-grid{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px}.mini-forecast-grid>div{display:grid;gap:8px;text-align:center;border-inline-start:1px solid var(--border);padding:0 12px}.mini-forecast-grid>div:first-child{border:0}.mini-forecast-grid strong{font-size:24px;direction:ltr;unicode-bidi:isolate}.mini-forecast-grid small{color:var(--muted);font-size:13px}.mini-forecast-grid .hint{font-size:11px}.mini-forecast h2{margin:0}.mini-forecast .card-head{flex-wrap:wrap}.summary-row{flex-wrap:wrap}
 @media(max-width:650px){.minimal-overview{grid-template-columns:1fr}.minimal-stat{display:grid;grid-template-columns:1fr auto;min-height:0;align-items:center;padding:20px}.minimal-stat .hint{grid-column:1/-1}.minimal-stat>strong{font-size:30px}.minimal-stat>button{justify-self:start;margin:0}.minimal-spending{flex-wrap:wrap}.mini-forecast-grid>div{padding:0 6px}.mini-forecast-grid strong{font-size:19px}.mini-forecast-grid .hint{font-size:10px}}
 .purchase-calculator .card-head{flex-wrap:wrap}.purchase-budget{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:20px}.purchase-budget strong{font-size:clamp(23px,4vw,34px);direction:ltr;unicode-bidi:isolate}.purchase-calculator form{margin-top:20px}.purchase-answer{margin-top:20px;background:#17251b;border:1px solid #3c6447;border-radius:13px;padding:18px}.purchase-caution{background:#292014;border-color:#604126}.purchase-answer h3{font-size:18px;margin-bottom:14px}.purchase-answer .insights{margin-top:15px}.purchase-scenarios{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}.purchase-scenarios summary{cursor:pointer;font-size:14px}.purchase-answer b{direction:ltr;unicode-bidi:isolate}.purchase-calculator .form-actions button{white-space:normal}
+.advice-budget-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.advice-budget-grid>div{display:grid;gap:7px;padding:12px;background:#0002;border-radius:9px;text-align:center}.advice-budget-grid small{font-size:12px;color:var(--muted)}.advice-budget-grid b{font-size:20px;direction:ltr;unicode-bidi:isolate}.purchase-answer>p{font-size:14px;line-height:1.8;margin:10px 0}.purchase-answer .hint{font-size:12px}
+@media(max-width:480px){.advice-budget-grid{gap:5px}.advice-budget-grid>div{padding:10px 5px}.advice-budget-grid b{font-size:17px}}
 </style>
 </head>
 <body>
@@ -158,10 +160,43 @@ const CashFlow = (() => {
       late:{endCents:late.balance-amountCents,minimumCents:late.minAvailable-s.settings.bufferCents-amountCents,date:late.minDate},
       overdueCents:overdue.reduce((sum,i)=>sum+i.amountCents,0),largest};
   }
+  function spendingAdvice(s,now=today()){
+    const summary=cashSummary(s,now),position=summary.position;
+    const sourceIncomes=Array.isArray(s.legacySnapshot?.incomes)?s.legacySnapshot.incomes:Object.values(s.legacySnapshot?.incomes||{});
+    const recent=s.incomes.filter(i=>i.status==='paid'&&i.paidDate>=addDays(now,-365)&&i.paidDate<=now&&i.paymentDateEstimated!==true)
+      .filter(i=>i.legacyId===undefined||i.paymentDateEstimated===false||sourceIncomes.some((raw,index)=>String(raw.id||index)===i.legacyId&&raw.paidDate))
+      .sort((a,b)=>b.paidDate.localeCompare(a.paidDate)).slice(0,12);
+    const delays=recent.map(i=>Math.max(0,Math.round((parseDate(i.paidDate)-parseDate(i.expectedDate))/DAY))).sort((a,b)=>a-b);
+    const learned=delays.length>=3;
+    // Use the observed 80th percentile rather than the average: occasional late
+    // payments should not disappear into an optimistic mean. Fewer than three
+    // receipts use an explicitly disclosed 30-day planning assumption.
+    const observedDelayDays=learned?delays[Math.ceil(delays.length*.8)-1]:30;
+    const delayDays=Math.min(90,observedDelayDays);
+    const targetCents=Math.max(1,summary.forecasts[0].outgoing);
+    const expected=s.incomes.filter(i=>i.status==='pending'&&i.expectedDate>=now)
+      .map(i=>({...i,planningDate:addDays(i.expectedDate,observedDelayDays)}))
+      .sort((a,b)=>a.planningDate.localeCompare(b.planningDate));
+    let coverageCents=0,nextFundingDate=null;
+    for(const i of expected){coverageCents+=i.amountCents-Math.round(i.amountCents*s.settings.taxBasisPoints/10000);if(coverageCents>=targetCents){nextFundingDate=i.planningDate;break;}}
+    const fundingDays=nextFundingDate?Math.round((parseDate(nextFundingDate)-parseDate(now))/DAY):null;
+    const periodDays=fundingDays===null?90:Math.max(30,Math.min(90,fundingDays));
+    const availableCents=summary.spendableCents;
+    const shortfallCents=Math.max(0,s.settings.bufferCents+s.settings.taxReserveCents-summary.remainingCents);
+    const nextSevenDays=summary.commitments.filter(o=>o.date<=addDays(now,7));
+    const overdue=s.incomes.filter(i=>i.status==='pending'&&i.expectedDate<now);
+    return {summary,availableCents,periodDays,periodEnd:addDays(now,periodDays),nextFundingDate,
+      learned,sampleSize:delays.length,observedDelayDays,delayDays,targetCents,
+      dailyCents:Math.floor(availableCents/periodDays),weeklyCents:Math.floor(availableCents*7/periodDays),
+      monthCents:Math.floor(availableCents*30/periodDays),shortfallCents,
+      nextSevenDaysCents:nextSevenDays.reduce((sum,o)=>sum+o.amountCents,0),
+      overdueIncomeCents:overdue.reduce((sum,i)=>sum+i.amountCents,0),
+      status:!position.ready||position.estimated?'unknown':availableCents===0?'pause':'budget'};
+  }
   function applyPayment(s,type,itemId,date,alreadyIncluded,now=today(),taxAdded=0){
     parseDate(date);if(date>now)throw Error('אפשר לאשר רק תשלום שכבר התקבל או ירד');if(!cashPosition(s).ready&&!alreadyIncluded)throw Error('קודם עדכן יתרה מהבנק בלוח הבקרה');
     const epoch=alreadyIncluded?null:s.bank.epoch;
-    if(type==='income'){const i=s.incomes.find(i=>i.id===itemId);if(!i||i.status==='paid')throw Error('ההכנסה כבר סומנה כשולמה');integer(taxAdded,0,i.amountCents);i.status='paid';i.paidDate=date;i.appliedEpoch=epoch;i.taxAddedCents=taxAdded;i.taxEpoch=s.settings.reserveEpoch||0;s.settings.taxReserveCents+=taxAdded;if(!alreadyIncluded)s.bank.balanceCents+=i.amountCents;}
+    if(type==='income'){const i=s.incomes.find(i=>i.id===itemId);if(!i||i.status==='paid')throw Error('ההכנסה כבר סומנה כשולמה');integer(taxAdded,0,i.amountCents);i.status='paid';i.paidDate=date;i.paymentDateEstimated=false;i.appliedEpoch=epoch;i.taxAddedCents=taxAdded;i.taxEpoch=s.settings.reserveEpoch||0;s.settings.taxReserveCents+=taxAdded;if(!alreadyIncluded)s.bank.balanceCents+=i.amountCents;}
     else{const o=occurrences(s,addDays(now,366)).find(o=>o.key===itemId);if(!o)throw Error('התשלום כבר אושר או אינו קיים');s.receipts.push({key:o.key,expenseId:o.expenseId,index:o.index,title:o.title,amountCents:o.amountCents,paidDate:date,chargeDate:o.date,category:o.category,scope:o.scope,appliedEpoch:epoch});if(!alreadyIncluded)s.bank.balanceCents-=o.amountCents;}
     if(!alreadyIncluded)s.bank.updatedAt=new Date().toISOString();
   }
@@ -181,7 +216,7 @@ const CashFlow = (() => {
       termDays:Number(i.termDays)||0,
       expectedDate:dueDate(i.date,Number(i.termDays)||0),manualDate:false,
       status:i.status==='paid'?'paid':'pending',
-      ...(i.status==='paid'?{paidDate:i.paidDate||i.date,appliedEpoch:null}:{})
+      ...(i.status==='paid'?{paidDate:i.paidDate||i.date,paymentDateEstimated:!i.paidDate,appliedEpoch:null}:{})
     }));
     s.expenses=expenses.map((e,index)=>({
       id:stableId('legacy_e_',e,index),legacyId:String(e.id||index),
@@ -223,7 +258,7 @@ const CashFlow = (() => {
     next.revision=target.revision+1;
     return validate(next);
   }
-  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,cashPosition,cashSummary,purchasePlan,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
+  return {today,parseDate,strDate,addDays,addMonths,dueDate,creditDate,cents,split,empty,validate,occurrences,forecast,recordedExpenses,cashPosition,cashSummary,purchasePlan,spendingAdvice,applyPayment,undoPayment,reconcile,migrateLegacy,mergeLegacy};
 })();
 window.CashFlow=CashFlow;
 </script>
@@ -257,7 +292,7 @@ function selectField(label,name,items,value){return `<label>${label}<select name
 function positiveInput(label,name,value,extra=''){return field(label,name,value,'number',`step="0.01" min="0.01" max="1000000000" required ${extra}`);}
 const actionsEnd=()=>`<div class="form-actions">${button('ביטול','close')}<button class="primary" type="submit">שמירה</button></div>`;
 let state=E.empty(),mode='local',status='נשמר במכשיר',busy=false,fb=null,user=null,unsub=null,cloudReady=false,modalBase=0,authObserver=null,authGeneration=0;
-const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all',purchaseAmount:'',paymentDelay:'30'};
+const ui={tab:'dashboard',period:'30',days:30,incomeRange:'all',incomeStatus:'all',expenseStatus:'series',expenseScope:'all',purchaseAmount:'',paymentDelay:'smart'};
 const root=document.getElementById('app'),modal=document.getElementById('modal');
 function toast(message){document.getElementById('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>document.getElementById('toast').textContent='',6500);}
 function loadLocal(){try{const raw=localStorage.getItem(LOCAL_KEY);return raw?E.validate(JSON.parse(raw)):E.empty();}catch(e){status='המידע המקומי לא נטען';setTimeout(()=>toast('לא ניתן לקרוא את המידע המקומי. אפשר לייבא גיבוי דרך כפתור גיבוי.'),100);return E.empty();}}
@@ -316,27 +351,41 @@ function dashboard(){
     <p class="hint dashboard-footnote">המספרים מחושבים מחדש בכל שמירה. הוצאות שכבר נכללות ביתרת הבנק אינן מופחתות שוב.</p>`;
 }
 function purchaseCalculator(){
-  const plan=E.purchasePlan(state),p=plan.summary.position;
+  const advice=E.spendingAdvice(state),plan=E.purchasePlan(state),p=plan.summary.position;
   return `<section class="card purchase-calculator"><div class="card-head"><h2>כמה כדאי לי להוציא?</h2>${button('כסף ששומרים בצד','cash-reserves')}</div>
+    ${automaticAdvice(advice)}
     <div class="purchase-budget"><span>פנוי לבזבוז או לחיסכון</span><strong class="${plan.limitCents>0?'green':'orange'}">${!p.ready?'—':p.estimated?'צריך לאשר יתרה בבנק':money(plan.limitCents)}</strong></div>
     <p class="hint">אחרי כל החיובים שעוד ממתינים, הוצאות קבועות ל־90 יום, כרית ביטחון וכסף למס. הכנסות שטרם שולמו אינן נחשבות כסף פנוי.</p>
-    <form class="form" data-form="purchase"><div class="fields">${positiveInput('כמה אתה שוקל להוציא עכשיו? (₪)','purchaseAmount',ui.purchaseAmount,'data-input="purchase" placeholder="למשל 1000"')}${selectField('בדיקה נוספת: אם לקוחות יאחרו בתשלום','paymentDelay',[{value:30,label:'איחור של 30 יום'},{value:60,label:'איחור של 60 יום'},{value:90,label:'איחור של 90 יום'}],ui.paymentDelay)}</div><div class="form-actions"><button class="primary" type="submit">חשב אם ההוצאה מתאימה לתקציב</button></div></form>
+    <form class="form" data-form="purchase"><div class="fields">${positiveInput('בדיקת רכישה נוספת — סכום (₪)','purchaseAmount',ui.purchaseAmount,'data-input="purchase" placeholder="למשל 1000"')}${selectField('בדיקת איחור של לקוחות','paymentDelay',[{value:'smart',label:'לפי התשלומים שנרשמו אצלי'},{value:30,label:'איחור של 30 יום'},{value:60,label:'איחור של 60 יום'},{value:90,label:'איחור של 90 יום'}],ui.paymentDelay)}</div><div class="form-actions"><button class="primary" type="submit">חשב אם ההוצאה מתאימה לתקציב</button></div></form>
     <div id="purchase-result" aria-live="polite">${purchaseResult()}</div><p class="hint">הבדיקה מדמה רכישה בלבד. הוצאות שלא הזנת אינן נכללות בחישוב.</p></section>`;
+}
+function automaticAdvice(a){
+  if(a.status==='unknown')return `<div class="notice" style="margin-top:18px">ההמלצה שלי כרגע: לעדכן את היתרה מהבנק. בלי סכום עדכני אי אפשר לקבוע תקציב להוצאה. ${button('עדכון יתרה','bank')}</div>`;
+  const lead=a.status==='pause'?'כרגע כדאי לעצור הוצאות חדשות שאינן חובה':`התקציב המומלץ לשבוע הקרוב: ${money(a.weeklyCents)}`;
+  const explanation=a.status==='pause'?`התקציב להוצאות חדשות הוא ${money(0)}.${a.shortfallCents?` חסרים ${money(a.shortfallCents)} לכיסוי החיובים ולשמירת כרית הביטחון והכסף למס.`:' כל הכסף הפנוי כבר מיועד לחיובים ולכסף ששומרים בצד.'}`:`אני מציע לפרוס את ${money(a.availableCents)} הפנויים לאורך ${a.periodDays} יום, עד ${dateLabel(a.periodEnd)}. זו מסגרת להוצאות חדשות שאינן חובה, אחרי שמירת כסף לחיובים שכבר הזנת.`;
+  const funding=a.nextFundingDate?`לפי מועדי החשבוניות והאיחור שנלקח בחשבון, צפוי עד ${dateLabel(a.nextFundingDate)} מספיק תשלום לכיסוי החיובים של 30 הימים הקרובים. הכסף הזה לא נוסף לתקציב לפני שיתקבל.`:'אין כרגע תשלום עתידי מתוארך שמספיק לכיסוי החיובים של 30 הימים הקרובים; לכן התקציב נפרס על 90 יום.';
+  const history=a.learned?`הערכת האיחור מבוססת על ${a.sampleSize} תשלומים מהשנה האחרונה: בלפחות 80% מהם האיחור היה עד ${a.observedDelayDays} ימים. זה דפוס שנרשם, ולא הבטחה למועד התשלום הבא.${a.observedDelayDays>90?' בדיקת הרכישה מאפשרת לדמות איחור של עד 90 יום.':''}`:`יש רק ${a.sampleSize} תשלומים עם תאריך קבלה מהשנה האחרונה. עד שיהיו לפחות 3, נלקח בחשבון איחור של 30 יום לצורכי תכנון; הוא אינו נתון שנלמד מהלקוחות שלך.`;
+  return `<div class="purchase-answer ${a.status==='pause'?'purchase-caution':''}"><h3>${lead}</h3><p>${esc(explanation)}</p>${a.status==='budget'?`<div class="advice-budget-grid"><div><small>בקצב יומי</small><b>${money(a.dailyCents)}</b></div><div><small>לשבוע הקרוב</small><b>${money(a.weeklyCents)}</b></div><div><small>ל־30 יום</small><b>${money(a.monthCents)}</b></div></div><p class="hint">אלה שלוש דרכים להציג את אותה מסגרת תקציב; הסכומים אינם מתווספים זה לזה.</p>`:''}
+    <div class="insights">${a.nextSevenDaysCents?`<p>בשבוע הקרוב יש חיובים ממתינים בסך ${money(a.nextSevenDaysCents)}. הכסף עבורם כבר נשמר בחישוב.</p>`:''}${a.overdueIncomeCents?`<p>כדאי להתחיל מגבייה: ${money(a.overdueIncomeCents)} מלקוחות כבר באיחור. התקציב ייבדק מחדש כאשר תסמן שהכסף התקבל.</p>`:''}${a.status==='budget'?'<p>את מה שלא נוצל מתקציב השבוע אפשר לשמור להמשך או לחיסכון. תשלום שהתקבל, הוצאה חדשה או שינוי ביתרה מעדכנים את ההמלצה.</p>':''}</div>
+    <details class="purchase-scenarios"><summary>למה זה הסכום שהומלץ?</summary><p class="hint">${esc(funding)}</p><p class="hint">${esc(history)}</p><p class="hint">פריסת התקציב היא כלל תכנון בין 30 ל־90 יום, ולא הבטחה שזו ההוצאה הטובה ביותר עבורך. ההחלטה מבוססת על ההוצאות שהוזנו.</p></details></div>`;
 }
 function purchaseResult(){
   let amount;
   try{amount=ui.purchaseAmount.trim()?E.cents(ui.purchaseAmount):0;}catch(e){return '<p class="hint">הזן סכום חיובי עם עד שתי ספרות אחרי הנקודה.</p>';}
-  const plan=E.purchasePlan(state,amount,Number(ui.paymentDelay)),p=plan.summary.position;
+  if(!amount)return '';
+  const advice=E.spendingAdvice(state),plan=E.purchasePlan(state,amount,ui.paymentDelay==='smart'?advice.delayDays:Number(ui.paymentDelay)),p=plan.summary.position;
   if(plan.result==='unknown')return `<div class="notice" style="margin-top:16px">כדי להמליץ על סכום להוצאה, צריך את היתרה שמופיעה עכשיו בבנק. ${button('עדכון מהבנק','bank')}</div>`;
   const tips=[];
   if(plan.existingShortfallCents>0)tips.push(`כבר לפני רכישה חדשה, חסרים ${money(plan.existingShortfallCents)} כדי לכסות את החיובים ולהשאיר את הכסף ששומרים בצד. כדאי לבדוק גבייה מלקוחות או דחיית הוצאה לפני התחייבות נוספת.`);
   else if(plan.result==='over-budget')tips.push(`אפשר לצמצם את הרכישה לתקציב של עד ${money(plan.limitCents)}, או לבדוק שוב אחרי שכסף יתקבל בפועל.`);
   else tips.push(amount?`לפי הרישומים, הרכישה משאירה ${money(Math.max(0,plan.afterPurchaseCents-plan.reserves))} מעבר לכסף ששומרים בצד.`:`התקציב כרגע להוצאה חדשה או להעברה לחיסכון הוא עד ${money(plan.limitCents)}. אם תעביר כסף לחיסכון, רשום את ההעברה כהוצאה או עדכן את יתרת הבנק.`);
+  const largerThanWeek=amount>0&&plan.result==='within-budget'&&amount>advice.weeklyCents;
+  if(largerThanWeek)tips.unshift(`הרכישה גדולה מתקציב השבוע המומלץ (${money(advice.weeklyCents)}). היא צורכת תקציב של כ־${Math.ceil(amount*advice.periodDays/advice.availableCents)} ימים. אם אינה דחופה, כדאי להמתין ולייחד לה תקציב; היכולת לשלם עכשיו אינה קובעת שהרכישה נחוצה.`);
   if(plan.overdueCents>0)tips.push(`יש ${money(plan.overdueCents)} מלקוחות שמועד התשלום שלהם עבר. כדאי לבדוק איתם מתי ישלמו; הכסף הזה אינו נכלל בתחזית עד לעדכון תאריך.`);
   if(plan.late.minimumCents<0)tips.push(`בתרחיש איחור של ${plan.delayDays} יום, ב־${dateLabel(plan.late.date)} היתרה יורדת ${money(-plan.late.minimumCents)} מתחת לכסף ששומרים בצד. בדוק שהחיובים הקרובים מכוסים גם אם הלקוחות מתעכבים.`);
   if(plan.result==='over-budget'&&plan.largest)tips.push(`החיוב הממתין הגדול ביותר הוא ״${plan.largest.title}״: ${money(plan.largest.amountCents)} ב־${dateLabel(plan.largest.date)}. בדוק אם יש גמישות במועד או בסכום שלו.`);
-  const title=!amount?'מה כדאי לבדוק עכשיו':plan.result==='within-budget'?'ההוצאה נכנסת לתקציב המחושב':'כדאי להמתין או להקטין את ההוצאה';
-  return `<div class="purchase-answer ${plan.result==='over-budget'?'purchase-caution':''}"><h3>${title}</h3>${amount?`<div class="summary-row"><span>הוצאה שבדקת</span><b>${money(amount)}</b></div><div class="summary-row"><span>יישאר אחרי הרכישה וכל החיובים הרשומים</span><b class="${plan.afterPurchaseCents<0?'red':''}">${money(plan.afterPurchaseCents)}</b></div><div class="summary-row"><span>כסף שרוצים להשאיר בחשבון</span><b>${money(plan.reserves)}</b></div>`:''}<div class="insights">${tips.map(t=>`<p>${esc(t)}</p>`).join('')}</div>
+  const title=!amount?'מה כדאי לבדוק עכשיו':plan.result==='within-budget'?largerThanWeek?'אפשר לשלם, אבל כדאי לבדוק אם הרכישה דחופה':'ההוצאה נכנסת לתקציב השבוע המומלץ':'כדאי להמתין או להקטין את ההוצאה';
+  return `<div class="purchase-answer ${plan.result==='over-budget'||largerThanWeek?'purchase-caution':''}"><h3>${title}</h3>${amount?`<div class="summary-row"><span>הוצאה שבדקת</span><b>${money(amount)}</b></div><div class="summary-row"><span>יישאר אחרי הרכישה וכל החיובים הרשומים</span><b class="${plan.afterPurchaseCents<0?'red':''}">${money(plan.afterPurchaseCents)}</b></div><div class="summary-row"><span>כסף שרוצים להשאיר בחשבון</span><b>${money(plan.reserves)}</b></div>`:''}<div class="insights">${tips.map(t=>`<p>${esc(t)}</p>`).join('')}</div>
     <details class="purchase-scenarios"><summary>מה יקרה אם הלקוחות ישלמו בזמן או יאחרו?</summary><p class="hint">יתרה צפויה בעוד 90 יום, ${amount?'כולל הרכישה שבדקת':'לפני רכישה חדשה'}. זו הערכה לפי מועדי התשלום, ולא כסף שכבר התקבל.</p><div class="summary-row"><span>אם ישלמו בתאריך שהזנת</span><b>${money(plan.onTime.endCents)}</b></div><div class="summary-row"><span>אם יאחרו ב־${plan.delayDays} יום</span><b class="${plan.late.endCents<0?'red':''}">${money(plan.late.endCents)}</b></div><p class="hint">גם אם היתרה בסוף התקופה חיובית, הבדיקה בוחנת מחסור בדרך. הוצאות חד־פעמיות ותשלומים מעבר ל־90 יום נכללים בתקציב הראשי.</p></details></div>`;
 }
 function updatePurchaseResult(){const target=document.getElementById('purchase-result');if(target)target.innerHTML=purchaseResult();}
@@ -575,7 +624,7 @@ async function clickAction(btn){
 }
 async function submitForm(form){
   const data=new FormData(form),get=n=>String(data.get(n)||'').trim(),type=form.dataset.form;
-  if(type==='purchase'){E.cents(get('purchaseAmount'));ui.purchaseAmount=get('purchaseAmount');ui.paymentDelay=get('paymentDelay')||'30';updatePurchaseResult();return;}
+  if(type==='purchase'){E.cents(get('purchaseAmount'));ui.purchaseAmount=get('purchaseAmount');ui.paymentDelay=get('paymentDelay')||'smart';updatePurchaseResult();return;}
   if(type==='encrypted-backup'){
     const password=get('backupPassword');if(password.length<10)throw Error('בחר סיסמה של לפחות 10 תווים');
     if(password!==get('backupRepeat'))throw Error('הסיסמאות אינן זהות');
