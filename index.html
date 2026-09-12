@@ -71,8 +71,12 @@
     .stat-value { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; }
     
     .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); }
-    .card-title { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+    .card-title { display: flex; align-items: center; justify-content: space-between; color: var(--text); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
     
+    .total-banner { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+    .total-banner-label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    .total-banner-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
     .summary-box { background: var(--surface-input); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
     .summary-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
     .summary-item.sub { font-size: 13px; color: var(--text-muted); padding-right: 12px; }
@@ -174,9 +178,7 @@
   const calcExpectedDate = (invoiceDateStr, termDays) => {
     if (Number(termDays) === 0) return invoiceDateStr;
     const date = new Date(invoiceDateStr);
-    // מעבר לסוף החודש של תאריך החשבונית
     const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    // הוספת ימי השוטף (30, 60, 90 וכו') מתחילת החודש הבא
     endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
     return endOfMonth.toISOString().slice(0, 10);
   };
@@ -205,7 +207,6 @@
         openingBalance: Number(data.openingBalance) || 0,
         incomes: (data.incomes || []).map(inc => ({
           ...inc,
-          // עדכון אוטומטי של תאריכי היעד עבור נתונים קיימים לפי הלוגיקה החדשה
           expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
         })),
         expenses: data.expenses || []
@@ -240,6 +241,7 @@
     
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
     const totalExpSoFar = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
+    const totalAllIncomes = (state.incomes || []).reduce((s, i) => s + Number(i.amount), 0);
     
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpSoFar + totalPaid;
     
@@ -262,6 +264,7 @@
       monthExpectedIncome, 
       monthExpenses,
       totalExpSoFar,
+      totalAllIncomes,
       safeToSpend,
       overdueAmount,
       overdueCount: overdueIncomes.length
@@ -289,8 +292,8 @@
       <div class="section">
         ${renderAIAssistant(c)}
         ${ui.tab === "dashboard" ? renderDashboard(c) : ""}
-        ${ui.tab === "income" ? renderIncome() : ""}
-        ${ui.tab === "expenses" ? renderExpenses() : ""}
+        ${ui.tab === "income" ? renderIncome(c) : ""}
+        ${ui.tab === "expenses" ? renderExpenses(c) : ""}
       </div>
     `;
   }
@@ -377,7 +380,9 @@
       </div>
 
       <div class="card">
-        <div class="card-title">⏳ תשלומים בדרך אליך (ממתין מגבייה)</div>
+        <div class="card-title">
+          <span>⏳ תשלומים בדרך אליך (ממתין מגבייה)</span>
+        </div>
         ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע.</div>' :
           c.pending.map((inc) => {
             const d = daysUntil(inc.expectedDate);
@@ -401,11 +406,16 @@
     return `<div class="stat-card"><div class="stat-dot-row"><span class="dot" style="background:${dot}"></span>${label}</div><div class="stat-value">${value}</div></div>`;
   }
 
-  function renderIncome() {
+  function renderIncome(c) {
     const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
     const editingItem = ui.editingIncomeId ? state.incomes.find(i => i.id === ui.editingIncomeId) : null;
 
     return `
+      <div class="total-banner">
+        <span class="total-banner-label">סה"כ כל ההכנסות:</span>
+        <span class="total-banner-value" style="color:var(--positive)">${fmtMoney(c.totalAllIncomes)}</span>
+      </div>
+
       <button class="add-btn" data-action="toggle-income-form">${ui.editingIncomeId ? "ביטול עריכה" : "+ הוספת עבודה / יום צילום"}</button>
       
       ${(ui.showIncomeForm || ui.editingIncomeId) ? `
@@ -450,12 +460,17 @@
     `;
   }
 
-  function renderExpenses() {
+  function renderExpenses(c) {
     const sorted = [...(state.expenses || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
     const editingItem = ui.editingExpenseId ? state.expenses.find(e => e.id === ui.editingExpenseId) : null;
     const f = ui.expenseFormState;
     
     return `
+      <div class="total-banner">
+        <span class="total-banner-label">סה"כ כל ההוצאות:</span>
+        <span class="total-banner-value" style="color:var(--negative)">-${fmtMoney(c.totalExpSoFar)}</span>
+      </div>
+
       <button class="add-btn" data-action="toggle-expense-form">${ui.editingExpenseId ? "ביטול עריכה" : "+ הוספת הוצאה חדשה"}</button>
       
       ${(ui.showExpenseForm || ui.editingExpenseId) ? `
