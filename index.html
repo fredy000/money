@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ניהול הוצאות ותקציב</title>
+  <title>תזרים לצלם - מעקב ותקציב</title>
   <style>
     :root {
       --bg-color: #121212;
@@ -27,10 +27,51 @@
     }
 
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
     }
 
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    /* Tabs Navigation */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background-color: #252525;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background-color: var(--card-bg);
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards & Layout */
     .card {
       background-color: var(--card-bg);
       border-radius: 12px;
@@ -39,21 +80,37 @@
       border: 1px solid var(--border-color);
     }
 
-    h2, h3 {
-      margin-top: 0;
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
     }
 
-    /* Form Styles */
-    .form-group {
-      margin-bottom: 15px;
+    .dash-card {
+      background-color: #252525;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
     }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
+    .dash-card .title {
+      font-size: 14px;
       color: var(--text-muted);
     }
 
+    .dash-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    .value.green { color: var(--green-text); }
+    .value.orange { color: var(--orange-text); }
+
+    /* Form Styles */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: var(--text-muted); }
     input, select {
       width: 100%;
       padding: 10px;
@@ -63,17 +120,10 @@
       color: white;
       box-sizing: border-box;
     }
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
 
-    .form-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .form-row .form-group {
-      flex: 1;
-    }
-
-    button {
+    .btn-submit {
       width: 100%;
       background-color: var(--accent-color);
       color: white;
@@ -85,24 +135,7 @@
       font-size: 16px;
     }
 
-    button:hover {
-      opacity: 0.9;
-    }
-
-    /* Summary Card */
-    .summary-title {
-      font-size: 18px;
-      color: var(--text-muted);
-    }
-
-    .summary-amount {
-      font-size: 28px;
-      font-weight: bold;
-      color: var(--orange-text);
-      margin: 10px 0;
-    }
-
-    /* Section Headers */
+    /* Section Headers & Lists */
     .section-header {
       padding: 10px 15px;
       border-radius: 6px;
@@ -111,19 +144,10 @@
       display: flex;
       justify-content: space-between;
     }
+    .upcoming-header { background-color: var(--orange-bg); color: var(--orange-text); }
+    .past-header { background-color: var(--green-bg); color: var(--green-text); }
 
-    .upcoming-header {
-      background-color: var(--orange-bg);
-      color: var(--orange-text);
-    }
-
-    .past-header {
-      background-color: var(--green-bg);
-      color: var(--green-text);
-    }
-
-    /* Expense Item Card */
-    .expense-card {
+    .item-card {
       background-color: #252525;
       border-radius: 8px;
       padding: 15px;
@@ -133,22 +157,12 @@
       align-items: center;
       border-right: 4px solid var(--accent-color);
     }
-
-    .expense-info h4 {
-      margin: 0 0 5px 0;
-      font-size: 16px;
-    }
-
-    .expense-details {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .expense-amount {
-      font-size: 18px;
-      font-weight: bold;
-      color: #ff5252;
-    }
+    .item-card.income { border-right-color: var(--green-text); }
+    .item-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+    .item-details { font-size: 12px; color: var(--text-muted); }
+    .item-amount { font-size: 18px; font-weight: bold; }
+    .amount-expense { color: #ff5252; }
+    .amount-income { color: var(--green-text); }
 
     .category-badge {
       background-color: #333;
@@ -163,152 +177,212 @@
 <body>
 
 <div class="container">
-
-  <!-- טופס הוספת הוצאה -->
-  <div class="card">
-    <h3>+ הוספת הוצאה חדשה</h3>
-    <form id="expenseForm">
-      <div class="form-group">
-        <label for="title">תיאור ההוצאה</label>
-        <input type="text" id="title" placeholder="לדוגמה: מקס" required>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="category">קטגוריה</label>
-          <select id="category" required>
-            <option value="סופר">סופר</option>
-            <option value="דירה">דירה</option>
-            <option value="דלק">דלק</option>
-            <option value="יציאות עם חברים">יציאות עם חברים</option>
-            <option value="אוכל">אוכל</option>
-            <option value="מוצרי חשמל">מוצרי חשמל</option>
-            <option value="חוויה">חוויה</option>
-            <option value="אחר">אחר</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="totalAmount">סכום כולל (₪)</label>
-          <input type="number" id="totalAmount" step="0.01" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="installments">מספר תשלומים</label>
-          <input type="number" id="installments" min="1" value="1" required>
-        </div>
-
-        <div class="form-group">
-          <label for="firstChargeDate">תאריך חיוב ראשון באשראי</label>
-          <input type="date" id="firstChargeDate" required>
-        </div>
-      </div>
-
-      <button type="submit">הוסף הוצאה</button>
-    </form>
+  
+  <div class="header">
+    <h2>📷 תזרים לצלם</h2>
   </div>
 
-  <!-- סיכום חיוב קרוב -->
-  <div class="card">
-    <div class="summary-title">לשלם בעתיד (ירד ב-02 לחודש הקרוב)</div>
-    <div class="summary-amount" id="upcomingTotal">₪ 0.00</div>
+  <!-- ניווט בלשוניות -->
+  <div class="tabs">
+    <div class="tab-btn active" onclick="switchTab('dashboard')">לוח בקרה</div>
+    <div class="tab-btn" onclick="switchTab('incomes')">הכנסות</div>
+    <div class="tab-btn" onclick="switchTab('expenses')">הוצאות</div>
   </div>
 
-  <!-- רשימת חיובים עתידיים -->
-  <div>
-    <div class="section-header upcoming-header">
-      <span>⏳ לשלם בעתיד (חיוב קרוב)</span>
+  <!-- ==================== לשונית לוח בקרה ==================== -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="dashboard-grid">
+      <div class="dash-card">
+        <div class="title">תזרימי יציב (עו"ש)</div>
+        <div class="value green" id="dashBankBalance">₪ 4,513.73</div>
+      </div>
+      <div class="dash-card">
+        <div class="title">חיוב קרוב באשראי (ירד ב-02)</div>
+        <div class="value orange" id="dashUpcomingCredit">₪ 0.00</div>
+      </div>
+      <div class="dash-card">
+        <div class="title">נותר חופשי (לאחר חיוב ב-02)</div>
+        <div class="value green" id="dashRemainingBalance">₪ 0.00</div>
+      </div>
     </div>
-    <div id="upcomingList"></div>
+
+    <div class="card">
+      <h3>💡 AI Financial Advisor</h3>
+      <p id="aiAdvice">מחשב נתונים ותזרים עתידי...</p>
+    </div>
   </div>
 
-  <!-- רשימת חיובים ששולמו -->
-  <div style="margin-top: 30px;">
-    <div class="section-header past-header">
-      <span>שולם בעבר (כבר ירד בעו"ש)</span>
+  <!-- ==================== לשונית הכנסות ==================== -->
+  <div id="tab-incomes" class="tab-content">
+    <div class="card">
+      <h3>+ הוספת הכנסה חדשה</h3>
+      <form id="incomeForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>תיאור ההכנסה</label>
+            <input type="text" id="incTitle" placeholder="לדוגמה: צילומי חתונה" required>
+          </div>
+          <div class="form-group">
+            <label>סכום (₪)</label>
+            <input type="number" id="incAmount" step="0.01" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>תאריך כניסה צפוי</label>
+          <input type="date" id="incDate" required>
+        </div>
+        <button type="submit" class="btn-submit">הוסף הכנסה</button>
+      </form>
     </div>
-    <div id="pastList"></div>
+
+    <div class="card">
+      <h3>רשימת הכנסות</h3>
+      <div id="incomeList"></div>
+    </div>
+  </div>
+
+  <!-- ==================== לשונית הוצאות ==================== -->
+  <div id="tab-expenses" class="tab-content">
+    <div class="card">
+      <h3>+ הוספת הוצאה חדשה</h3>
+      <form id="expenseForm">
+        <div class="form-group">
+          <label>תיאור ההוצאה</label>
+          <input type="text" id="expTitle" placeholder="לדוגמה: מקס" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>קטגוריה</label>
+            <select id="expCategory" required>
+              <option value="סופר">סופר</option>
+              <option value="דירה">דירה</option>
+              <option value="דלק">דלק</option>
+              <option value="יציאות עם חברים">יציאות עם חברים</option>
+              <option value="אוכל">אוכל</option>
+              <option value="מוצרי חשמל">מוצרי חשמל</option>
+              <option value="חוויה">חוויה</option>
+              <option value="אחר">אחר</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>סכום כולל (₪)</label>
+            <input type="number" id="expTotalAmount" step="0.01" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>מספר תשלומים</label>
+            <input type="number" id="expInstallments" min="1" value="1" required>
+          </div>
+
+          <div class="form-group">
+            <label>תאריך חיוב ראשון באשראי</label>
+            <input type="date" id="expFirstDate" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">הוסף הוצאה</button>
+      </form>
+    </div>
+
+    <div>
+      <div class="section-header upcoming-header">
+        <span>⏳ לשלם בעתיד (ירד ב-02 לחודש)</span>
+        <span id="upcomingSectionTotal">₪ 0.00</span>
+      </div>
+      <div id="upcomingList"></div>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <div class="section-header past-header">
+        <span>✅ שולם בעבר (כבר ירד בעו"ש)</span>
+      </div>
+      <div id="pastList"></div>
+    </div>
   </div>
 
 </div>
 
 <script>
-  // שמירת נתונים ב-LocalStorage
-  let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+  // נתונים בסיסיים
+  let bankBalance = 4513.73;
+  let expenses = JSON.parse(localStorage.getItem('app_expenses')) || [];
+  let incomes = JSON.parse(localStorage.getItem('app_incomes')) || [];
 
-  const form = document.getElementById('expenseForm');
+  // מעבר בין לשוניות
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-  // פונקציה לייצור כל התשלומים הבודדים מתוך העסקה
-  function processExpenses() {
-    const allInstallments = [];
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+  }
 
+  // פירוק העסקאות לתשלומים חודשיים
+  function getParsedInstallments() {
+    const all = [];
     expenses.forEach(item => {
       const baseAmount = item.totalAmount / item.installments;
       const startDate = new Date(item.firstChargeDate);
 
       for (let i = 0; i < item.installments; i++) {
-        // חישוב תאריך החיוב לכל תשלום בנפרד (חודש אחר חודש)
         const chargeDate = new Date(startDate);
         chargeDate.setMonth(startDate.getMonth() + i);
 
-        allInstallments.push({
+        all.push({
           id: item.id,
           title: item.title,
           category: item.category,
           installmentIndex: i + 1,
           totalInstallments: item.installments,
-          amount: baseAmount, // אם יש ריבית עתידית משתנה, ניתן לעדכן את החישוב כאן
+          amount: baseAmount,
           totalAmount: item.totalAmount,
           chargeDate: chargeDate
         });
       }
     });
-
-    return allInstallments;
+    return all;
   }
 
+  // רינדור וחישוב כל הנתונים
   function render() {
-    const allInstallments = processExpenses();
     const now = new Date();
-    
-    // קביעת חודש ושנת החיוב הקרוב (החיוב הקרוב ביותר שעדיין לא עבר)
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
+    const installments = getParsedInstallments();
+
     const upcomingListEl = document.getElementById('upcomingList');
     const pastListEl = document.getElementById('pastList');
-    const upcomingTotalEl = document.getElementById('upcomingTotal');
+    const incomeListEl = document.getElementById('incomeList');
 
     upcomingListEl.innerHTML = '';
     pastListEl.innerHTML = '';
+    incomeListEl.innerHTML = '';
 
-    let upcomingTotal = 0;
+    let upcomingMonthTotal = 0;
 
-    allInstallments.forEach(item => {
+    // הצגת הוצאות ותשלומים
+    installments.forEach(item => {
       const itemDate = new Date(item.chargeDate);
-      
-      // בדיקה אם החיוב הוא מהחודש הנוכחי/עתידי או שכבר עבר
       const isPast = itemDate < new Date(now.getFullYear(), now.getMonth(), 1);
       const isCurrentBillingMonth = itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
 
-      const formattedDate = itemDate.toLocaleDateString('he-IL', {
-        year: '2-digit',
-        month: 'numeric',
-        day: 'numeric'
-      });
+      const formattedDate = itemDate.toLocaleDateString('he-IL', { year: '2-digit', month: 'numeric', day: 'numeric' });
 
       const html = `
-        <div class="expense-card">
-          <div class="expense-info">
+        <div class="item-card">
+          <div class="item-info">
             <h4>${item.title} (${item.installmentIndex}/${item.totalInstallments}) <span class="category-badge">${item.category}</span></h4>
-            <div class="expense-details">
-              תאריך חיוב באשראי: ${formattedDate} • תשלום ${item.installmentIndex}/${item.totalInstallments}
-              <br>סכום מלא: ₪${item.totalAmount.toFixed(2)}
+            <div class="item-details">
+              תאריך חיוב: ${formattedDate} • תשלום ${item.installmentIndex}/${item.totalInstallments}
+              <br>סכום עסקה מלא: ₪${item.totalAmount.toFixed(2)}
             </div>
           </div>
-          <div class="expense-amount">
+          <div class="item-amount amount-expense">
             ₪${item.amount.toFixed(2)}-
           </div>
         </div>
@@ -317,36 +391,69 @@
       if (isPast) {
         pastListEl.innerHTML += html;
       } else {
-        // מציג ברשימה העתידית
         upcomingListEl.innerHTML += html;
-        
-        // סוכם רק את מה ששייך לחיוב של החודש הקרוב!
         if (isCurrentBillingMonth) {
-          upcomingTotal += item.amount;
+          upcomingMonthTotal += item.amount;
         }
       }
     });
 
-    upcomingTotalEl.textContent = `₪ ${upcomingTotal.toFixed(2)}`;
+    // הצגת הכנסות
+    incomes.forEach(inc => {
+      const formattedDate = new Date(inc.date).toLocaleDateString('he-IL');
+      incomeListEl.innerHTML += `
+        <div class="item-card income">
+          <div class="item-info">
+            <h4>${inc.title}</h4>
+            <div class="item-details">תאריך: ${formattedDate}</div>
+          </div>
+          <div class="item-amount amount-income">
+            +₪${inc.amount.toFixed(2)}
+          </div>
+        </div>
+      `;
+    });
+
+    // עדכון לוח בקרה
+    document.getElementById('dashBankBalance').textContent = `₪ ${bankBalance.toFixed(2)}`;
+    document.getElementById('dashUpcomingCredit').textContent = `₪ ${upcomingMonthTotal.toFixed(2)}`;
+    document.getElementById('upcomingSectionTotal').textContent = `₪ ${upcomingMonthTotal.toFixed(2)}`;
+    
+    const remaining = bankBalance - upcomingMonthTotal;
+    document.getElementById('dashRemainingBalance').textContent = `₪ ${remaining.toFixed(2)}`;
+
+    // עדכון AI Advisor
+    document.getElementById('aiAdvice').textContent = 
+      `תזרימי יציב: יש לך ₪${bankBalance.toFixed(2)} בעו"ש בבנק. ב-02 לחודש עתידים לרדת ₪${upcomingMonthTotal.toFixed(2)} בחיוב האשראי. כתוצאה מכך ייוותר לך תזרים חופשי של ₪${remaining.toFixed(2)}.`;
   }
 
-  // טיפול בהוספת טופס
-  form.addEventListener('submit', (e) => {
+  // הוספת הוצאה
+  document.getElementById('expenseForm').addEventListener('submit', (e) => {
     e.preventDefault();
-
-    const newExpense = {
+    expenses.push({
       id: Date.now(),
-      title: document.getElementById('title').value,
-      category: document.getElementById('category').value,
-      totalAmount: parseFloat(document.getElementById('totalAmount').value),
-      installments: parseInt(document.getElementById('installments').value),
-      firstChargeDate: document.getElementById('firstChargeDate').value
-    };
+      title: document.getElementById('expTitle').value,
+      category: document.getElementById('expCategory').value,
+      totalAmount: parseFloat(document.getElementById('expTotalAmount').value),
+      installments: parseInt(document.getElementById('expInstallments').value),
+      firstChargeDate: document.getElementById('expFirstDate').value
+    });
+    localStorage.setItem('app_expenses', JSON.stringify(expenses));
+    e.target.reset();
+    render();
+  });
 
-    expenses.push(newExpense);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    
-    form.reset();
+  // הוספת הכנסה
+  document.getElementById('incomeForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    incomes.push({
+      id: Date.now(),
+      title: document.getElementById('incTitle').value,
+      amount: parseFloat(document.getElementById('incAmount').value),
+      date: document.getElementById('incDate').value
+    });
+    localStorage.setItem('app_incomes', JSON.stringify(incomes));
+    e.target.reset();
     render();
   });
 
