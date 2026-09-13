@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>תזרים לצלם - מעקב הכנסות והוצאות</title>
+  <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
@@ -18,14 +17,11 @@
       --text-muted: #A39B8E;
       --accent: #FF7024;
       --accent-glow: rgba(255, 112, 36, 0.25);
-      --accent-hover: #FF8542;
       --positive: #4EB868;
       --positive-bg: rgba(78, 184, 104, 0.12);
       --negative: #FF5252;
-      --negative-bg: rgba(255, 82, 82, 0.12);
       --border: #2D2822;
       --border-focus: #483F36;
-      --radius: 16px;
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
@@ -40,7 +36,7 @@
     body {
       margin: 0;
       background: var(--bg);
-      font-family: "Rubik", system-ui, -apple-system, sans-serif;
+      font-family: "Rubik", system-ui, sans-serif;
       min-height: 100vh;
       color: var(--text);
       -webkit-font-smoothing: antialiased;
@@ -167,8 +163,6 @@
       border-radius: 20px;
       padding: 20px;
       box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
     }
 
     .ai-header {
@@ -185,14 +179,11 @@
       font-weight: 800;
       padding: 3px 8px;
       border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .ai-title {
       font-weight: 700;
       font-size: 16px;
-      color: var(--text);
     }
 
     .ai-text {
@@ -220,7 +211,6 @@
     .ai-stat-label {
       font-size: 11.5px;
       color: var(--text-muted);
-      font-weight: 500;
     }
 
     .ai-stat-value {
@@ -241,17 +231,15 @@
     .hero-label {
       color: var(--text-muted);
       font-size: 13.5px;
-      font-weight: 500;
       margin-bottom: 6px;
     }
 
     .hero-number {
       font-weight: 800;
       font-size: 40px;
-      color: var(--text);
+      color: var(--positive);
       line-height: 1.1;
       font-variant-numeric: tabular-nums;
-      word-break: break-all;
     }
 
     .link-btn {
@@ -262,14 +250,7 @@
       padding: 6px 14px;
       border-radius: 20px;
       font-size: 12px;
-      font-weight: 500;
       cursor: pointer;
-      display: inline-block;
-    }
-
-    .link-btn:hover {
-      color: var(--text);
-      border-color: var(--accent);
     }
 
     .stat-row {
@@ -283,9 +264,6 @@
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 14px 12px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
     }
 
     .stat-dot-row {
@@ -295,7 +273,6 @@
       font-size: 11.5px;
       color: var(--text-muted);
       margin-bottom: 6px;
-      font-weight: 500;
     }
 
     .dot {
@@ -303,14 +280,12 @@
       height: 8px;
       border-radius: 50%;
       display: inline-block;
-      flex-shrink: 0;
     }
 
     .stat-value {
       font-size: 14.5px;
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
       font-weight: 700;
+      font-variant-numeric: tabular-nums;
     }
 
     .card {
@@ -323,10 +298,6 @@
     }
 
     .card-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
       font-size: 16px;
       font-weight: 700;
       margin-bottom: 14px;
@@ -340,13 +311,11 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      margin-bottom: 16px;
     }
 
     .summary-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       gap: 12px;
       font-size: 14px;
     }
@@ -363,8 +332,6 @@
       padding: 12px;
       border-radius: 12px;
       font-weight: 800;
-      font-size: 15px;
-      color: var(--text);
       margin-top: 6px;
     }
 
@@ -381,7 +348,6 @@
     }
 
     .row-title {
-      color: var(--text);
       font-size: 15px;
       font-weight: 600;
     }
@@ -391,14 +357,11 @@
       font-size: 12.5px;
       margin-top: 4px;
       display: flex;
-      align-items: center;
       gap: 6px;
       flex-wrap: wrap;
     }
 
     .row-amount {
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
       font-size: 15.5px;
       font-weight: 700;
       white-space: nowrap;
@@ -407,47 +370,31 @@
 
     .actions-group {
       display: flex;
-      align-items: center;
       gap: 6px;
+    }
+
+    .icon-btn,
+    .icon-btn-muted {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
 
     .icon-btn {
       background: var(--positive-bg);
       border: 1px solid rgba(78, 184, 104, 0.3);
       color: var(--positive);
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 15px;
       font-weight: bold;
-    }
-
-    .icon-btn:hover {
-      background: var(--positive);
-      color: #000;
     }
 
     .icon-btn-muted {
       background: var(--surface-input);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 13.5px;
-    }
-
-    .icon-btn-muted:hover {
-      border-color: var(--accent);
-      color: var(--accent);
     }
 
     .icon-btn-danger:hover {
@@ -456,25 +403,17 @@
     }
 
     .add-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       width: 100%;
       background: linear-gradient(135deg, var(--accent), #D84E00);
       color: #FFF;
       border: none;
       border-radius: 16px;
-      padding: 14px 0;
+      padding: 14px;
       font-size: 15.5px;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 20px var(--accent-glow);
       margin-bottom: 12px;
-    }
-
-    .add-btn:active {
-      transform: scale(0.98);
     }
 
     .form-box {
@@ -485,7 +424,6 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-      box-shadow: var(--shadow);
       margin-bottom: 16px;
     }
 
@@ -494,7 +432,6 @@
       flex-direction: column;
       gap: 7px;
       font-size: 13px;
-      font-weight: 500;
       color: var(--text-muted);
     }
 
@@ -513,12 +450,10 @@
       color: #FFF;
       border: none;
       border-radius: 12px;
-      padding: 13px 0;
+      padding: 13px;
       font-size: 15.5px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 8px;
-      box-shadow: 0 4px 15px var(--accent-glow);
       width: 100%;
     }
 
@@ -527,12 +462,9 @@
       color: var(--text-muted);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 10px 0;
-      font-size: 14px;
-      font-weight: 600;
+      padding: 10px;
       cursor: pointer;
       width: 100%;
-      margin-top: 6px;
     }
 
     .empty {
@@ -547,11 +479,8 @@
       align-items: center;
       justify-content: flex-end;
       gap: 10px;
-      display: flex;
-      cursor: pointer;
-      user-select: none;
-      font-size: 14px;
       color: var(--text);
+      cursor: pointer;
     }
 
     .category-pills {
@@ -568,17 +497,10 @@
       padding: 8px 14px;
       border-radius: 20px;
       font-size: 13px;
-      font-weight: 500;
       cursor: pointer;
-      user-select: none;
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-
-    .pill:hover {
-      border-color: var(--border-focus);
-      color: var(--text);
     }
 
     .pill.selected {
@@ -594,21 +516,13 @@
         grid-template-columns: 1fr;
       }
 
-      .hero-number {
-        font-size: 34px;
+      .ai-grid {
+        grid-template-columns: 1fr;
       }
 
       .row {
-        align-items: flex-start;
         flex-wrap: wrap;
-      }
-
-      .row-amount {
-        margin-right: 0;
-      }
-
-      .ai-grid {
-        grid-template-columns: 1fr;
+        align-items: flex-start;
       }
     }
   </style>
@@ -641,12 +555,12 @@
     };
 
     const firebaseApp = initializeApp(firebaseConfig);
-    const db = getDatabase(firebaseApp);
+    const database = getDatabase(firebaseApp);
 
     /*
-     * הנתיב לא השתנה, ולכן הנתונים הקיימים נשמרים.
+     * לא שינינו את הנתיב, ולכן הנתונים הקיימים נשמרים.
      */
-    const dbRef = ref(db, "appData");
+    const databaseReference = ref(database, "appData");
 
     const TERMS = [
       { days: 0, label: "מיידי" },
@@ -699,7 +613,7 @@
       return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     };
 
-    const dateToStr = (date) => {
+    const dateToString = (date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
@@ -724,164 +638,124 @@
       );
     };
 
-    const todayStr = () => dateToStr(new Date());
+    const todayString = () => dateToString(new Date());
 
     const monthKey = (dateString) => {
-      return dateString
-        ? String(dateString).slice(0, 7)
-        : todayStr().slice(0, 7);
+      return String(dateString || todayString()).slice(0, 7);
     };
 
     const addMonths = (dateString, months) => {
-      const source = parseLocalDate(dateString);
+      const originalDate = parseLocalDate(dateString);
 
-      const target = new Date(
-        source.getFullYear(),
-        source.getMonth() + Number(months),
+      const targetDate = new Date(
+        originalDate.getFullYear(),
+        originalDate.getMonth() + Number(months),
         1,
         12
       );
 
-      const lastDay = new Date(
-        target.getFullYear(),
-        target.getMonth() + 1,
+      const finalDayOfMonth = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth() + 1,
         0
       ).getDate();
 
-      target.setDate(
-        Math.min(source.getDate(), lastDay)
+      targetDate.setDate(
+        Math.min(originalDate.getDate(), finalDayOfMonth)
       );
 
-      return dateToStr(target);
+      return dateToString(targetDate);
     };
 
-    const calcExpectedDate = (invoiceDateString, termDays) => {
-      if (Number(termDays) === 0) {
+    const calculateExpectedIncomeDate = (
+      invoiceDateString,
+      paymentTermDays
+    ) => {
+      if (Number(paymentTermDays) === 0) {
         return invoiceDateString;
       }
 
       const invoiceDate = parseLocalDate(invoiceDateString);
 
-      const endOfMonth = new Date(
+      const endOfInvoiceMonth = new Date(
         invoiceDate.getFullYear(),
         invoiceDate.getMonth() + 1,
         0,
         12
       );
 
-      endOfMonth.setDate(
-        endOfMonth.getDate() + Number(termDays)
+      endOfInvoiceMonth.setDate(
+        endOfInvoiceMonth.getDate() +
+          Number(paymentTermDays)
       );
 
-      return dateToStr(endOfMonth);
-    };
-
-    const calcCreditChargeDate = (
-      expenseDateString,
-      billingDay = 2
-    ) => {
-      const expenseDate = parseLocalDate(expenseDateString);
-
-      if (Number.isNaN(expenseDate.getTime())) {
-        return expenseDateString;
-      }
-
-      const safeBillingDay = Math.min(
-        31,
-        Math.max(1, Number(billingDay) || 2)
-      );
-
-      let targetYear = expenseDate.getFullYear();
-      let targetMonth = expenseDate.getMonth();
-
-      /*
-       * אם הרכישה הייתה ביום החיוב או אחריו,
-       * היא תרד בחודש הבא.
-       */
-      if (expenseDate.getDate() >= safeBillingDay) {
-        targetMonth += 1;
-      }
-
-      const lastDay = new Date(
-        targetYear,
-        targetMonth + 1,
-        0
-      ).getDate();
-
-      const chargeDate = new Date(
-        targetYear,
-        targetMonth,
-        Math.min(safeBillingDay, lastDay),
-        12
-      );
-
-      return dateToStr(chargeDate);
+      return dateToString(endOfInvoiceMonth);
     };
 
     const splitInstallmentAmounts = (
       originalAmount,
-      count,
-      interest = 0,
-      customMonthly = 0
+      numberOfPayments,
+      interestAmount = 0,
+      customMonthlyAmount = 0
     ) => {
-      const payments = Number(count);
-      const originalCents = Math.round(Number(originalAmount) * 100);
+      const paymentCount = Number(numberOfPayments);
+      const originalCents = Math.round(
+        Number(originalAmount) * 100
+      );
 
       if (
-        !Number.isInteger(payments) ||
-        payments < 2 ||
-        payments > 36 ||
+        !Number.isInteger(paymentCount) ||
+        paymentCount < 2 ||
+        paymentCount > 36 ||
         originalCents <= 0
       ) {
         return [];
       }
 
-      /*
-       * אם ידוע הסכום המדויק שיורד בכל חודש,
-       * משתמשים בו לכל התשלומים.
-       */
-      if (Number(customMonthly) > 0) {
+      if (Number(customMonthlyAmount) > 0) {
         const monthlyCents = Math.round(
-          Number(customMonthly) * 100
+          Number(customMonthlyAmount) * 100
         );
 
-        return Array(payments).fill(monthlyCents);
+        return Array(paymentCount).fill(monthlyCents);
       }
 
       const interestCents = Math.max(
         0,
-        Math.round(Number(interest || 0) * 100)
+        Math.round(Number(interestAmount || 0) * 100)
       );
 
       const totalCents = originalCents + interestCents;
-      const baseAmount = Math.floor(totalCents / payments);
-      const remainder = totalCents - baseAmount * payments;
+      const basePayment = Math.floor(
+        totalCents / paymentCount
+      );
 
-      /*
-       * האגורות החסרות מתווספות לתשלומים האחרונים,
-       * כדי שסכום כל התשלומים יהיה מדויק.
-       */
+      const remainingCents =
+        totalCents - basePayment * paymentCount;
+
       return Array.from(
-        { length: payments },
+        { length: paymentCount },
         (_, index) => {
-          return baseAmount +
-            (index >= payments - remainder ? 1 : 0);
+          return basePayment +
+            (
+              index >= paymentCount - remainingCents
+                ? 1
+                : 0
+            );
         }
       );
     };
 
-    const fmtMoney = (number) => {
-      const value = Number(number || 0);
-
+    const formatMoney = (number) => {
       return new Intl.NumberFormat("he-IL", {
         style: "currency",
         currency: "ILS",
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
-      }).format(value);
+      }).format(Number(number || 0));
     };
 
-    const fmtDate = (dateString) => {
+    const formatDate = (dateString) => {
       return new Intl.DateTimeFormat("he-IL", {
         day: "numeric",
         month: "short",
@@ -889,7 +763,7 @@
       }).format(parseLocalDate(dateString));
     };
 
-    const fmtMonth = (dateString) => {
+    const formatMonth = (dateString) => {
       return new Intl.DateTimeFormat("he-IL", {
         month: "long",
         year: "numeric"
@@ -900,12 +774,12 @@
       return Math.round(
         (
           parseLocalDate(dateString) -
-          parseLocalDate(todayStr())
+          parseLocalDate(todayString())
         ) / 86400000
       );
     };
 
-    const esc = (value) => {
+    const escapeHtml = (value) => {
       return String(value || "").replace(
         /[&<>"']/g,
         (character) => ({
@@ -918,8 +792,11 @@
       );
     };
 
+    /*
+     * טעינת הנתונים הקיימים מ־Firebase.
+     */
     onValue(
-      dbRef,
+      databaseReference,
 
       (snapshot) => {
         const data = snapshot.val();
@@ -927,17 +804,21 @@
         if (data) {
           state = {
             openingBalance: Number(data.openingBalance) || 0,
+
             creditCardBillingDay:
               Number(data.creditCardBillingDay) || 2,
 
-            incomes: (data.incomes || []).map((income) => ({
-              ...income,
+            incomes: (data.incomes || []).map(
+              (income) => ({
+                ...income,
 
-              expectedDate: calcExpectedDate(
-                income.date,
-                income.termDays || 0
-              )
-            })),
+                expectedDate:
+                  calculateExpectedIncomeDate(
+                    income.date,
+                    income.termDays || 0
+                  )
+              })
+            ),
 
             expenses: data.expenses || []
           };
@@ -949,7 +830,8 @@
         render();
       },
 
-      () => {
+      (error) => {
+        console.error(error);
         syncStatus = "שגיאת הרשאות ⚠️";
         render();
       }
@@ -960,7 +842,7 @@
         syncStatus = "שומר...";
         render();
 
-        await set(dbRef, state);
+        await set(databaseReference, state);
 
         syncStatus = "סנכרון פעיל ☁️";
       } catch (error) {
@@ -971,9 +853,9 @@
       render();
     }
 
-    function calc() {
-      const today = todayStr();
-      const thisMonth = monthKey(today);
+    function calculateFinances() {
+      const today = todayString();
+      const currentMonth = monthKey(today);
       const nextMonth = monthKey(addMonths(today, 1));
 
       const paidIncomes = (state.incomes || []).filter(
@@ -982,8 +864,10 @@
 
       const pendingIncomes = (state.incomes || [])
         .filter((income) => income.status !== "paid")
-        .sort((a, b) => {
-          return a.expectedDate > b.expectedDate ? 1 : -1;
+        .sort((incomeA, incomeB) => {
+          return incomeA.expectedDate.localeCompare(
+            incomeB.expectedDate
+          );
         });
 
       const totalPaidIncome = paidIncomes.reduce(
@@ -991,150 +875,104 @@
         0
       );
 
-      const billingDay =
-        Number(state.creditCardBillingDay) || 2;
-
       /*
-       * החלוקה למסכים נעשית לפי חודש קלנדרי.
+       * התיקון החשוב:
        *
-       * למשל, אם היום 13 בספטמבר וחיוב ירד
-       * ב־2 בספטמבר, הוא עדיין יוצג בתוך
-       * "משלם עכשיו — ספטמבר".
+       * הוצאה מוכנסת לקבוצה לפי התאריך שרשמת.
+       *
+       * תאריך בספטמבר = משלם עכשיו בספטמבר.
+       * תאריך באוגוסט = שולם בעבר.
+       * תאריך באוקטובר = תשלם בעתיד.
        */
       const pastExpenses = (state.expenses || []).filter(
         (expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
-
-          return monthKey(chargeDate) < thisMonth;
+          return monthKey(expense.date) < currentMonth;
         }
       );
 
       const currentExpenses = (state.expenses || []).filter(
         (expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
-
-          return monthKey(chargeDate) === thisMonth;
+          return monthKey(expense.date) === currentMonth;
         }
       );
 
       const futureExpenses = (state.expenses || []).filter(
         (expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
-
-          return monthKey(chargeDate) > thisMonth;
+          return monthKey(expense.date) > currentMonth;
         }
       );
 
       /*
-       * החיובים שכבר ירדו משמשים לחישוב
-       * יתרת הבנק בלבד.
-       *
-       * הרשימה הזאת נפרדת מקבוצות התצוגה,
-       * כדי שחיוב של ספטמבר יופיע בספטמבר
-       * אבל לא יופחת פעמיים מהיתרה.
+       * הרשימה הזאת משמשת רק לחישוב היתרה.
+       * היא לא קובעת באיזה חלק ההוצאה תוצג.
        */
-      const chargedExpenses = (state.expenses || []).filter(
-        (expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
+      const alreadyPaidExpenses = (
+        state.expenses || []
+      ).filter((expense) => {
+        return expense.date <= today;
+      });
 
-          return chargeDate <= today;
-        }
-      );
-
-      /*
-       * חיובים בחודש הנוכחי שמועד ירידתם
-       * עדיין לא הגיע.
-       */
-      const currentOutstandingExpenses =
+      const remainingCurrentMonthExpenses =
         currentExpenses.filter((expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
-
-          return chargeDate > today;
+          return expense.date > today;
         });
 
-      const pendingExpenses = [
-        ...currentOutstandingExpenses,
+      const remainingExpenses = [
+        ...remainingCurrentMonthExpenses,
         ...futureExpenses
       ];
 
-      const totalExpPast = pastExpenses.reduce(
+      const totalPastExpenses = pastExpenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0
       );
 
-      const totalExpCurrent = currentExpenses.reduce(
+      const totalCurrentExpenses = currentExpenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0
       );
 
-      const totalExpCurrentOutstanding =
-        currentOutstandingExpenses.reduce(
+      const totalRemainingCurrentExpenses =
+        remainingCurrentMonthExpenses.reduce(
           (sum, expense) => sum + Number(expense.amount),
           0
         );
 
-      const totalExpFuture = futureExpenses.reduce(
+      const totalFutureExpenses = futureExpenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0
       );
 
-      const totalExpCharged = chargedExpenses.reduce(
-        (sum, expense) => sum + Number(expense.amount),
-        0
-      );
+      const totalAlreadyPaidExpenses =
+        alreadyPaidExpenses.reduce(
+          (sum, expense) => sum + Number(expense.amount),
+          0
+        );
 
-      const totalExpPending = pendingExpenses.reduce(
-        (sum, expense) => sum + Number(expense.amount),
-        0
-      );
+      const totalRemainingExpenses =
+        remainingExpenses.reduce(
+          (sum, expense) => sum + Number(expense.amount),
+          0
+        );
 
-      const totalExpNextMonth = futureExpenses
+      const totalNextMonthExpenses = futureExpenses
         .filter((expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
-          );
-
-          return monthKey(chargeDate) === nextMonth;
+          return monthKey(expense.date) === nextMonth;
         })
         .reduce(
           (sum, expense) => sum + Number(expense.amount),
           0
         );
 
-      const actualCurrentBalance =
+      const currentBalance =
         Number(state.openingBalance || 0) -
-        totalExpCharged +
+        totalAlreadyPaidExpenses +
         totalPaidIncome;
 
-      const monthPaidIncome = paidIncomes
+      const expectedIncomeThisMonth = pendingIncomes
         .filter((income) => {
-          return monthKey(income.paidDate || income.date) ===
-            thisMonth;
-        })
-        .reduce(
-          (sum, income) => sum + Number(income.amount),
-          0
-        );
-
-      const monthExpectedIncome = pendingIncomes
-        .filter((income) => {
-          return monthKey(income.expectedDate) === thisMonth;
+          return monthKey(income.expectedDate) ===
+            currentMonth;
         })
         .reduce(
           (sum, income) => sum + Number(income.amount),
@@ -1142,19 +980,16 @@
         );
 
       /*
-       * יתרה צפויה בסוף החודש:
-       * יתרה עכשיו
-       * פחות מה שעוד לא ירד החודש
-       * ועוד הכנסות שממתינות החודש.
+       * חיובים שכבר עברו החודש לא יורדים שוב.
        */
-      const finalExpectedBalance =
-        actualCurrentBalance -
-        totalExpCurrentOutstanding +
-        monthExpectedIncome;
+      const expectedEndOfMonthBalance =
+        currentBalance -
+        totalRemainingCurrentExpenses +
+        expectedIncomeThisMonth;
 
       const safeToSpend = Math.max(
         0,
-        actualCurrentBalance - totalExpPending
+        currentBalance - totalRemainingExpenses
       );
 
       const overdueIncomes = pendingIncomes.filter(
@@ -1167,37 +1002,30 @@
       );
 
       return {
-        openingBalance: Number(state.openingBalance || 0),
-
-        actualCurrentBalance,
-        finalExpectedBalance,
+        currentBalance,
+        expectedEndOfMonthBalance,
         safeToSpend,
 
         pendingIncomes,
-        monthPaidIncome,
-        monthExpectedIncome,
+        expectedIncomeThisMonth,
 
-        totalExpPast,
-        totalExpCurrent,
-        totalExpCurrentOutstanding,
-        totalExpFuture,
-        totalExpCharged,
-        totalExpPending,
-        totalExpNextMonth,
+        totalPastExpenses,
+        totalCurrentExpenses,
+        totalRemainingCurrentExpenses,
+        totalFutureExpenses,
+        totalNextMonthExpenses,
 
-        overdueAmount,
         overdueCount: overdueIncomes.length,
+        overdueAmount,
 
         pastExpenses,
         currentExpenses,
-        futureExpenses,
-        currentOutstandingExpenses,
-        pendingExpenses
+        futureExpenses
       };
     }
 
     function render() {
-      const calculations = calc();
+      const finances = calculateFinances();
       const root = document.getElementById("app");
 
       root.innerHTML = `
@@ -1217,15 +1045,21 @@
               </svg>
             </div>
 
-            <span class="brand-text">תזרים לצלם</span>
+            <span class="brand-text">
+              תזרים לצלם
+            </span>
           </div>
 
-          <span class="sync-badge">${syncStatus}</span>
+          <span class="sync-badge">
+            ${syncStatus}
+          </span>
         </div>
 
         <div class="tabs">
           <button
-            class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}"
+            class="tab-btn ${
+              ui.tab === "dashboard" ? "active" : ""
+            }"
             data-action="tab"
             data-tab="dashboard"
           >
@@ -1233,7 +1067,9 @@
           </button>
 
           <button
-            class="tab-btn ${ui.tab === "income" ? "active" : ""}"
+            class="tab-btn ${
+              ui.tab === "income" ? "active" : ""
+            }"
             data-action="tab"
             data-tab="income"
           >
@@ -1241,7 +1077,9 @@
           </button>
 
           <button
-            class="tab-btn ${ui.tab === "expenses" ? "active" : ""}"
+            class="tab-btn ${
+              ui.tab === "expenses" ? "active" : ""
+            }"
             data-action="tab"
             data-tab="expenses"
           >
@@ -1250,91 +1088,105 @@
         </div>
 
         <div class="section">
-          ${renderAIAssistant(calculations)}
+          ${renderAdvisor(finances)}
 
           ${
             ui.tab === "dashboard"
-              ? renderDashboard(calculations)
+              ? renderDashboard(finances)
               : ""
           }
 
           ${
             ui.tab === "income"
-              ? renderIncome()
+              ? renderIncomes()
               : ""
           }
 
           ${
             ui.tab === "expenses"
-              ? renderExpenses(calculations)
+              ? renderExpenses(finances)
               : ""
           }
         </div>
       `;
     }
 
-    function renderAIAssistant(calculations) {
+    function renderAdvisor(finances) {
       let advice = "";
 
-      if (calculations.overdueCount > 0) {
+      if (finances.overdueCount > 0) {
         advice = `
           ⚠️ <strong>שים לב:</strong>
           יש לך
-          <strong>${fmtMoney(calculations.overdueAmount)}</strong>
-          בתשלומים שמועד הפירעון שלהם עבר
-          (${calculations.overdueCount} לקוחות באיחור).
+          <strong>${formatMoney(
+            finances.overdueAmount
+          )}</strong>
+          בהכנסות שמועד התשלום שלהן עבר.
 
-          בחודש הנוכחי יש תשלומים בסך
-          <strong>${fmtMoney(calculations.totalExpCurrent)}</strong>,
-          ובחודש הבא
-          <strong>${fmtMoney(calculations.totalExpNextMonth)}</strong>.
+          החודש יש לך הוצאות בסך
+          <strong>${formatMoney(
+            finances.totalCurrentExpenses
+          )}</strong>.
         `;
-      } else if (calculations.safeToSpend > 5000) {
+      } else if (finances.safeToSpend > 5000) {
         advice = `
-          🟢 <strong>מצב תזרימי מצוין!</strong>
+          🟢 <strong>מצב תזרימי טוב.</strong>
 
-          היתרה המחושבת בעו"ש היא
-          <strong>${fmtMoney(calculations.actualCurrentBalance)}</strong>.
+          בחשבון נשארו
+          <strong>${formatMoney(
+            finances.currentBalance
+          )}</strong>.
 
-          בחודש הנוכחי יש תשלומים בסך
-          <strong>${fmtMoney(calculations.totalExpCurrent)}</strong>,
-          ובחודש הבא
-          <strong>${fmtMoney(calculations.totalExpNextMonth)}</strong>.
+          החודש יש לך הוצאות בסך
+          <strong>${formatMoney(
+            finances.totalCurrentExpenses
+          )}</strong>.
         `;
-      } else if (calculations.safeToSpend > 0) {
+      } else if (finances.safeToSpend > 0) {
         advice = `
-          💡 <strong>תזרים יציב:</strong>
+          💡 <strong>כדאי להוציא בזהירות.</strong>
 
-          היתרה המחושבת בעו"ש היא
-          <strong>${fmtMoney(calculations.actualCurrentBalance)}</strong>.
+          בחשבון נשארו
+          <strong>${formatMoney(
+            finances.currentBalance
+          )}</strong>.
 
-          בחודש הנוכחי יש תשלומים בסך
-          <strong>${fmtMoney(calculations.totalExpCurrent)}</strong>,
-          ובחודש הבא
-          <strong>${fmtMoney(calculations.totalExpNextMonth)}</strong>.
+          החודש יש לך הוצאות בסך
+          <strong>${formatMoney(
+            finances.totalCurrentExpenses
+          )}</strong>.
         `;
       } else {
         advice = `
-          🛑 <strong>כדאי להיזהר בהוצאות חדשות:</strong>
+          🛑 <strong>כרגע לא מומלץ להוסיף הוצאה חדשה.</strong>
 
-          היתרה המחושבת בעו"ש היא
-          <strong>${fmtMoney(calculations.actualCurrentBalance)}</strong>.
+          בחשבון נשארו
+          <strong>${formatMoney(
+            finances.currentBalance
+          )}</strong>.
 
-          בחודש הנוכחי יש תשלומים בסך
-          <strong>${fmtMoney(calculations.totalExpCurrent)}</strong>,
-          ובחודש הבא
-          <strong>${fmtMoney(calculations.totalExpNextMonth)}</strong>.
+          החודש יש לך הוצאות בסך
+          <strong>${formatMoney(
+            finances.totalCurrentExpenses
+          )}</strong>.
         `;
       }
 
       return `
         <div class="ai-card">
           <div class="ai-header">
-            <span class="ai-badge">AI FINANCIAL ADVISOR</span>
-            <span class="ai-title">היועץ הפיננסי שלך</span>
+            <span class="ai-badge">
+              AI FINANCIAL ADVISOR
+            </span>
+
+            <span class="ai-title">
+              היועץ הפיננסי שלך
+            </span>
           </div>
 
-          <div class="ai-text">${advice}</div>
+          <div class="ai-text">
+            ${advice}
+          </div>
 
           <div class="ai-grid">
             <div class="ai-stat">
@@ -1346,7 +1198,9 @@
                 class="ai-stat-value"
                 style="color:var(--negative)"
               >
-                ${fmtMoney(calculations.totalExpCurrent)}
+                ${formatMoney(
+                  finances.totalCurrentExpenses
+                )}
               </div>
             </div>
 
@@ -1359,7 +1213,9 @@
                 class="ai-stat-value"
                 style="color:var(--accent)"
               >
-                ${fmtMoney(calculations.totalExpNextMonth)}
+                ${formatMoney(
+                  finances.totalNextMonthExpenses
+                )}
               </div>
             </div>
           </div>
@@ -1379,30 +1235,29 @@
             ${label}
           </div>
 
-          <div class="stat-value">${value}</div>
+          <div class="stat-value">
+            ${value}
+          </div>
         </div>
       `;
     }
 
-    function renderDashboard(calculations) {
+    function renderDashboard(finances) {
       return `
         <div class="hero">
           <div class="hero-label">
-            סכום נוכחי מחושב בבנק
+            סכום נוכחי מחושב בחשבון
           </div>
 
-          <div
-            class="hero-number"
-            style="color:var(--positive)"
-          >
-            ${fmtMoney(calculations.actualCurrentBalance)}
+          <div class="hero-number">
+            ${formatMoney(finances.currentBalance)}
           </div>
 
           <button
             class="link-btn"
             data-action="toggle-balance-edit"
           >
-            ⚙️ עדכון יתרה / יום חיוב
+            עדכון יתרה
           </button>
 
           ${
@@ -1421,27 +1276,15 @@
                     id="balance-input"
                     type="number"
                     step="0.01"
-                    min="0"
                     value="${state.openingBalance}"
-                    placeholder="יתרת הפתיחה"
-                  />
-
-                  <input
-                    class="input"
-                    id="billing-day-input"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value="${state.creditCardBillingDay || 2}"
-                    placeholder="יום חיוב האשראי"
+                    placeholder="יתרת פתיחה"
                   />
 
                   <button
                     class="submit-btn"
-                    style="margin-top:0"
                     data-action="save-balance"
                   >
-                    עדכן נתונים
+                    עדכן
                   </button>
                 </div>
               `
@@ -1451,20 +1294,20 @@
 
         <div class="stat-row">
           ${statCard(
-            "קיים בבנק",
-            fmtMoney(calculations.actualCurrentBalance),
+            "קיים בחשבון",
+            formatMoney(finances.currentBalance),
             "var(--positive)"
           )}
 
           ${statCard(
             "תשלומים החודש",
-            fmtMoney(calculations.totalExpCurrent),
+            formatMoney(finances.totalCurrentExpenses),
             "var(--negative)"
           )}
 
           ${statCard(
             "הכנסות בדרך",
-            fmtMoney(calculations.monthExpectedIncome),
+            formatMoney(finances.expectedIncomeThisMonth),
             "var(--accent)"
           )}
         </div>
@@ -1482,71 +1325,58 @@
                 color:var(--positive);
               "
             >
-              <span>סכום נוכחי מחושב:</span>
+              <span>סכום נוכחי בחשבון:</span>
 
               <span>
-                ${fmtMoney(calculations.actualCurrentBalance)}
+                ${formatMoney(finances.currentBalance)}
               </span>
             </div>
 
             <div
               class="summary-item sub"
-              style="
-                margin-top:8px;
-                color:var(--negative);
-              "
+              style="color:var(--negative)"
             >
               <span>
-                עדיין צפוי לרדת עד סוף החודש:
+                עדיין צפוי לרדת החודש:
               </span>
 
               <span>
-                -${fmtMoney(
-                  calculations.totalExpCurrentOutstanding
+                -${formatMoney(
+                  finances.totalRemainingCurrentExpenses
                 )}
               </span>
             </div>
 
-            <div
-              class="summary-item sub"
-              style="margin-top:6px"
-            >
+            <div class="summary-item sub">
               <span>תשלומים בחודש הבא:</span>
 
               <span style="color:var(--accent)">
-                -${fmtMoney(
-                  calculations.totalExpNextMonth
+                -${formatMoney(
+                  finances.totalNextMonthExpenses
                 )}
               </span>
             </div>
 
-            <div
-              class="summary-item"
-              style="
-                margin-top:6px;
-                border-top:1px dashed var(--border);
-                padding-top:8px;
-              "
-            >
+            <div class="summary-item">
               <span>
                 הכנסות שצפויות להיכנס החודש:
               </span>
 
               <span style="color:var(--positive)">
-                +${fmtMoney(
-                  calculations.monthExpectedIncome
+                +${formatMoney(
+                  finances.expectedIncomeThisMonth
                 )}
               </span>
             </div>
 
             <div class="summary-item total">
               <span>
-                סה"כ צפוי בחשבון בסוף החודש:
+                צפוי בחשבון בסוף החודש:
               </span>
 
               <span style="color:var(--accent)">
-                ${fmtMoney(
-                  calculations.finalExpectedBalance
+                ${formatMoney(
+                  finances.expectedEndOfMonthBalance
                 )}
               </span>
             </div>
@@ -1555,42 +1385,45 @@
 
         <div class="card">
           <div class="card-title">
-            ⏳ תשלומים בדרך אליך
+            ⏳ הכנסות שממתינות לתשלום
           </div>
 
           ${
-            calculations.pendingIncomes.length === 0
+            finances.pendingIncomes.length === 0
               ? `
                 <div class="empty">
                   אין תשלומים ממתינים כרגע.
                 </div>
               `
-              : calculations.pendingIncomes
+              : finances.pendingIncomes
                   .map((income) => {
-                    const days = daysUntil(
-                      income.expectedDate
-                    );
+                    const remainingDays =
+                      daysUntil(income.expectedDate);
 
                     return `
                       <div class="row">
                         <div style="flex:1">
                           <div class="row-title">
-                            ${esc(income.client)}
+                            ${escapeHtml(income.client)}
                           </div>
 
                           <div class="row-sub">
-                            צפוי ב-${fmtDate(income.expectedDate)}
+                            צפוי ב-${formatDate(
+                              income.expectedDate
+                            )}
 
                             ·
 
                             ${
-                              days >= 0
-                                ? `בעוד ${days} ימים`
+                              remainingDays >= 0
+                                ? `בעוד ${remainingDays} ימים`
                                 : `
                                   <span
                                     style="color:var(--negative)"
                                   >
-                                    באיחור של ${Math.abs(days)} ימים
+                                    באיחור של
+                                    ${Math.abs(remainingDays)}
+                                    ימים
                                   </span>
                                 `
                             }
@@ -1598,7 +1431,7 @@
                         </div>
 
                         <div class="row-amount">
-                          ${fmtMoney(income.amount)}
+                          ${formatMoney(income.amount)}
                         </div>
 
                         <div class="actions-group">
@@ -1615,7 +1448,6 @@
                             class="icon-btn-muted"
                             data-action="edit-income"
                             data-id="${income.id}"
-                            title="ערוך"
                           >
                             ✏️
                           </button>
@@ -1629,16 +1461,17 @@
       `;
     }
 
-    function renderIncome() {
+    function renderIncomes() {
       const sortedIncomes = [
         ...(state.incomes || [])
-      ].sort((a, b) => {
-        return a.date < b.date ? 1 : -1;
+      ].sort((incomeA, incomeB) => {
+        return incomeB.date.localeCompare(incomeA.date);
       });
 
-      const editingItem = ui.editingIncomeId
+      const editingIncome = ui.editingIncomeId
         ? state.incomes.find(
-            (income) => income.id === ui.editingIncomeId
+            (income) =>
+              income.id === ui.editingIncomeId
           )
         : null;
 
@@ -1648,28 +1481,26 @@
           data-action="toggle-income-form"
         >
           ${
-            ui.editingIncomeId
+            editingIncome
               ? "ביטול עריכה"
               : "+ הוספת עבודה / יום צילום"
           }
         </button>
 
         ${
-          ui.showIncomeForm || ui.editingIncomeId
+          ui.showIncomeForm || editingIncome
             ? `
               <div class="form-box">
                 <div
                   style="
                     font-weight:700;
-                    font-size:16px;
                     color:var(--accent);
-                    margin-bottom:6px;
                   "
                 >
                   ${
-                    editingItem
+                    editingIncome
                       ? "✏️ עריכת הכנסה"
-                      : "➕ הוספת הכנסה חדשה"
+                      : "➕ הוספת הכנסה"
                   }
                 </div>
 
@@ -1678,45 +1509,43 @@
 
                   <input
                     class="input"
-                    id="inc-client"
-                    placeholder="למשל: צילומי תדמית"
+                    id="income-client"
                     value="${
-                      editingItem
-                        ? esc(editingItem.client)
+                      editingIncome
+                        ? escapeHtml(editingIncome.client)
                         : ""
                     }"
                   />
                 </label>
 
                 <label class="label">
-                  סכום מדויק (₪)
+                  סכום (₪)
 
                   <input
                     class="input"
-                    id="inc-amount"
+                    id="income-amount"
                     type="number"
                     step="0.01"
                     min="0.01"
-                    placeholder="0.00"
                     value="${
-                      editingItem
-                        ? editingItem.amount
+                      editingIncome
+                        ? editingIncome.amount
                         : ""
                     }"
                   />
                 </label>
 
                 <label class="label">
-                  תאריך הוצאת החשבונית
+                  תאריך החשבונית
 
                   <input
                     class="input"
-                    id="inc-date"
+                    id="income-date"
                     type="date"
                     value="${
-                      editingItem
-                        ? editingItem.date
-                        : todayStr()
+                      editingIncome
+                        ? editingIncome.date
+                        : todayString()
                     }"
                   />
                 </label>
@@ -1726,15 +1555,15 @@
 
                   <select
                     class="input"
-                    id="inc-term"
+                    id="income-term"
                   >
                     ${TERMS.map((term) => {
                       return `
                         <option
                           value="${term.days}"
                           ${
-                            editingItem &&
-                            Number(editingItem.termDays) ===
+                            editingIncome &&
+                            Number(editingIncome.termDays) ===
                               term.days
                               ? "selected"
                               : ""
@@ -1748,22 +1577,20 @@
                 </label>
 
                 <button
-                  type="button"
                   class="submit-btn"
-                  data-action="save-income-direct"
+                  data-action="save-income"
                 >
                   ${
-                    editingItem
+                    editingIncome
                       ? "עדכן הכנסה"
                       : "שמור הכנסה"
                   }
                 </button>
 
                 ${
-                  editingItem
+                  editingIncome
                     ? `
                       <button
-                        type="button"
                         class="cancel-btn"
                         data-action="cancel-edit"
                       >
@@ -1785,7 +1612,7 @@
             sortedIncomes.length === 0
               ? `
                 <div class="empty">
-                  עדיין לא הוכנסו עבודות.
+                  עדיין לא הוכנסו הכנסות.
                 </div>
               `
               : sortedIncomes
@@ -1794,11 +1621,11 @@
                       <div class="row">
                         <div style="flex:1">
                           <div class="row-title">
-                            ${esc(income.client)}
+                            ${escapeHtml(income.client)}
                           </div>
 
                           <div class="row-sub">
-                            ${fmtDate(income.date)}
+                            ${formatDate(income.date)}
 
                             ·
 
@@ -1808,17 +1635,14 @@
                                   <span
                                     style="color:var(--positive)"
                                   >
-                                    שולם ב-${fmtDate(
-                                      income.paidDate ||
-                                        income.date
-                                    )}
+                                    שולם
                                   </span>
                                 `
                                 : `
                                   <span
                                     style="color:var(--accent)"
                                   >
-                                    צפוי ב-${fmtDate(
+                                    צפוי ב-${formatDate(
                                       income.expectedDate
                                     )}
                                   </span>
@@ -1828,7 +1652,7 @@
                         </div>
 
                         <div class="row-amount">
-                          ${fmtMoney(income.amount)}
+                          ${formatMoney(income.amount)}
                         </div>
 
                         <div class="actions-group">
@@ -1839,7 +1663,6 @@
                                   class="icon-btn"
                                   data-action="mark-paid"
                                   data-id="${income.id}"
-                                  title="סמן כשולם"
                                 >
                                   ✓
                                 </button>
@@ -1851,7 +1674,6 @@
                             class="icon-btn-muted"
                             data-action="edit-income"
                             data-id="${income.id}"
-                            title="ערוך"
                           >
                             ✏️
                           </button>
@@ -1860,7 +1682,6 @@
                             class="icon-btn-muted icon-btn-danger"
                             data-action="delete-income"
                             data-id="${income.id}"
-                            title="מחיקה"
                           >
                             🗑
                           </button>
@@ -1874,54 +1695,59 @@
       `;
     }
 
-    function renderExpenses(calculations) {
-      const billingDay =
-        Number(state.creditCardBillingDay) || 2;
-
-      const editingItem = ui.editingExpenseId
+    function renderExpenses(finances) {
+      const editingExpense = ui.editingExpenseId
         ? state.expenses.find(
             (expense) =>
               expense.id === ui.editingExpenseId
           )
         : null;
 
-      const valueDescription = editingItem
-        ? esc(editingItem.desc)
-        : esc(ui.tempExpense.desc || "");
+      const expenseDescription = editingExpense
+        ? escapeHtml(editingExpense.desc)
+        : escapeHtml(ui.tempExpense.desc || "");
 
-      const valueAmount = editingItem
-        ? editingItem.amount
+      const expenseAmount = editingExpense
+        ? editingExpense.amount
         : ui.tempExpense.amount || "";
 
-      const valueDate = editingItem
-        ? editingItem.date
-        : ui.tempExpense.date || todayStr();
+      const expenseDate = editingExpense
+        ? editingExpense.date
+        : ui.tempExpense.date || todayString();
 
-      const sortByChargeDate = (a, b) => {
-        const dateA = calcCreditChargeDate(
-          a.date,
-          billingDay
+      const sortByDate = (expenseA, expenseB) => {
+        return expenseA.date.localeCompare(
+          expenseB.date
         );
-
-        const dateB = calcCreditChargeDate(
-          b.date,
-          billingDay
-        );
-
-        return dateA.localeCompare(dateB);
       };
 
+      const pastList = [
+        ...finances.pastExpenses
+      ].sort(sortByDate);
+
       const currentList = [
-        ...calculations.currentExpenses
-      ].sort(sortByChargeDate);
+        ...finances.currentExpenses
+      ].sort(sortByDate);
 
       const futureList = [
-        ...calculations.futureExpenses
-      ].sort(sortByChargeDate);
+        ...finances.futureExpenses
+      ].sort(sortByDate);
 
-      const pastList = [
-        ...calculations.pastExpenses
-      ].sort(sortByChargeDate);
+      const formatInstallmentText = (
+        installmentInfo
+      ) => {
+        if (!installmentInfo) {
+          return "";
+        }
+
+        const [currentPayment, totalPayments] =
+          String(installmentInfo).split("/");
+
+        return (
+          ` — תשלום ${currentPayment}` +
+          ` מתוך ${totalPayments}`
+        );
+      };
 
       const renderExpenseRow = (expense) => {
         const categoryObject = CATEGORIES.find(
@@ -1933,22 +1759,17 @@
           ? categoryObject.icon
           : "📦";
 
-        const chargeDate = calcCreditChargeDate(
-          expense.date,
-          billingDay
-        );
-
-        let installmentDetails = "";
+        let fullAmountDetails = "";
 
         if (expense.fullOriginalAmount) {
-          installmentDetails =
-            ` · סכום מלא: ` +
-            fmtMoney(expense.fullOriginalAmount);
+          fullAmountDetails =
+            ` · סכום העסקה: ` +
+            formatMoney(expense.fullOriginalAmount);
 
           if (expense.interestAmount) {
-            installmentDetails +=
-              ` (כולל ריבית של ` +
-              `${fmtMoney(expense.interestAmount)})`;
+            fullAmountDetails +=
+              ` · ריבית: ` +
+              formatMoney(expense.interestAmount);
           }
         }
 
@@ -1956,28 +1777,24 @@
           <div class="row">
             <div style="flex:1">
               <div class="row-title">
-                ${icon} ${esc(expense.desc)}
+                ${icon}
+                ${escapeHtml(expense.desc)}
+                ${formatInstallmentText(
+                  expense.installmentInfo
+                )}
               </div>
 
               <div class="row-sub">
-                תאריך חיוב באשראי:
-                <strong>${fmtDate(chargeDate)}</strong>
+                תאריך התשלום:
+                <strong>
+                  ${formatDate(expense.date)}
+                </strong>
 
-                ${
-                  expense.installmentInfo
-                    ? `
-                      <span style="color:var(--accent)">
-                        · תשלום ${expense.installmentInfo}
-                      </span>
-                    `
-                    : ""
-                }
-
-                ${installmentDetails}
+                ${fullAmountDetails}
 
                 ${
                   expense.recurring
-                    ? " · קבועה"
+                    ? " · הוצאה קבועה"
                     : ""
                 }
               </div>
@@ -1987,7 +1804,7 @@
               class="row-amount"
               style="color:var(--negative)"
             >
-              -${fmtMoney(expense.amount)}
+              -${formatMoney(expense.amount)}
             </div>
 
             <div class="actions-group">
@@ -1995,7 +1812,6 @@
                 class="icon-btn-muted"
                 data-action="edit-expense"
                 data-id="${expense.id}"
-                title="ערוך"
               >
                 ✏️
               </button>
@@ -2004,7 +1820,6 @@
                 class="icon-btn-muted icon-btn-danger"
                 data-action="delete-expense"
                 data-id="${expense.id}"
-                title="מחיקה"
               >
                 🗑
               </button>
@@ -2013,52 +1828,37 @@
         `;
       };
 
-      const groupByCategory = (items) => {
+      const groupByCategory = (expenses) => {
         const groups = new Map();
 
-        items.forEach((expense) => {
-          const category =
+        expenses.forEach((expense) => {
+          const categoryName =
             expense.category || "אחר";
 
-          if (!groups.has(category)) {
-            groups.set(category, []);
+          if (!groups.has(categoryName)) {
+            groups.set(categoryName, []);
           }
 
-          groups.get(category).push(expense);
+          groups.get(categoryName).push(expense);
         });
 
-        return [...groups.entries()].sort(
-          ([categoryA], [categoryB]) => {
-            const indexA = CATEGORIES.findIndex(
-              (category) =>
-                category.name === categoryA
-            );
-
-            const indexB = CATEGORIES.findIndex(
-              (category) =>
-                category.name === categoryB
-            );
-
-            return (
-              (indexA < 0 ? 999 : indexA) -
-              (indexB < 0 ? 999 : indexB)
-            );
-          }
-        );
+        return [...groups.entries()];
       };
 
-      const renderCategoryGroups = (items) => {
-        return groupByCategory(items)
-          .map(([category, expenses]) => {
+      const renderCategoryGroups = (expenses) => {
+        return groupByCategory(expenses)
+          .map(([categoryName, categoryExpenses]) => {
             const categoryObject = CATEGORIES.find(
-              (item) => item.name === category
+              (category) =>
+                category.name === categoryName
             );
 
-            const subtotal = expenses.reduce(
-              (sum, expense) =>
-                sum + Number(expense.amount),
-              0
-            );
+            const categoryTotal =
+              categoryExpenses.reduce(
+                (sum, expense) =>
+                  sum + Number(expense.amount),
+                0
+              );
 
             return `
               <div
@@ -2074,13 +1874,15 @@
               >
                 <span>
                   ${categoryObject?.icon || "📦"}
-                  ${esc(category)}
+                  ${escapeHtml(categoryName)}
                 </span>
 
-                <span>${fmtMoney(subtotal)}</span>
+                <span>
+                  ${formatMoney(categoryTotal)}
+                </span>
               </div>
 
-              ${expenses
+              ${categoryExpenses
                 .map(renderExpenseRow)
                 .join("")}
             `;
@@ -2088,30 +1890,27 @@
           .join("");
       };
 
-      const renderFutureMonths = (items) => {
+      const renderFutureMonths = (expenses) => {
         const months = new Map();
 
-        items.forEach((expense) => {
-          const chargeDate = calcCreditChargeDate(
-            expense.date,
-            billingDay
+        expenses.forEach((expense) => {
+          const expenseMonth = monthKey(
+            expense.date
           );
 
-          const chargeMonth = monthKey(chargeDate);
-
-          if (!months.has(chargeMonth)) {
-            months.set(chargeMonth, []);
+          if (!months.has(expenseMonth)) {
+            months.set(expenseMonth, []);
           }
 
-          months.get(chargeMonth).push(expense);
+          months.get(expenseMonth).push(expense);
         });
 
         return [...months.entries()]
           .sort(([monthA], [monthB]) => {
             return monthA.localeCompare(monthB);
           })
-          .map(([month, expenses]) => {
-            const monthTotal = expenses.reduce(
+          .map(([month, monthExpenses]) => {
+            const monthTotal = monthExpenses.reduce(
               (sum, expense) =>
                 sum + Number(expense.amount),
               0
@@ -2129,13 +1928,15 @@
                 "
               >
                 <span>
-                  ${fmtMonth(`${month}-01`)}
+                  ${formatMonth(`${month}-01`)}
                 </span>
 
-                <span>${fmtMoney(monthTotal)}</span>
+                <span>
+                  ${formatMoney(monthTotal)}
+                </span>
               </div>
 
-              ${renderCategoryGroups(expenses)}
+              ${renderCategoryGroups(monthExpenses)}
             `;
           })
           .join("");
@@ -2147,28 +1948,26 @@
           data-action="toggle-expense-form"
         >
           ${
-            ui.editingExpenseId
+            editingExpense
               ? "ביטול עריכה"
               : "+ הוספת הוצאה חדשה"
           }
         </button>
 
         ${
-          ui.showExpenseForm || ui.editingExpenseId
+          ui.showExpenseForm || editingExpense
             ? `
               <div class="form-box">
                 <div
                   style="
                     font-weight:700;
-                    font-size:16px;
                     color:var(--accent);
-                    margin-bottom:6px;
                   "
                 >
                   ${
-                    editingItem
+                    editingExpense
                       ? "✏️ עריכת הוצאה"
-                      : "➕ הוספת הוצאה חדשה"
+                      : "➕ הוספת הוצאה"
                   }
                 </div>
 
@@ -2177,56 +1976,56 @@
 
                   <input
                     class="input"
-                    id="exp-desc"
-                    placeholder="למשל: סופר או תשלום לציוד"
-                    value="${valueDescription}"
+                    id="expense-description"
+                    value="${expenseDescription}"
+                    placeholder="למשל: מחסני חשמל"
                   />
                 </label>
 
                 <label class="label">
-                  סכום ההוצאה המקורי / הכולל (₪)
+                  סכום ההוצאה (₪)
 
                   <input
                     class="input"
-                    id="exp-amount"
+                    id="expense-amount"
                     type="number"
                     step="0.01"
                     min="0.01"
-                    placeholder="למשל: 3524"
-                    value="${valueAmount}"
+                    value="${expenseAmount}"
                   />
                 </label>
 
                 <label class="label">
-                  תאריך הרכישה
+                  תאריך התשלום
 
                   <input
                     class="input"
-                    id="exp-date"
+                    id="expense-date"
                     type="date"
-                    value="${valueDate}"
+                    value="${expenseDate}"
                   />
                 </label>
 
                 <label class="label">
-                  בחירת קטגוריה
+                  קטגוריה
 
                   <div class="category-pills">
                     ${CATEGORIES.map((category) => {
-                      const currentCategory =
-                        editingItem
-                          ? editingItem.category
+                      const selectedCategory =
+                        editingExpense
+                          ? editingExpense.category
                           : ui.selectedCategory;
 
                       return `
                         <div
                           class="pill ${
-                            currentCategory === category.name
+                            selectedCategory ===
+                            category.name
                               ? "selected"
                               : ""
                           }"
                           data-action="select-category"
-                          data-cat="${category.name}"
+                          data-category="${category.name}"
                         >
                           <span>${category.icon}</span>
                           <span>${category.name}</span>
@@ -2237,12 +2036,12 @@
                 </label>
 
                 ${
-                  !editingItem
+                  !editingExpense
                     ? `
                       <label class="label checkbox-label">
                         <input
                           type="checkbox"
-                          id="installments-check"
+                          id="installments-checkbox"
                           style="
                             width:18px;
                             height:18px;
@@ -2273,7 +2072,7 @@
 
                                 <input
                                   class="input"
-                                  id="exp-installmentsCount"
+                                  id="installment-count"
                                   type="number"
                                   min="2"
                                   max="36"
@@ -2284,22 +2083,12 @@
                                 />
                               </label>
 
-                              <div
-                                style="
-                                  font-size:12px;
-                                  color:var(--accent);
-                                  font-weight:600;
-                                "
-                              >
-                                חישוב ריבית או תשלום חודשי
-                              </div>
-
                               <label class="label">
                                 סכום קבוע שיורד בכל חודש
 
                                 <input
                                   class="input"
-                                  id="exp-customMonthly"
+                                  id="custom-monthly-amount"
                                   type="number"
                                   step="0.01"
                                   min="0"
@@ -2316,11 +2105,10 @@
 
                                 <input
                                   class="input"
-                                  id="exp-interest"
+                                  id="interest-amount"
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  placeholder="למשל: 24.57"
                                   value="${
                                     ui.tempExpense
                                       .interestAmount || ""
@@ -2335,7 +2123,7 @@
                             >
                               <input
                                 type="checkbox"
-                                id="exp-recurring"
+                                id="recurring-expense"
                                 style="
                                   width:18px;
                                   height:18px;
@@ -2352,22 +2140,20 @@
                 }
 
                 <button
-                  type="button"
                   class="submit-btn"
-                  data-action="save-expense-direct"
+                  data-action="save-expense"
                 >
                   ${
-                    editingItem
+                    editingExpense
                       ? "עדכן הוצאה"
                       : "שמור הוצאה"
                   }
                 </button>
 
                 ${
-                  editingItem
+                  editingExpense
                     ? `
                       <button
-                        type="button"
                         class="cancel-btn"
                         data-action="cancel-edit"
                       >
@@ -2389,18 +2175,18 @@
             style="
               padding:14px 0;
               font-weight:700;
-              font-size:15px;
               color:var(--positive);
               border-bottom:1px solid var(--border);
               display:flex;
               justify-content:space-between;
-              align-items:center;
             "
           >
             <span>✅ שולם בעבר</span>
 
             <span>
-              ${fmtMoney(calculations.totalExpPast)}
+              ${formatMoney(
+                finances.totalPastExpenses
+              )}
             </span>
           </div>
 
@@ -2408,7 +2194,7 @@
             pastList.length === 0
               ? `
                 <div class="empty">
-                  אין חיובים מחודשים קודמים.
+                  אין הוצאות מחודשים קודמים.
                 </div>
               `
               : renderCategoryGroups(pastList)
@@ -2423,21 +2209,21 @@
             style="
               padding:14px 0;
               font-weight:700;
-              font-size:15px;
               color:var(--negative);
               border-bottom:1px solid var(--border);
               display:flex;
               justify-content:space-between;
-              align-items:center;
             "
           >
             <span>
               🔴 משלם עכשיו —
-              ${fmtMonth(todayStr())}
+              ${formatMonth(todayString())}
             </span>
 
             <span>
-              ${fmtMoney(calculations.totalExpCurrent)}
+              ${formatMoney(
+                finances.totalCurrentExpenses
+              )}
             </span>
           </div>
 
@@ -2460,18 +2246,18 @@
             style="
               padding:14px 0;
               font-weight:700;
-              font-size:15px;
               color:var(--accent);
               border-bottom:1px solid var(--border);
               display:flex;
               justify-content:space-between;
-              align-items:center;
             "
           >
             <span>⏳ תשלם בעתיד</span>
 
             <span>
-              ${fmtMoney(calculations.totalExpFuture)}
+              ${formatMoney(
+                finances.totalFutureExpenses
+              )}
             </span>
           </div>
 
@@ -2479,7 +2265,7 @@
             futureList.length === 0
               ? `
                 <div class="empty">
-                  אין חיובים בחודשים הבאים.
+                  אין תשלומים בחודשים הבאים.
                 </div>
               `
               : renderFutureMonths(futureList)
@@ -2489,7 +2275,9 @@
     }
 
     document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-action]");
+      const button = event.target.closest(
+        "[data-action]"
+      );
 
       if (!button) {
         return;
@@ -2511,19 +2299,11 @@
       }
 
       if (action === "save-balance") {
-        const balanceInput =
-          document.getElementById("balance-input");
-
-        const billingDayInput =
-          document.getElementById("billing-day-input");
-
-        state.openingBalance =
-          Number(balanceInput.value) || 0;
-
-        state.creditCardBillingDay = Math.min(
-          31,
-          Math.max(1, Number(billingDayInput.value) || 2)
-        );
+        state.openingBalance = Number(
+          document.getElementById(
+            "balance-input"
+          ).value
+        ) || 0;
 
         ui.showBalanceEdit = false;
         saveToCloud();
@@ -2545,28 +2325,54 @@
         return;
       }
 
-      if (action === "cancel-edit") {
-        ui.editingIncomeId = null;
-        ui.editingExpenseId = null;
-        ui.showIncomeForm = false;
-        ui.showExpenseForm = false;
-        render();
+      if (action === "delete-income") {
+        state.incomes = state.incomes.filter(
+          (income) => income.id !== id
+        );
+
+        saveToCloud();
         return;
       }
 
-      if (action === "save-income-direct") {
-        const client =
-          document.getElementById("inc-client").value.trim();
+      if (action === "mark-paid") {
+        state.incomes = state.incomes.map(
+          (income) => {
+            if (income.id !== id) {
+              return income;
+            }
 
-        const amount = Number(
-          document.getElementById("inc-amount").value
+            return {
+              ...income,
+              status: "paid",
+              paidDate: todayString()
+            };
+          }
         );
 
-        const date =
-          document.getElementById("inc-date").value;
+        saveToCloud();
+        return;
+      }
+
+      if (action === "save-income") {
+        const client = document
+          .getElementById("income-client")
+          .value
+          .trim();
+
+        const amount = Number(
+          document.getElementById(
+            "income-amount"
+          ).value
+        );
+
+        const date = document.getElementById(
+          "income-date"
+        ).value;
 
         const termDays = Number(
-          document.getElementById("inc-term").value
+          document.getElementById(
+            "income-term"
+          ).value
         );
 
         if (!client || amount <= 0 || !date) {
@@ -2574,23 +2380,28 @@
         }
 
         if (ui.editingIncomeId) {
-          state.incomes = state.incomes.map((income) => {
-            if (income.id !== ui.editingIncomeId) {
-              return income;
-            }
+          state.incomes = state.incomes.map(
+            (income) => {
+              if (
+                income.id !== ui.editingIncomeId
+              ) {
+                return income;
+              }
 
-            return {
-              ...income,
-              client,
-              amount,
-              date,
-              termDays,
-              expectedDate: calcExpectedDate(
+              return {
+                ...income,
+                client,
+                amount,
                 date,
-                termDays
-              )
-            };
-          });
+                termDays,
+                expectedDate:
+                  calculateExpectedIncomeDate(
+                    date,
+                    termDays
+                  )
+              };
+            }
+          );
         } else {
           state.incomes.push({
             id: uid(),
@@ -2599,42 +2410,16 @@
             date,
             termDays,
             status: "pending",
-            expectedDate: calcExpectedDate(
-              date,
-              termDays
-            )
+            expectedDate:
+              calculateExpectedIncomeDate(
+                date,
+                termDays
+              )
           });
         }
 
         ui.showIncomeForm = false;
         ui.editingIncomeId = null;
-
-        saveToCloud();
-        return;
-      }
-
-      if (action === "mark-paid") {
-        state.incomes = state.incomes.map((income) => {
-          if (income.id !== id) {
-            return income;
-          }
-
-          return {
-            ...income,
-            status: "paid",
-            paidDate: todayStr()
-          };
-        });
-
-        saveToCloud();
-        return;
-      }
-
-      if (action === "delete-income") {
-        state.incomes = state.incomes.filter(
-          (income) => income.id !== id
-        );
-
         saveToCloud();
         return;
       }
@@ -2647,7 +2432,8 @@
       }
 
       if (action === "select-category") {
-        ui.selectedCategory = button.dataset.cat;
+        ui.selectedCategory =
+          button.dataset.category;
 
         if (ui.editingExpenseId) {
           state.expenses = state.expenses.map(
@@ -2696,24 +2482,27 @@
         return;
       }
 
-      if (action === "save-expense-direct") {
-        const description =
-          document
-            .getElementById("exp-desc")
-            .value
-            .trim();
+      if (action === "save-expense") {
+        const description = document
+          .getElementById("expense-description")
+          .value
+          .trim();
 
-        const amountInput = Number(
-          document.getElementById("exp-amount").value
+        const amount = Number(
+          document.getElementById(
+            "expense-amount"
+          ).value
         );
 
-        const date =
-          document.getElementById("exp-date").value;
+        const paymentDate =
+          document.getElementById(
+            "expense-date"
+          ).value;
 
         if (
           !description ||
-          amountInput <= 0 ||
-          !date
+          amount <= 0 ||
+          !paymentDate
         ) {
           return;
         }
@@ -2730,8 +2519,8 @@
               return {
                 ...expense,
                 desc: description,
-                amount: amountInput,
-                date,
+                amount,
+                date: paymentDate,
                 category: ui.selectedCategory
               };
             }
@@ -2739,94 +2528,96 @@
         } else {
           const isInstallments =
             document.getElementById(
-              "installments-check"
+              "installments-checkbox"
             )?.checked;
 
           if (isInstallments) {
-            const count = Number(
+            const paymentCount = Number(
               document.getElementById(
-                "exp-installmentsCount"
+                "installment-count"
               ).value
             );
 
-            const customMonthly = Number(
+            const customMonthlyAmount = Number(
               document.getElementById(
-                "exp-customMonthly"
+                "custom-monthly-amount"
               )?.value
             );
 
-            const interest = Number(
+            const interestAmount = Number(
               document.getElementById(
-                "exp-interest"
+                "interest-amount"
               )?.value
             );
 
             const installmentAmounts =
               splitInstallmentAmounts(
-                amountInput,
-                count,
-                interest,
-                customMonthly
+                amount,
+                paymentCount,
+                interestAmount,
+                customMonthlyAmount
               );
 
-            if (installmentAmounts.length !== count) {
+            if (
+              installmentAmounts.length !==
+              paymentCount
+            ) {
               return;
             }
 
-            const fullAmount =
+            const fullPaymentAmount =
               installmentAmounts.reduce(
                 (sum, cents) => sum + cents,
                 0
               ) / 100;
 
-            const originalCents = Math.round(
-              amountInput * 100
-            );
+            const originalAmountInCents =
+              Math.round(amount * 100);
 
             const addedCost =
               Math.max(
                 0,
-                Math.round(fullAmount * 100) -
-                  originalCents
+                Math.round(
+                  fullPaymentAmount * 100
+                ) - originalAmountInCents
               ) / 100;
 
             const installmentGroupId = uid();
 
             for (
               let index = 0;
-              index < count;
+              index < paymentCount;
               index += 1
             ) {
-              const installmentDate = addMonths(
-                date,
-                index
-              );
-
               state.expenses.push({
                 id: uid(),
                 installmentGroupId,
                 desc: description,
                 amount:
                   installmentAmounts[index] / 100,
-                date: installmentDate,
+                date: addMonths(
+                  paymentDate,
+                  index
+                ),
                 category: ui.selectedCategory,
                 installmentInfo:
-                  `${index + 1}/${count}`,
-                fullOriginalAmount: fullAmount,
+                  `${index + 1}/${paymentCount}`,
+                fullOriginalAmount:
+                  fullPaymentAmount,
                 interestAmount: addedCost
               });
             }
           } else {
             const recurring =
               document.getElementById(
-                "exp-recurring"
+                "recurring-expense"
               )?.checked;
 
             state.expenses.push({
               id: uid(),
               desc: description,
-              amount: amountInput,
-              date,
+              amount,
+              date: paymentDate,
               category: ui.selectedCategory,
               recurring: Boolean(recurring)
             });
@@ -2847,27 +2638,43 @@
         };
 
         saveToCloud();
+        return;
+      }
+
+      if (action === "cancel-edit") {
+        ui.editingIncomeId = null;
+        ui.editingExpenseId = null;
+        ui.showIncomeForm = false;
+        ui.showExpenseForm = false;
+        render();
       }
     });
 
     document.addEventListener("change", (event) => {
-      if (event.target.id === "installments-check") {
-        ui.isInstallments = event.target.checked;
+      if (
+        event.target.id ===
+        "installments-checkbox"
+      ) {
+        ui.isInstallments =
+          event.target.checked;
+
         render();
       }
     });
 
     document.addEventListener("input", (event) => {
       const fieldMap = {
-        "exp-desc": "desc",
-        "exp-amount": "amount",
-        "exp-date": "date",
-        "exp-installmentsCount": "installmentsCount",
-        "exp-customMonthly": "customMonthlyAmount",
-        "exp-interest": "interestAmount"
+        "expense-description": "desc",
+        "expense-amount": "amount",
+        "expense-date": "date",
+        "installment-count": "installmentsCount",
+        "custom-monthly-amount":
+          "customMonthlyAmount",
+        "interest-amount": "interestAmount"
       };
 
-      const fieldName = fieldMap[event.target.id];
+      const fieldName =
+        fieldMap[event.target.id];
 
       if (fieldName) {
         ui.tempExpense[fieldName] =
