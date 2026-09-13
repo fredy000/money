@@ -104,6 +104,7 @@
     .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 15px var(--accent-glow); }
     .cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
     .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
+    .form-error { background: var(--negative-bg); border: 1px solid var(--negative); color: var(--negative); border-radius: 12px; padding: 10px 14px; font-size: 13.5px; font-weight: 600; }
     .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
 
     .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 4px; }
@@ -168,7 +169,15 @@
     editingExpenseId: null,
     showBalanceEdit: false, 
     isInstallments: false,
+    formError: "",
     expenseFormState: { desc: "", amount: "", date: "", category: CATEGORIES[0].name, installmentsCount: 3, recurring: false }
+  };
+
+  // ממיר קלט טקסטואלי לסכום מספרי, כולל תמיכה בפסיק כמפריד עשרוני (כפי שנהוג לפעמים בעברית)
+  const parseAmount = (val) => {
+    if (val === null || val === undefined) return NaN;
+    const cleaned = String(val).trim().replace(/,/g, ".");
+    return cleaned === "" ? NaN : Number(cleaned);
   };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
@@ -343,12 +352,13 @@
       <div class="hero">
         <div class="hero-label">נשאר ביד כרגע (אחרי הוצאות)</div>
         <div class="hero-number" style="color:${c.actualCurrentBalance >= 0 ? 'var(--positive)' : 'var(--negative)'}">${fmtMoney(c.actualCurrentBalance)}</div>
-        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה בחשבון</button>
+        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון היתרה שנשארה לי ביד כרגע</button>
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;gap:8px;">
-            <input class="input" style="flex:1" id="balance-input" type="number" step="0.01" value="${c.openingBalance}" placeholder="יתרת פתיחה בעו''ש"/>
+            <input class="input" style="flex:1" id="balance-input" type="text" inputmode="decimal" value="${c.actualCurrentBalance.toFixed(2)}" placeholder="כמה באמת נשאר לי ביד עכשיו"/>
             <button class="submit-btn" style="padding:0 20px;margin-top:0" data-action="save-balance">עדכן</button>
-          </div>` : ""}
+          </div>
+          <div style="margin-top:8px;font-size:11.5px;color:var(--text-muted)">הזן את היתרה האמיתית שיש לך בעו״ש כרגע — המערכת תעדכן את הבסיס בהתאם, בלי לנכות שוב הוצאות שכבר נרשמו.</div>` : ""}
       </div>
 
       <div class="stat-row">
@@ -361,7 +371,7 @@
         <div class="card-title">📋 סיכום תזרים מזומנים מפורט</div>
         <div class="summary-box">
           <div class="summary-item">
-            <span>1. יתרת פתיחה שהוזנה בחשבון:</span>
+            <span>1. בסיס לחישוב (לפני ההוצאות שנרשמו):</span>
             <span><strong>${fmtMoney(c.openingBalance)}</strong></span>
           </div>
           <div class="summary-item sub" style="color:var(--negative)">
@@ -430,11 +440,12 @@
           ${editingItem ? "✏️ עריכת הכנסה" : "➕ הוספת הכנסה חדשה"}
         </div>
         <input type="hidden" name="id" value="${editingItem ? editingItem.id : ''}"/>
+        ${ui.formError ? `<div class="form-error">⚠️ ${esc(ui.formError)}</div>` : ""}
         <label class="label">לקוח / תיאור העבודה
-          <input class="input" name="client" placeholder="למשל: צילומי תדמית / פרסומת" value="${editingItem ? esc(editingItem.client) : ''}" required/>
+          <input class="input" name="client" placeholder="למשל: צילומי תדמית / פרסומת" value="${editingItem ? esc(editingItem.client) : ''}"/>
         </label>
         <label class="label">סכום מדויק (₪)
-          <input class="input" name="amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}" required/>
+          <input class="input" name="amount" type="text" inputmode="decimal" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}"/>
         </label>
         <label class="label">תאריך הוצאת החשבונית
           <input class="input" name="date" type="date" value="${editingItem ? editingItem.date : todayStr()}"/>
@@ -485,11 +496,12 @@
           ${editingItem ? "✏️ עריכת הוצאה" : "➕ הוספת הוצאה חדשה"}
         </div>
         <input type="hidden" name="id" value="${editingItem ? editingItem.id : ''}"/>
+        ${ui.formError ? `<div class="form-error">⚠️ ${esc(ui.formError)}</div>` : ""}
         <label class="label">תיאור ההוצאה
-          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${esc(f.desc)}" required/>
+          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${esc(f.desc)}"/>
         </label>
         <label class="label">סכום מדויק (₪)
-          <input class="input" name="amount" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${f.amount}" required/>
+          <input class="input" name="amount" id="exp-amount" type="text" inputmode="decimal" placeholder="0.00" value="${esc(f.amount)}"/>
         </label>
         <label class="label">תאריך הרכישה
           <input class="input" name="date" id="exp-date" type="date" value="${f.date || todayStr()}"/>
@@ -576,29 +588,38 @@
       render(); 
     } else if (action === "save-balance") {
       const input = document.getElementById("balance-input");
-      state.openingBalance = parseFloat(input.value) || 0;
+      const desiredCurrentBalance = parseAmount(input.value) || 0;
+      const c = calc();
+      // המשתמש מזין כמה באמת נשאר לו ביד עכשיו. מחשבים אחורה את "בסיס"
+      // כך שאחרי חישוב מחדש (בסיס - הוצאות עד היום + הכנסות ששולמו) נקבל בדיוק את המספר שהוזן,
+      // במקום לנכות שוב הוצאות שכבר נוכו פעם אחת.
+      state.openingBalance = desiredCurrentBalance + c.expensesTillNow - c.totalPaid;
       ui.showBalanceEdit = false;
       saveToCloud();
     } else if (action === "toggle-income-form") { 
       ui.showIncomeForm = !ui.showIncomeForm; 
       ui.editingIncomeId = null;
+      ui.formError = "";
       render(); 
     } else if (action === "toggle-expense-form") { 
       ui.showExpenseForm = !ui.showExpenseForm; 
       ui.editingExpenseId = null;
       ui.isInstallments = false;
+      ui.formError = "";
       ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
       render(); 
     } else if (action === "edit-income") {
       ui.tab = "income";
       ui.editingIncomeId = btn.dataset.id;
       ui.showIncomeForm = false;
+      ui.formError = "";
       render();
     } else if (action === "edit-expense") {
       ui.tab = "expenses";
       ui.editingExpenseId = btn.dataset.id;
       ui.showExpenseForm = false;
       ui.isInstallments = false;
+      ui.formError = "";
       const item = state.expenses.find(exp => exp.id === btn.dataset.id);
       // מאתחלים את טופס העריכה עם הנתונים הקיימים של הפריט, כדי שבחירת קטגוריה
       // באמצע העריכה לא תמחק תיאור/סכום/תאריך שכבר הוקלדו
@@ -609,6 +630,7 @@
     } else if (action === "cancel-edit") {
       ui.editingIncomeId = null;
       ui.editingExpenseId = null;
+      ui.formError = "";
       render();
     } else if (action === "select-category") {
       // שומרים תמיד את מה שהוקלד עד כה (גם במצב עריכה) לפני שהתצוגה מתעדכנת מחדש
@@ -644,8 +666,23 @@
     if (e.target.id === "income-form") {
       const fd = new FormData(e.target);
       const id = fd.get("id");
+      const client = (fd.get("client") || "").trim();
+      const amount = parseAmount(fd.get("amount"));
       const date = fd.get("date") || todayStr();
       const termDays = Number(fd.get("termDays"));
+
+      if (!client) {
+        ui.formError = "צריך למלא לקוח / תיאור עבודה.";
+        render();
+        return;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        ui.formError = "הסכום שהוזן לא תקין. נא להזין מספר גדול מ-0 (למשל 1500 או 1500.50).";
+        render();
+        return;
+      }
+      ui.formError = "";
+
       const expectedDate = calcExpectedDate(date, termDays);
       
       state.incomes = state.incomes || [];
@@ -653,8 +690,8 @@
       if (id) {
         const idx = state.incomes.findIndex(i => i.id === id);
         if (idx !== -1) {
-          state.incomes[idx].client = fd.get("client");
-          state.incomes[idx].amount = Number(fd.get("amount"));
+          state.incomes[idx].client = client;
+          state.incomes[idx].amount = amount;
           state.incomes[idx].date = date;
           state.incomes[idx].termDays = termDays;
           state.incomes[idx].expectedDate = expectedDate;
@@ -663,8 +700,8 @@
       } else {
         state.incomes.push({
           id: uid(), 
-          client: fd.get("client"), 
-          amount: Number(fd.get("amount")), 
+          client, 
+          amount, 
           date, 
           termDays, 
           expectedDate,
@@ -680,9 +717,21 @@
       const fd = new FormData(e.target);
       const id = fd.get("id");
       const startDate = ui.expenseFormState.date || fd.get("date") || todayStr();
-      const desc = ui.expenseFormState.desc || fd.get("desc");
-      const totalAmount = Number(ui.expenseFormState.amount || fd.get("amount"));
+      const desc = (ui.expenseFormState.desc || fd.get("desc") || "").trim();
+      const totalAmount = parseAmount(ui.expenseFormState.amount || fd.get("amount"));
       const category = ui.expenseFormState.category || CATEGORIES[0].name;
+
+      if (!desc) {
+        ui.formError = "צריך למלא תיאור להוצאה.";
+        render();
+        return;
+      }
+      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        ui.formError = "הסכום שהוזן לא תקין. נא להזין מספר גדול מ-0 (למשל 250 או 250.50).";
+        render();
+        return;
+      }
+      ui.formError = "";
       
       state.expenses = state.expenses || [];
 
