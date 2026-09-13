@@ -172,31 +172,63 @@
   };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
-  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const dateToStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const parseLocalDate = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+    if (!match) return new Date(NaN);
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  };
+
+  const todayStr = () => dateToStr(new Date());
   
   const calcExpectedDate = (invoiceDateStr, termDays) => {
     if (Number(termDays) === 0) return invoiceDateStr;
-    const date = new Date(invoiceDateStr);
+    const date = parseLocalDate(invoiceDateStr);
     const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
     endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
-    return endOfMonth.toISOString().slice(0, 10);
+    return dateToStr(endOfMonth);
   };
 
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
-    const d = new Date(expenseDateStr);
+    const d = parseLocalDate(expenseDateStr);
     let month = d.getMonth();
     let year = d.getFullYear();
     if (d.getDate() >= billingDay) {
       month += 1;
     }
-    const chargeDate = new Date(year, month, billingDay);
-    return chargeDate.toISOString().slice(0, 10);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const chargeDate = new Date(year, month, Math.min(Number(billingDay), lastDay), 12);
+    return dateToStr(chargeDate);
   };
 
   const addMonths = (d, months) => {
-    const x = new Date(d);
-    x.setMonth(x.getMonth() + Number(months));
-    return x.toISOString().slice(0, 10);
+    const source = parseLocalDate(d);
+    const target = new Date(source.getFullYear(), source.getMonth() + Number(months), 1, 12);
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(source.getDate(), lastDay));
+    return dateToStr(target);
+  };
+
+  const splitInstallmentAmounts = (originalAmount, count, interest = 0, customMonthly = 0) => {
+    const payments = Number(count);
+    const originalCents = Math.round(Number(originalAmount) * 100);
+    if (!Number.isInteger(payments) || payments < 2 || payments > 36 || originalCents <= 0) return [];
+
+    if (Number(customMonthly) > 0) {
+      const monthlyCents = Math.round(Number(customMonthly) * 100);
+      return Array(payments).fill(monthlyCents);
+    }
+
+    const totalCents = originalCents + Math.max(0, Math.round(Number(interest || 0) * 100));
+    const base = Math.floor(totalCents / payments);
+    const remainder = totalCents - (base * payments);
+    return Array.from({ length: payments }, (_, index) => base + (index >= payments - remainder ? 1 : 0));
   };
   
   const fmtMoney = (n) => {
@@ -209,9 +241,10 @@
     }).format(val);
   };
 
-  const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short", year: "2-digit" }).format(new Date(d));
+  const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short", year: "2-digit" }).format(parseLocalDate(d));
+  const fmtMonth = (d) => new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric" }).format(parseLocalDate(d));
   const monthKey = (d) => (d ? d.slice(0, 7) : todayStr().slice(0, 7));
-  const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
+  const daysUntil = (d) => Math.round((parseLocalDate(d) - parseLocalDate(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   onValue(dbRef, (snapshot) => {
@@ -250,6 +283,7 @@
   function calc() {
     const today = todayStr();
     const thisMonth = monthKey(today);
+    const nextMonth = monthKey(addMonths(today, 1));
     
     const paid = (state.incomes || []).filter((i) => i.status === "paid");
     const pending = (state.incomes || []).filter((i) => i.status !== "paid").sort((a, b) => (a.expectedDate > b.expectedDate ? 1 : -1));
@@ -259,24 +293,36 @@
 
     const pastExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
-      return chargeDate <= today;
+      return chargeDate < today;
     });
 
-    const pendingExpenses = (state.expenses || []).filter((e) => {
+    const currentExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
-      return chargeDate > today;
+      return chargeDate >= today && monthKey(chargeDate) === thisMonth;
     });
+
+    const futureExpenses = (state.expenses || []).filter((e) => {
+      const chargeDate = calcCreditChargeDate(e.date, billingDay);
+      return monthKey(chargeDate) > thisMonth;
+    });
+
+    const pendingExpenses = [...currentExpenses, ...futureExpenses];
 
     const totalExpCharged = pastExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const totalExpPending = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpCurrent = currentExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpFuture = futureExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpNextMonth = futureExpenses
+      .filter((e) => monthKey(calcCreditChargeDate(e.date, billingDay)) === nextMonth)
+      .reduce((s, e) => s + Number(e.amount), 0);
     
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpCharged + totalPaid;
     
     const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
-    const monthExpectedIncome = pending.reduce((s, i) => s + Number(i.amount), 0);
+    const monthExpectedIncome = pending.filter((i) => monthKey(i.expectedDate) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
     const monthExpenses = (state.expenses || []).filter((e) => monthKey(e.date) === thisMonth).reduce((s, e) => s + Number(e.amount), 0);
     
-    const finalExpectedBalance = actualCurrentBalance - totalExpPending + monthExpectedIncome;
+    const finalExpectedBalance = actualCurrentBalance - totalExpCurrent + monthExpectedIncome;
     const safeToSpend = Math.max(0, actualCurrentBalance - totalExpPending);
     const overdueIncomes = pending.filter(i => daysUntil(i.expectedDate) < 0);
     const overdueAmount = overdueIncomes.reduce((s, i) => s + Number(i.amount), 0);
@@ -291,10 +337,15 @@
       monthExpenses,
       totalExpCharged,
       totalExpPending,
+      totalExpCurrent,
+      totalExpFuture,
+      totalExpNextMonth,
       safeToSpend,
       overdueAmount,
       overdueCount: overdueIncomes.length,
       pastExpenses,
+      currentExpenses,
+      futureExpenses,
       pendingExpenses
     };
   }
@@ -330,13 +381,13 @@
     let advice = "";
 
     if (c.overdueCount > 0) {
-      advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). בעו"ש בבנק יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, ובחיוב הקרוב ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי.`;
+      advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). עד סוף החודש נשאר לשלם <strong>${fmtMoney(c.totalExpCurrent)}</strong>, ובחודש הבא יש חיובים של <strong>${fmtMoney(c.totalExpNextMonth)}</strong>.`;
     } else if (c.safeToSpend > 5000) {
-      advice = `🟢 <strong>מצב תזרימי מצוין!</strong> היתרה בעו"ש בבנק עומדת על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. בחיוב הקרוב ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong>.`;
+      advice = `🟢 <strong>מצב תזרימי מצוין!</strong> היתרה בעו"ש בבנק עומדת על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. עד סוף החודש נשאר לשלם <strong>${fmtMoney(c.totalExpCurrent)}</strong>, ובחודש הבא <strong>${fmtMoney(c.totalExpNextMonth)}</strong>.`;
     } else if (c.safeToSpend > 0) {
-      advice = `💡 <strong>תזרים יציב:</strong> יש לך <strong>${fmtMoney(c.actualCurrentBalance)}</strong> בעו"ש בבנק. ב-02 לחודש עתידים לרדת <strong>${fmtMoney(c.totalExpPending)}</strong> בחיוב האשראי.`;
+      advice = `💡 <strong>תזרים יציב:</strong> יש לך <strong>${fmtMoney(c.actualCurrentBalance)}</strong> בעו"ש בבנק. עד סוף החודש נשאר לשלם <strong>${fmtMoney(c.totalExpCurrent)}</strong>, ובחודש הבא <strong>${fmtMoney(c.totalExpNextMonth)}</strong>.`;
     } else {
-      advice = `🛑 <strong>שיקוף חיוב קרוב:</strong> בעו"ש בבנק יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי. כדאי לגבות תשלומים צפויים (<strong>${fmtMoney(c.monthExpectedIncome)}</strong>).`;
+      advice = `🛑 <strong>שיקוף חיוב קרוב:</strong> בעו"ש בבנק יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. עד סוף החודש נשאר לשלם <strong>${fmtMoney(c.totalExpCurrent)}</strong>, ובחודש הבא <strong>${fmtMoney(c.totalExpNextMonth)}</strong>. כדאי לבדוק גבייה מלקוחות.`;
     }
 
     return `
@@ -348,12 +399,12 @@
         <div class="ai-text">${advice}</div>
         <div class="ai-grid">
           <div class="ai-stat">
-            <div class="ai-stat-label">סכום שיורד ב-02 לחודש (אשראי)</div>
-            <div class="ai-stat-value" style="color:var(--negative)">${fmtMoney(c.totalExpPending)}</div>
+            <div class="ai-stat-label">נשאר לשלם עד סוף החודש</div>
+            <div class="ai-stat-value" style="color:var(--negative)">${fmtMoney(c.totalExpCurrent)}</div>
           </div>
           <div class="ai-stat">
-            <div class="ai-stat-label">נותר חופשי (לאחר החיוב ב-02)</div>
-            <div class="ai-stat-value" style="color:var(--positive)">${fmtMoney(c.safeToSpend)}</div>
+            <div class="ai-stat-label">תשלומים בחודש הבא</div>
+            <div class="ai-stat-value" style="color:var(--accent)">${fmtMoney(c.totalExpNextMonth)}</div>
           </div>
         </div>
       </div>
@@ -376,7 +427,7 @@
 
       <div class="stat-row">
         ${statCard("קיים בבנק", fmtMoney(c.actualCurrentBalance), "var(--positive)")}
-        ${statCard("ירד ב-02 לחודש", fmtMoney(c.totalExpPending), "var(--negative)")}
+        ${statCard("נשאר לשלם החודש", fmtMoney(c.totalExpCurrent), "var(--negative)")}
         ${statCard("הכנסות בדרך", fmtMoney(c.monthExpectedIncome), "var(--accent)")}
       </div>
 
@@ -389,12 +440,17 @@
           </div>
           
           <div class="summary-item sub" style="margin-top:8px; color:var(--negative)">
-            <span>2. סה"כ אמור לרדת ב-02 לחודש (חיוב אשראי עתידי):</span>
-            <span>-${fmtMoney(c.totalExpPending)}</span>
+            <span>2. נשאר לשלם עד סוף החודש:</span>
+            <span>-${fmtMoney(c.totalExpCurrent)}</span>
+          </div>
+
+          <div class="summary-item sub" style="margin-top:6px;">
+            <span>3. תשלומים בחודש הבא:</span>
+            <span style="color:var(--accent)">-${fmtMoney(c.totalExpNextMonth)}</span>
           </div>
 
           <div class="summary-item" style="margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
-            <span>3. הכנסות צפויות להיכנס מלקוחות:</span>
+            <span>4. הכנסות שצפויות להיכנס החודש:</span>
             <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
           </div>
 
@@ -486,7 +542,8 @@
     const valAmount = editingItem ? editingItem.amount : (ui.tempExpense.amount || '');
     const valDate = editingItem ? editingItem.date : (ui.tempExpense.date || todayStr());
 
-    const pendingList = [...c.pendingExpenses].sort((a, b) => (calcCreditChargeDate(a.date, billingDay) > calcCreditChargeDate(b.date, billingDay) ? 1 : -1));
+    const currentList = [...c.currentExpenses].sort((a, b) => (calcCreditChargeDate(a.date, billingDay) > calcCreditChargeDate(b.date, billingDay) ? 1 : -1));
+    const futureList = [...c.futureExpenses].sort((a, b) => (calcCreditChargeDate(a.date, billingDay) > calcCreditChargeDate(b.date, billingDay) ? 1 : -1));
     const pastList = [...c.pastExpenses].sort((a, b) => (calcCreditChargeDate(a.date, billingDay) < calcCreditChargeDate(b.date, billingDay) ? 1 : -1));
 
     const renderExpenseRow = (exp, isPast) => {
@@ -519,6 +576,51 @@
           <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${exp.id}" title="מחיקה">🗑</button>
         </div>
       </div>`;
+    };
+
+    const groupByCategory = (items) => {
+      const groups = new Map();
+      items.forEach((expense) => {
+        const category = expense.category || "אחר";
+        if (!groups.has(category)) groups.set(category, []);
+        groups.get(category).push(expense);
+      });
+      return [...groups.entries()].sort(([a], [b]) => {
+        const aIndex = CATEGORIES.findIndex(c => c.name === a);
+        const bIndex = CATEGORIES.findIndex(c => c.name === b);
+        return (aIndex < 0 ? 999 : aIndex) - (bIndex < 0 ? 999 : bIndex);
+      });
+    };
+
+    const renderCategoryGroups = (items) => groupByCategory(items).map(([category, expenses]) => {
+      const catObj = CATEGORIES.find(c => c.name === category);
+      const subtotal = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      return `
+        <div style="padding:12px 0 4px;color:var(--text-muted);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-bottom:1px dashed var(--border);">
+          <span>${catObj?.icon || "📦"} ${esc(category)}</span>
+          <span>${fmtMoney(subtotal)}</span>
+        </div>
+        ${expenses.map((expense) => renderExpenseRow(expense)).join("")}
+      `;
+    }).join("");
+
+    const renderFutureMonths = (items) => {
+      const months = new Map();
+      items.forEach((expense) => {
+        const chargeMonth = monthKey(calcCreditChargeDate(expense.date, billingDay));
+        if (!months.has(chargeMonth)) months.set(chargeMonth, []);
+        months.get(chargeMonth).push(expense);
+      });
+      return [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, expenses]) => {
+        const monthTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+        return `
+          <div style="padding:16px 0 6px;color:var(--accent);font-size:14px;font-weight:800;display:flex;justify-content:space-between;">
+            <span>${fmtMonth(`${month}-01`)}</span>
+            <span>${fmtMoney(monthTotal)}</span>
+          </div>
+          ${renderCategoryGroups(expenses)}
+        `;
+      }).join("");
     };
 
     return `
@@ -583,18 +685,27 @@
       </div>` : ""}
 
       <div class="card" style="padding:0 20px;">
-        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>⏳ לשלם בעתיד (ירד ב-02 לחודש)</span>
-          <span>${fmtMoney(c.totalExpPending)}</span>
+        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span>✅ שולם בעבר</span>
+          <span>${fmtMoney(c.totalExpCharged)}</span>
         </div>
-        ${pendingList.length === 0 ? '<div class="empty">אין חיובים עתידיים באשראי.</div>' : pendingList.map((exp) => renderExpenseRow(exp, false)).join("")}
+        ${pastList.length === 0 ? '<div class="empty">אין חיובים קודמים ברשימה.</div>' : renderCategoryGroups(pastList)}
       </div>
 
       <div class="card" style="padding:0 20px;">
-        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);">
-          ✅ שולם בעבר (כבר ירד בעו"ש)
+        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span>🔴 משלם עכשיו — עד סוף ${fmtMonth(todayStr())}</span>
+          <span>${fmtMoney(c.totalExpCurrent)}</span>
         </div>
-        ${pastList.length === 0 ? '<div class="empty">אין חיובים קודמים ברשימה.</div>' : pastList.map((exp) => renderExpenseRow(exp, true)).join("")}
+        ${currentList.length === 0 ? '<div class="empty">אין חיובים נוספים עד סוף החודש.</div>' : renderCategoryGroups(currentList)}
+      </div>
+
+      <div class="card" style="padding:0 20px;">
+        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span>⏳ תשלם בעתיד</span>
+          <span>${fmtMoney(c.totalExpFuture)}</span>
+        </div>
+        ${futureList.length === 0 ? '<div class="empty">אין חיובים בחודשים הבאים.</div>' : renderFutureMonths(futureList)}
       </div>
     `;
   }
@@ -707,28 +818,25 @@
           const customMonthly = Number(document.getElementById("exp-customMonthly")?.value);
           const interest = Number(document.getElementById("exp-interest")?.value);
 
-          let monthlyAmt = amountInput / count;
-          let fullOriginal = amountInput;
-
-          if (customMonthly > 0) {
-            monthlyAmt = customMonthly;
-            fullOriginal = customMonthly * count;
-          } else if (interest > 0) {
-            fullOriginal = amountInput + interest;
-            monthlyAmt = fullOriginal / count;
-          }
+          const installmentAmounts = splitInstallmentAmounts(amountInput, count, interest, customMonthly);
+          if (installmentAmounts.length !== count) return;
+          const fullOriginal = installmentAmounts.reduce((sum, cents) => sum + cents, 0) / 100;
+          const originalCents = Math.round(amountInput * 100);
+          const addedCost = Math.max(0, Math.round(fullOriginal * 100) - originalCents) / 100;
+          const installmentGroupId = uid();
 
           for (let i = 0; i < count; i++) {
             const expDate = addMonths(date, i);
             state.expenses.push({
               id: uid(),
+              installmentGroupId,
               desc,
-              amount: monthlyAmt,
+              amount: installmentAmounts[i] / 100,
               date: expDate,
               category: ui.selectedCategory,
               installmentInfo: `${i + 1}/${count}`,
               fullOriginalAmount: fullOriginal,
-              interestAmount: interest || (customMonthly ? (customMonthly * count - amountInput) : 0)
+              interestAmount: addedCost
             });
           }
         } else {
