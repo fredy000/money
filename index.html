@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
     
@@ -111,12 +116,10 @@
   </style>
 </head>
 <body>
-<div id="app">טוען נתונים ועוזר AI...</div>
+<div id="app">טוען נתונים وعוזר AI...</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
+<script>
+  // Firebase initialization using Compat library for reliability
   const firebaseConfig = {
     apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
     authDomain: "money-1d58a.firebaseapp.com",
@@ -128,9 +131,9 @@
     measurementId: "G-NRXTEBFEXT"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const dbRef = ref(db, "appData");
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const dbRef = db.ref("appData");
 
   const TERMS = [
     { days: 0, label: "מיידי" },
@@ -215,7 +218,7 @@
   const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  onValue(dbRef, (snapshot) => {
+  dbRef.on("value", (snapshot) => {
     const data = snapshot.val();
     if (data) {
       state = {
@@ -240,7 +243,7 @@
     try {
       syncStatus = "שומר...";
       render();
-      await set(dbRef, state);
+      await dbRef.set(state);
       syncStatus = "סנכרון פעיל ☁️";
     } catch (e) {
       syncStatus = "שגיאה בשמירה ❌";
@@ -258,7 +261,6 @@
     
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
 
-    // חישוב הוצאות לפי תאריכי חיוב
     const pastExpenses = [];
     const futureExpensesByChargeDate = {};
 
@@ -276,12 +278,10 @@
 
     const sortedChargeDates = Object.keys(futureExpensesByChargeDate).sort();
     
-    // חיוב עתידי קרוב ביותר (ה-02 הקרוב)
     const nextChargeDate = sortedChargeDates[0] || null;
     const nextChargeExpenses = nextChargeDate ? futureExpensesByChargeDate[nextChargeDate] : [];
     const nextChargeTotal = nextChargeExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
-    // חיוב עתידי שני (ה-02 של החודש הבא)
     const secondChargeDate = sortedChargeDates[1] || null;
     const secondChargeExpenses = secondChargeDate ? futureExpensesByChargeDate[secondChargeDate] : [];
     const secondChargeTotal = secondChargeExpenses.reduce((s, e) => s + Number(e.amount), 0);
