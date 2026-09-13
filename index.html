@@ -261,11 +261,14 @@
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
 
     const billingDay = state.creditCardBillingDay || 2;
+
+    // הוצאות שתאריך הריד שלהן באשראי כבר חל (ירדו בפועל מהבנק)
     const pastExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
       return chargeDate <= today;
     });
 
+    // הוצאות שתאריך החיוב שלהן בעתיד (טרם ירדו מהבנק)
     const pendingExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
       return chargeDate > today;
@@ -273,8 +276,8 @@
 
     const totalExpCharged = pastExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const totalExpPending = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
-    const totalExpSoFar = totalExpCharged + totalExpPending;
     
+    // יתרה בעו"ש כעת - יורדת אך ורק מהוצאות שתאריך החיוב שלהן כבר הגיע
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpCharged + totalPaid;
     
     const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
@@ -295,7 +298,6 @@
       monthPaidIncome, 
       monthExpectedIncome, 
       monthExpenses,
-      totalExpSoFar,
       totalExpCharged,
       totalExpPending,
       safeToSpend,
@@ -381,7 +383,7 @@
 
       <div class="stat-row">
         ${statCard("יתרה פותחת", fmtMoney(c.openingBalance), "var(--text-muted)")}
-        ${statCard("חיוב אשראי ב-02", fmtMoney(c.totalExpPending), "var(--negative)")}
+        ${statCard("חיוב אשראי עתידי", fmtMoney(c.totalExpPending), "var(--negative)")}
         ${statCard("הכנסות בדרך", fmtMoney(c.monthExpectedIncome), "var(--accent)")}
       </div>
 
@@ -393,16 +395,16 @@
             <span><strong>${fmtMoney(c.openingBalance)}</strong></span>
           </div>
           <div class="summary-item sub" style="color:var(--negative)">
-            <span>פחות הוצאות שכבר ירדו בפועל מהבנק:</span>
+            <span>פחות הוצאות שכבר ירדו בפועל מהבנק בתאריך החיוב:</span>
             <span>-${fmtMoney(c.totalExpCharged)}</span>
           </div>
           <div class="summary-item" style="border-top:1px solid var(--border); padding-top:8px; font-weight:700; color:var(--positive);">
-            <span>יתרה מציאותית בעו"ש כרגע:</span>
+            <span>יתרה מציאותית בעו"ש כרגע (בבנק):</span>
             <span>${fmtMoney(c.actualCurrentBalance)}</span>
           </div>
           
           <div class="summary-item sub" style="margin-top:8px; color:var(--negative)">
-            <span>2. חיוב אשראי עתידי שירד ב-02 לחודש:</span>
+            <span>2. חיוב אשראי עתידי שירד ב-${state.creditCardBillingDay || 2} לחודש:</span>
             <span>-${fmtMoney(c.totalExpPending)}</span>
           </div>
 
@@ -571,7 +573,7 @@
           <div class="row">
             <div style="flex:1">
               <div class="row-title">${icon} ${esc(exp.desc)}</div>
-              <div class="row-sub">${fmtDate(exp.date)} · ${isCharged ? `<span style="color:var(--text-muted)">ירד באשראי ב-${fmtDate(chargeDate)}</span>` : `<span style="color:var(--accent)">ירד באשראי ב-${fmtDate(chargeDate)}</span>`}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
+              <div class="row-sub">${fmtDate(exp.date)} · ${isCharged ? `<span style="color:var(--text-muted)">ירד בבנק ב-${fmtDate(chargeDate)}</span>` : `<span style="color:var(--accent)">ירד בבנק ב-${fmtDate(chargeDate)}</span>`}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
             </div>
             <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
             <div class="actions-group">
