@@ -262,13 +262,13 @@
 
     const billingDay = state.creditCardBillingDay || 2;
 
-    // הוצאות שתאריך הריד שלהן באשראי כבר חל (ירדו בפועל מהבנק)
+    // הוצאות שתאריך החיוב שלהן באשראי כבר הגיע או עבר (ירדו בפועל מהבנק)
     const pastExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
       return chargeDate <= today;
     });
 
-    // הוצאות שתאריך החיוב שלהן בעתיד (טרם ירדו מהבנק)
+    // הוצאות שתאריך החיוב שלהן עתידי (טרם ירדו מהבנק)
     const pendingExpenses = (state.expenses || []).filter((e) => {
       const chargeDate = calcCreditChargeDate(e.date, billingDay);
       return chargeDate > today;
@@ -277,13 +277,14 @@
     const totalExpCharged = pastExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const totalExpPending = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
     
-    // יתרה בעו"ש כעת - יורדת אך ורק מהוצאות שתאריך החיוב שלהן כבר הגיע
+    // יתרה בעו"ש כעת - משקפת מבוסס יתרת פתיחה + הכנסות שנכנסו פחות אך ורק הוצאות שתאריך החיוב שלהן כבר עבר
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalExpCharged + totalPaid;
     
     const monthPaidIncome = paid.filter((i) => monthKey(i.paidDate || i.date) === thisMonth).reduce((s, i) => s + Number(i.amount), 0);
     const monthExpectedIncome = pending.reduce((s, i) => s + Number(i.amount), 0);
     const monthExpenses = (state.expenses || []).filter((e) => monthKey(e.date) === thisMonth).reduce((s, e) => s + Number(e.amount), 0);
     
+    // צפוי בסוף החודש לאחר ירידת האשראי ב-02 וקבלת כל ההכנסות
     const finalExpectedBalance = actualCurrentBalance - totalExpPending + monthExpectedIncome;
 
     const safeToSpend = Math.max(0, actualCurrentBalance - totalExpPending);
@@ -337,13 +338,13 @@
     let advice = "";
 
     if (c.overdueCount > 0) {
-      advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). בעו"ש יש כרגע <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, אך ירד בחיוב הקרוב <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי. מומלץ ליצור קשר עם הלקוחות.`;
+      advice = `⚠️ <strong>שים לב:</strong> יש לך <strong>${fmtMoney(c.overdueAmount)}</strong> בתשלומים שמועד פירעונם עבר (${c.overdueCount} לקוחות באיחור). בעו"ש בבנק יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, ובחודש הקרוב ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי.`;
     } else if (c.safeToSpend > 5000) {
-      advice = `🟢 <strong>מצב תזרימי מצוין!</strong> היתרה בעו"ש עומדת על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. גם לאחר ירידת החיוב הקרוב באשראי נשאר לך נקי לבזבוז <strong>${fmtMoney(c.safeToSpend)}</strong>.`;
+      advice = `🟢 <strong>מצב תזרימי מצוין!</strong> היתרה בעו"ש בבנק עומדת על <strong>${fmtMoney(c.actualCurrentBalance)}</strong>. בחיוב הקרוב ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong>.`;
     } else if (c.safeToSpend > 0) {
-      advice = `💡 <strong>תזרים יציב:</strong> יש לך <strong>${fmtMoney(c.actualCurrentBalance)}</strong> בעו"ש. זכור שמתוכם מיועדים <strong>${fmtMoney(c.totalExpPending)}</strong> לחיוב האשראי ב-02 לחודש. תגודל הנזילות החופשית היא <strong>${fmtMoney(c.safeToSpend)}</strong>.`;
+      advice = `💡 <strong>תזרים יציב:</strong> יש לך <strong>${fmtMoney(c.actualCurrentBalance)}</strong> בעו"ש בבנק. ב-02 לחודש עתידים לרדת <strong>${fmtMoney(c.totalExpPending)}</strong> בחיוב האשראי.`;
     } else {
-      advice = `🛑 <strong>זהירות מגרעון בחיוב הקרוב:</strong> בעו"ש יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, אך ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי. כדאי לזדרז בגביית התשלומים הצפויים (<strong>${fmtMoney(c.monthExpectedIncome)}</strong>).`;
+      advice = `🛑 <strong>שיקוף חיוב קרוב:</strong> בעו"ש בבנק יש <strong>${fmtMoney(c.actualCurrentBalance)}</strong>, ב-02 לחודש ירדו <strong>${fmtMoney(c.totalExpPending)}</strong> באשראי. כדאי לגבות תשלומים צפויים (<strong>${fmtMoney(c.monthExpectedIncome)}</strong>).`;
     }
 
     return `
@@ -355,12 +356,12 @@
         <div class="ai-text">${advice}</div>
         <div class="ai-grid">
           <div class="ai-stat">
-            <div class="ai-stat-label">פנוי לבזבוז נקי (אחרי אשראי)</div>
-            <div class="ai-stat-value" style="color:var(--positive)">${fmtMoney(c.safeToSpend)}</div>
+            <div class="ai-stat-label">סכום שיורד ב-02 לחודש (אשראי)</div>
+            <div class="ai-stat-value" style="color:var(--negative)">${fmtMoney(c.totalExpPending)}</div>
           </div>
           <div class="ai-stat">
-            <div class="ai-stat-label">חיוב אשראי קרוב (02 לחודש)</div>
-            <div class="ai-stat-value" style="color:var(--negative)">${fmtMoney(c.totalExpPending)}</div>
+            <div class="ai-stat-label">נותר חופשי (לאחר החיוב ב-02)</div>
+            <div class="ai-stat-value" style="color:var(--positive)">${fmtMoney(c.safeToSpend)}</div>
           </div>
         </div>
       </div>
@@ -370,46 +371,38 @@
   function renderDashboard(c) {
     return `
       <div class="hero">
-        <div class="hero-label">נשאר ביד כרגע בבנק (עו"ש בפועל)</div>
+        <div class="hero-label">סכום נוכחי בפועל בבנק (עו"ש)</div>
         <div class="hero-number" style="color:var(--positive)">${fmtMoney(c.actualCurrentBalance)}</div>
-        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת פתיחה / יום חיוב אשראי</button>
+        <button class="link-btn" data-action="toggle-balance-edit">⚙️ עדכון יתרת עו"ש בבנק / יום חיוב</button>
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-            <input class="input" id="balance-input" type="number" step="0.01" value="${c.openingBalance}" placeholder="יתרת פתיחה בעו''ש"/>
-            <input class="input" id="billing-day-input" type="number" min="1" max="31" value="${state.creditCardBillingDay || 2}" placeholder="יום חיוב אשראי בחודש (למשל: 2)"/>
-            <button class="submit-btn" style="margin-top:0" data-action="save-balance">עדכן הגדרות</button>
+            <input class="input" id="balance-input" type="number" step="0.01" value="${c.actualCurrentBalance}" placeholder="הכנס את הסכום המדויק שיש כרגע בבנק"/>
+            <input class="input" id="billing-day-input" type="number" min="1" max="31" value="${state.creditCardBillingDay || 2}" placeholder="יום חיוב אשראי (למשל: 2)"/>
+            <button class="submit-btn" style="margin-top:0" data-action="save-balance">עדכן נתונים</button>
           </div>` : ""}
       </div>
 
       <div class="stat-row">
-        ${statCard("יתרה פותחת", fmtMoney(c.openingBalance), "var(--text-muted)")}
-        ${statCard("חיוב אשראי עתידי", fmtMoney(c.totalExpPending), "var(--negative)")}
+        ${statCard("קיים בבנק", fmtMoney(c.actualCurrentBalance), "var(--positive)")}
+        ${statCard("ירד ב-02 לחודש", fmtMoney(c.totalExpPending), "var(--negative)")}
         ${statCard("הכנסות בדרך", fmtMoney(c.monthExpectedIncome), "var(--accent)")}
       </div>
 
       <div class="card">
-        <div class="card-title">📋 סיכום תזרים מזומנים מפורט</div>
+        <div class="card-title">📋 פירוט תזרימי וחיובים קרובים</div>
         <div class="summary-box">
-          <div class="summary-item">
-            <span>1. יתרת פתיחה שהוזנה:</span>
-            <span><strong>${fmtMoney(c.openingBalance)}</strong></span>
-          </div>
-          <div class="summary-item sub" style="color:var(--negative)">
-            <span>פחות הוצאות שכבר ירדו בפועל מהבנק בתאריך החיוב:</span>
-            <span>-${fmtMoney(c.totalExpCharged)}</span>
-          </div>
-          <div class="summary-item" style="border-top:1px solid var(--border); padding-top:8px; font-weight:700; color:var(--positive);">
-            <span>יתרה מציאותית בעו"ש כרגע (בבנק):</span>
+          <div class="summary-item" style="font-weight:700; color:var(--positive);">
+            <span>1. סכום קיים כרגע בבנק (עו"ש בפועל):</span>
             <span>${fmtMoney(c.actualCurrentBalance)}</span>
           </div>
           
           <div class="summary-item sub" style="margin-top:8px; color:var(--negative)">
-            <span>2. חיוב אשראי עתידי שירד ב-${state.creditCardBillingDay || 2} לחודש:</span>
+            <span>2. סה"כ אמור לרדת ב-02 לחודש (חיוב אשראי עתידי):</span>
             <span>-${fmtMoney(c.totalExpPending)}</span>
           </div>
 
           <div class="summary-item" style="margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
-            <span>3. הכנסות שצריכות להיכנס מלקוחות:</span>
+            <span>3. הכנסות צפויות להיכנס מלקוחות:</span>
             <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
           </div>
 
@@ -573,7 +566,7 @@
           <div class="row">
             <div style="flex:1">
               <div class="row-title">${icon} ${esc(exp.desc)}</div>
-              <div class="row-sub">${fmtDate(exp.date)} · ${isCharged ? `<span style="color:var(--text-muted)">ירד בבנק ב-${fmtDate(chargeDate)}</span>` : `<span style="color:var(--accent)">ירד בבנק ב-${fmtDate(chargeDate)}</span>`}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
+              <div class="row-sub">${fmtDate(exp.date)} · ${isCharged ? `<span style="color:var(--text-muted)">ירד בבנק ב-${fmtDate(chargeDate)}</span>` : `<span style="color:var(--accent)">יירד ב-02 לחודש (${fmtDate(chargeDate)})</span>`}${exp.installmentInfo ? ` · תשלום ${exp.installmentInfo}` : exp.recurring ? " · קבועה" : ""}</div>
             </div>
             <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
             <div class="actions-group">
@@ -616,8 +609,21 @@
     } else if (action === "save-balance") {
       const input = document.getElementById("balance-input");
       const billingInput = document.getElementById("billing-day-input");
-      state.openingBalance = parseFloat(input.value) || 0;
-      state.creditCardBillingDay = parseInt(billingInput.value) || 2;
+      
+      const newBalanceInput = parseFloat(input.value) || 0;
+      const billingDay = parseInt(billingInput.value) || 2;
+      
+      const today = todayStr();
+      const pastExpenses = (state.expenses || []).filter((e) => {
+        const chargeDate = calcCreditChargeDate(e.date, billingDay);
+        return chargeDate <= today;
+      });
+      const totalExpCharged = pastExpenses.reduce((s, e) => s + Number(e.amount), 0);
+      const totalPaid = (state.incomes || []).filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
+
+      // מאפס את יתרת הפתיחה כך שהיתרה הנוכחית בפועל תהיה בדיוק מה שהוזן
+      state.openingBalance = newBalanceInput + totalExpCharged - totalPaid;
+      state.creditCardBillingDay = billingDay;
       ui.showBalanceEdit = false;
       saveToCloud();
     } else if (action === "toggle-income-form") { 
