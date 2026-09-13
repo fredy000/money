@@ -91,14 +91,14 @@
     .icon-btn-muted:hover { border-color: var(--accent); color: var(--accent); }
     .icon-btn-danger:hover { border-color: var(--negative); color: var(--negative); }
     
-    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); color: #FFF; border: none; border-radius: 16px; padding: 14px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); }
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); color: #FFF; border: none; border-radius: 16px; padding: 14px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); margin-bottom: 12px; }
     .add-btn:active { transform: scale(0.98); }
     
-    .form-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
+    .form-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
     .label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
     .input { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; width: 100%; }
-    .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 15px var(--accent-glow); }
-    .cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 15px var(--accent-glow); width: 100%; }
+    .cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
     .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
     .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
 
@@ -170,18 +170,19 @@
   const uid = () => Math.random().toString(36).slice(2, 10);
   const todayStr = () => new Date().toISOString().slice(0, 10);
   
-  // חישוב תאריך יעד אמיתי לפי תנאי שוטף (סוף החודש הנוכחי + X ימים)
   const calcExpectedDate = (invoiceDateStr, termDays) => {
     if (Number(termDays) === 0) return invoiceDateStr;
     const date = new Date(invoiceDateStr);
-    // מעבר לסוף החודש של תאריך החשבונית
     const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    // הוספת ימי השוטף (30, 60, 90 וכו') מתחילת החודש הבא
     endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
     return endOfMonth.toISOString().slice(0, 10);
   };
 
-  const addMonths = (d, months) => { const x = new Date(d); x.setMonth(x.getMonth() + Number(months)); return x.toISOString().slice(0, 10); };
+  const addMonths = (d, months) => {
+    const x = new Date(d);
+    x.setMonth(x.getMonth() + Number(months));
+    return x.toISOString().slice(0, 10);
+  };
   
   const fmtMoney = (n) => {
     const val = Number(n || 0);
@@ -194,7 +195,7 @@
   };
 
   const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(d));
-  const monthKey = (d) => d.slice(0, 7);
+  const monthKey = (d) => (d ? d.slice(0, 7) : todayStr().slice(0, 7));
   const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -205,7 +206,6 @@
         openingBalance: Number(data.openingBalance) || 0,
         incomes: (data.incomes || []).map(inc => ({
           ...inc,
-          // עדכון אוטומטי של תאריכי היעד עבור נתונים קיימים לפי הלוגיקה החדשה
           expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
         })),
         expenses: data.expenses || []
@@ -576,36 +576,51 @@
       ui.editingIncomeId = btn.dataset.id;
       ui.showIncomeForm = false;
       render();
+    } else if (action === "delete-income") {
+      const id = btn.dataset.id;
+      if (confirm("האם למחוק הכנסה זו?")) {
+        state.incomes = state.incomes.filter(i => i.id !== id);
+        saveToCloud();
+      }
+    } else if (action === "mark-paid") {
+      const id = btn.dataset.id;
+      const inc = state.incomes.find(i => i.id === id);
+      if (inc) {
+        inc.status = "paid";
+        inc.paidDate = todayStr();
+        saveToCloud();
+      }
     } else if (action === "edit-expense") {
       ui.tab = "expenses";
-      ui.editingExpenseId = btn.dataset.id;
-      ui.showExpenseForm = false;
+      const exp = state.expenses.find(e => e.id === btn.dataset.id);
+      if (exp) {
+        ui.editingExpenseId = exp.id;
+        ui.showExpenseForm = false;
+        ui.expenseFormState = {
+          desc: exp.desc,
+          amount: exp.amount,
+          date: exp.date,
+          category: exp.category || CATEGORIES[0].name,
+          recurring: !!exp.recurring
+        };
+        render();
+      }
+    } else if (action === "delete-expense") {
+      const id = btn.dataset.id;
+      if (confirm("האם למחוק הוצאה זו?")) {
+        state.expenses = state.expenses.filter(e => e.id !== id);
+        saveToCloud();
+      }
+    } else if (action === "select-category") {
+      saveCurrentExpenseState();
+      ui.expenseFormState.category = btn.dataset.cat;
       render();
     } else if (action === "cancel-edit") {
       ui.editingIncomeId = null;
       ui.editingExpenseId = null;
+      ui.showIncomeForm = false;
+      ui.showExpenseForm = false;
       render();
-    } else if (action === "select-category") {
-      if (!ui.editingExpenseId) saveCurrentExpenseState();
-      ui.expenseFormState.category = btn.dataset.cat;
-      if (ui.editingExpenseId) {
-        const item = state.expenses.find(e => e.id === ui.editingExpenseId);
-        if (item) item.category = btn.dataset.cat;
-      }
-      render();
-    } else if (action === "mark-paid") {
-      const inc = state.incomes.find((i) => i.id === btn.dataset.id);
-      if (inc) { 
-        inc.status = "paid"; 
-        inc.paidDate = todayStr(); 
-        saveToCloud(); 
-      }
-    } else if (action === "delete-income") {
-      state.incomes = state.incomes.filter((i) => i.id !== btn.dataset.id); 
-      saveToCloud();
-    } else if (action === "delete-expense") {
-      state.expenses = state.expenses.filter((e) => e.id !== btn.dataset.id); 
-      saveToCloud();
     }
   });
 
@@ -619,88 +634,92 @@
 
   document.getElementById("app").addEventListener("submit", (e) => {
     e.preventDefault();
-    if (e.target.id === "income-form") {
-      const fd = new FormData(e.target);
-      const id = fd.get("id");
-      const date = fd.get("date") || todayStr();
-      const termDays = Number(fd.get("termDays"));
-      const expectedDate = calcExpectedDate(date, termDays);
-      
-      state.incomes = state.incomes || [];
+    const form = e.target;
+
+    if (form.id === "income-form") {
+      const formData = new FormData(form);
+      const id = formData.get("id");
+      const client = formData.get("client").trim();
+      const amount = parseFloat(formData.get("amount")) || 0;
+      const date = formData.get("date") || todayStr();
+      const termDays = Number(formData.get("termDays") || 0);
+
+      if (!client || amount <= 0) return;
 
       if (id) {
-        const idx = state.incomes.findIndex(i => i.id === id);
-        if (idx !== -1) {
-          state.incomes[idx].client = fd.get("client");
-          state.incomes[idx].amount = Number(fd.get("amount"));
-          state.incomes[idx].date = date;
-          state.incomes[idx].termDays = termDays;
-          state.incomes[idx].expectedDate = expectedDate;
+        const inc = state.incomes.find(i => i.id === id);
+        if (inc) {
+          inc.client = client;
+          inc.amount = amount;
+          inc.date = date;
+          inc.termDays = termDays;
+          inc.expectedDate = calcExpectedDate(date, termDays);
         }
-        ui.editingIncomeId = null;
       } else {
         state.incomes.push({
-          id: uid(), 
-          client: fd.get("client"), 
-          amount: Number(fd.get("amount")), 
-          date, 
-          termDays, 
-          expectedDate,
-          status: termDays === 0 ? "paid" : "pending", 
-          paidDate: termDays === 0 ? date : null,
+          id: uid(),
+          client,
+          amount,
+          date,
+          termDays,
+          expectedDate: calcExpectedDate(date, termDays),
+          status: "pending"
         });
-        ui.showIncomeForm = false; 
       }
+
+      ui.showIncomeForm = false;
+      ui.editingIncomeId = null;
       saveToCloud();
-    } else if (e.target.id === "expense-form") {
-      const fd = new FormData(e.target);
-      const id = fd.get("id");
-      const totalAmount = Number(fd.get("amount"));
-      const startDate = fd.get("date") || todayStr();
-      const desc = fd.get("desc");
-      
-      state.expenses = state.expenses || [];
+    }
+
+    if (form.id === "expense-form") {
+      const formData = new FormData(form);
+      const id = formData.get("id");
+      const desc = formData.get("desc").trim();
+      const amount = parseFloat(formData.get("amount")) || 0;
+      const date = formData.get("date") || todayStr();
+      const category = ui.expenseFormState.category || CATEGORIES[0].name;
+
+      if (!desc || amount <= 0) return;
 
       if (id) {
-        const idx = state.expenses.findIndex(exp => exp.id === id);
-        if (idx !== -1) {
-          state.expenses[idx].desc = desc;
-          state.expenses[idx].amount = totalAmount;
-          state.expenses[idx].date = startDate;
-          state.expenses[idx].category = ui.expenseFormState.category;
+        const exp = state.expenses.find(e => e.id === id);
+        if (exp) {
+          exp.desc = desc;
+          exp.amount = amount;
+          exp.date = date;
+          exp.category = category;
         }
-        ui.editingExpenseId = null;
       } else {
-        const category = ui.expenseFormState.category || CATEGORIES[0].name;
         if (ui.isInstallments) {
-          const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
-          const monthlyAmount = Number((totalAmount / count).toFixed(2));
-          
+          const count = Math.max(2, Math.min(36, Number(formData.get("installmentsCount") || 3)));
+          const installmentAmount = Math.round((amount / count) * 100) / 100;
           for (let i = 0; i < count; i++) {
             state.expenses.push({
               id: uid(),
-              desc: `${desc}`,
-              amount: monthlyAmount,
-              date: addMonths(startDate, i),
-              category: category,
+              desc: `${desc} (${i + 1}/${count})`,
+              amount: installmentAmount,
+              date: addMonths(date, i),
+              category,
               installmentInfo: `${i + 1}/${count}`
             });
           }
         } else {
+          const recurring = formData.get("recurring") === "on";
           state.expenses.push({
-            id: uid(), 
-            desc: desc, 
-            amount: totalAmount, 
-            date: startDate,
-            category: category, 
-            recurring: fd.get("recurring") === "on",
+            id: uid(),
+            desc,
+            amount,
+            date,
+            category,
+            recurring
           });
         }
-        ui.showExpenseForm = false; 
-        ui.isInstallments = false;
       }
 
-      ui.expenseFormState = { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
+      ui.showExpenseForm = false;
+      ui.editingExpenseId = null;
+      ui.isInstallments = false;
       saveToCloud();
     }
   });
