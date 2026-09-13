@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
   
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <!-- Firebase SDKs with Safe Loading -->
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
@@ -116,25 +116,9 @@
   </style>
 </head>
 <body>
-<div id="app">טוען נתונים وعוזר AI...</div>
+<div id="app"></div>
 
 <script>
-  // Firebase initialization using Compat library for reliability
-  const firebaseConfig = {
-    apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
-    authDomain: "money-1d58a.firebaseapp.com",
-    databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "money-1d58a",
-    storageBucket: "money-1d58a.firebasestorage.app",
-    messagingSenderId: "1038447297202",
-    appId: "1:1038447297202:web:bd907752a47cb171bc7fab",
-    measurementId: "G-NRXTEBFEXT"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const dbRef = db.ref("appData");
-
   const TERMS = [
     { days: 0, label: "מיידי" },
     { days: 30, label: "שוטף +30" },
@@ -154,7 +138,8 @@
   ];
 
   let state = { openingBalance: 4513.73, incomes: [], expenses: [], creditCardBillingDay: 2 };
-  let syncStatus = "סנכרון פעיל ☁️";
+  let syncStatus = "טוען... ⏳";
+  let dbRef = null;
 
   let ui = { 
     tab: "dashboard", 
@@ -218,35 +203,83 @@
   const daysUntil = (d) => Math.round((new Date(d) - new Date(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  dbRef.on("value", (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      state = {
-        openingBalance: Number(data.openingBalance) || 0,
-        creditCardBillingDay: Number(data.creditCardBillingDay) || 2,
-        incomes: (data.incomes || []).map(inc => ({
-          ...inc,
-          expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
-        })),
-        expenses: data.expenses || []
-      };
-    } else {
-      saveToCloud();
-    }
+  // Load local backup first so app starts instantly
+  const localSaved = localStorage.getItem("appData_backup");
+  if (localSaved) {
+    try { state = JSON.parse(localSaved); } catch(e){}
+  }
+
+  // Initialize Firebase safely after window load
+  window.addEventListener("DOMContentLoaded", () => {
     render();
-  }, (err) => {
-    syncStatus = "שגיאת הרשאות ⚠️";
-    render();
+    initFirebase();
   });
 
-  async function saveToCloud() {
+  function initFirebase() {
     try {
-      syncStatus = "שומר...";
-      render();
-      await dbRef.set(state);
-      syncStatus = "סנכרון פעיל ☁️";
+      if (typeof firebase === "undefined") {
+        syncStatus = "אחסון מקומי בלבד 💾";
+        render();
+        return;
+      }
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
+        authDomain: "money-1d58a.firebaseapp.com",
+        databaseURL: "https://money-1d58a-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "money-1d58a",
+        storageBucket: "money-1d58a.firebasestorage.app",
+        messagingSenderId: "1038447297202",
+        appId: "1:1038447297202:web:bd907752a47cb171bc7fab"
+      };
+
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+
+      dbRef = firebase.database().ref("appData");
+
+      dbRef.on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          state = {
+            openingBalance: Number(data.openingBalance) || 0,
+            creditCardBillingDay: Number(data.creditCardBillingDay) || 2,
+            incomes: (data.incomes || []).map(inc => ({
+              ...inc,
+              expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
+            })),
+            expenses: data.expenses || []
+          };
+          localStorage.setItem("appData_backup", JSON.stringify(state));
+        } else {
+          saveToCloud();
+        }
+        syncStatus = "סנכרון פעיל ☁️";
+        render();
+      }, (err) => {
+        syncStatus = "אחסון מקומי בלבד 💾";
+        render();
+      });
     } catch (e) {
-      syncStatus = "שגיאה בשמירה ❌";
+      syncStatus = "אחסון מקומי בלבד 💾";
+      render();
+    }
+  }
+
+  async function saveToCloud() {
+    localStorage.setItem("appData_backup", JSON.stringify(state));
+    if (dbRef) {
+      try {
+        syncStatus = "שומר...";
+        render();
+        await dbRef.set(state);
+        syncStatus = "סנכרון פעיל ☁️";
+      } catch (e) {
+        syncStatus = "שמור מקומית 💾";
+      }
+    } else {
+      syncStatus = "שמור מקומית 💾";
     }
     render();
   }
@@ -323,6 +356,8 @@
   function render() {
     const c = calc();
     const root = document.getElementById("app");
+    if(!root) return;
+    
     root.innerHTML = `
       <div class="brand">
         <div class="brand-logo">
