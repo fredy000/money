@@ -164,7 +164,9 @@
     editingExpenseId: null,
     showBalanceEdit: false, 
     isInstallments: false,
-    selectedCategory: CATEGORIES[0].name
+    selectedCategory: CATEGORIES[0].name,
+    // שדות זמניים לטופס הוצאה
+    tempExpense: { desc: "", amount: "", date: "" }
   };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
@@ -488,6 +490,10 @@
     const editingItem = ui.editingExpenseId ? state.expenses.find(e => e.id === ui.editingExpenseId) : null;
     const billingDay = state.creditCardBillingDay || 2;
 
+    const valDesc = editingItem ? esc(editingItem.desc) : esc(ui.tempExpense.desc || '');
+    const valAmount = editingItem ? editingItem.amount : (ui.tempExpense.amount || '');
+    const valDate = editingItem ? editingItem.date : (ui.tempExpense.date || todayStr());
+
     return `
       <button class="add-btn" data-action="toggle-expense-form">${ui.editingExpenseId ? "ביטול עריכה" : "+ הוספת הוצאה חדשה"}</button>
       
@@ -497,13 +503,13 @@
           ${editingItem ? "✏️ עריכת הוצאה" : "➕ הוספת הוצאה חדשה"}
         </div>
         <label class="label">תיאור ההוצאה
-          <input class="input" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${editingItem ? esc(editingItem.desc) : ''}"/>
+          <input class="input" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${valDesc}"/>
         </label>
         <label class="label">סכום מדויק (₪)
-          <input class="input" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}"/>
+          <input class="input" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${valAmount}"/>
         </label>
         <label class="label">תאריך הרכישה
-          <input class="input" id="exp-date" type="date" value="${editingItem ? editingItem.date : todayStr()}"/>
+          <input class="input" id="exp-date" type="date" value="${valDate}"/>
         </label>
 
         <label class="label">בחירת קטגוריה
@@ -565,6 +571,15 @@
     `;
   }
 
+  function saveTempExpense() {
+    const descEl = document.getElementById("exp-desc");
+    const amountEl = document.getElementById("exp-amount");
+    const dateEl = document.getElementById("exp-date");
+    if (descEl) ui.tempExpense.desc = descEl.value;
+    if (amountEl) ui.tempExpense.amount = amountEl.value;
+    if (dateEl) ui.tempExpense.date = dateEl.value;
+  }
+
   document.getElementById("app").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
@@ -592,6 +607,7 @@
       ui.editingExpenseId = null;
       ui.isInstallments = false;
       ui.selectedCategory = CATEGORIES[0].name;
+      ui.tempExpense = { desc: "", amount: "", date: "" };
       render(); 
     } else if (action === "edit-income") {
       ui.tab = "income";
@@ -628,6 +644,7 @@
         saveToCloud();
       }
     } else if (action === "select-category") {
+      saveTempExpense();
       ui.selectedCategory = btn.dataset.cat;
       const cards = document.querySelectorAll(".cat-card");
       cards.forEach(c => c.classList.remove("selected"));
@@ -637,6 +654,7 @@
       ui.editingExpenseId = null;
       ui.showIncomeForm = false;
       ui.showExpenseForm = false;
+      ui.tempExpense = { desc: "", amount: "", date: "" };
       render();
     } else if (action === "save-expense-direct") {
       const descInput = document.getElementById("exp-desc");
@@ -697,6 +715,7 @@
       ui.showExpenseForm = false;
       ui.editingExpenseId = null;
       ui.isInstallments = false;
+      ui.tempExpense = { desc: "", amount: "", date: "" };
       saveToCloud();
     } else if (action === "save-income-direct") {
       const clientInput = document.getElementById("inc-client");
@@ -747,6 +766,7 @@
 
   document.getElementById("app").addEventListener("change", (e) => {
     if (e.target.id === "installments-check") {
+      saveTempExpense();
       ui.isInstallments = e.target.checked;
       render();
     }
