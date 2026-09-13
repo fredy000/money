@@ -240,7 +240,7 @@
     
     const totalPaid = paid.reduce((s, i) => s + Number(i.amount), 0);
     
-    // הוצאות עד היום (לא כולל תשלומים עתידיים עתידיים)
+    // הוצאות עד היום (לא כולל תשלומים עתידיים)
     const expensesTillNow = (state.expenses || []).filter(e => e.date <= today).reduce((s, e) => s + Number(e.amount), 0);
     
     // סך כל ההוצאות וההכנסות הרשומות
@@ -284,7 +284,7 @@
       <div class="brand">
         <div class="brand-logo">
           <div class="brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <span class="brand-text">תזרים לצלם</span>
         </div>
@@ -486,25 +486,22 @@
         </div>
         <input type="hidden" name="id" value="${editingItem ? editingItem.id : ''}"/>
         <label class="label">תיאור ההוצאה
-          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${editingItem ? esc(editingItem.desc) : esc(f.desc)}" required/>
+          <input class="input" name="desc" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${esc(f.desc)}" required/>
         </label>
         <label class="label">סכום מדויק (₪)
-          <input class="input" name="amount" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : f.amount}" required/>
+          <input class="input" name="amount" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${f.amount}" required/>
         </label>
         <label class="label">תאריך הרכישה
-          <input class="input" name="date" id="exp-date" type="date" value="${editingItem ? editingItem.date : (f.date || todayStr())}"/>
+          <input class="input" name="date" id="exp-date" type="date" value="${f.date || todayStr()}"/>
         </label>
 
         <label class="label">בחירת קטגוריה
           <div class="category-grid">
-            ${CATEGORIES.map((c) => {
-              const currentCat = editingItem ? editingItem.category : f.category;
-              return `
-              <div class="cat-card ${currentCat === c.name ? "selected" : ""}" data-action="select-category" data-cat="${c.name}">
-                <span class="cat-icon">${c.icon}</span>
-                <span class="cat-name">${c.name}</span>
-              </div>`;
-            }).join("")}
+            ${CATEGORIES.map((cat) => `
+              <div class="cat-card ${f.category === cat.name ? "selected" : ""}" data-action="select-category" data-cat="${cat.name}">
+                <span class="cat-icon">${cat.icon}</span>
+                <span class="cat-name">${cat.name}</span>
+              </div>`).join("")}
           </div>
         </label>
         
@@ -601,18 +598,22 @@
       ui.tab = "expenses";
       ui.editingExpenseId = btn.dataset.id;
       ui.showExpenseForm = false;
+      ui.isInstallments = false;
+      const item = state.expenses.find(exp => exp.id === btn.dataset.id);
+      // מאתחלים את טופס העריכה עם הנתונים הקיימים של הפריט, כדי שבחירת קטגוריה
+      // באמצע העריכה לא תמחק תיאור/סכום/תאריך שכבר הוקלדו
+      ui.expenseFormState = item
+        ? { desc: item.desc, amount: item.amount, date: item.date, category: item.category, installmentsCount: 3, recurring: !!item.recurring }
+        : { desc: "", amount: "", date: todayStr(), category: CATEGORIES[0].name, installmentsCount: 3, recurring: false };
       render();
     } else if (action === "cancel-edit") {
       ui.editingIncomeId = null;
       ui.editingExpenseId = null;
       render();
     } else if (action === "select-category") {
-      if (!ui.editingExpenseId) saveCurrentExpenseState();
+      // שומרים תמיד את מה שהוקלד עד כה (גם במצב עריכה) לפני שהתצוגה מתעדכנת מחדש
+      saveCurrentExpenseState();
       ui.expenseFormState.category = btn.dataset.cat;
-      if (ui.editingExpenseId) {
-        const item = state.expenses.find(e => e.id === ui.editingExpenseId);
-        if (item) item.category = btn.dataset.cat;
-      }
       render();
     } else if (action === "mark-paid") {
       const inc = state.incomes.find((i) => i.id === btn.dataset.id);
@@ -674,11 +675,14 @@
       }
       saveToCloud();
     } else if (e.target.id === "expense-form") {
+      // מוודאים שכל מה שהוקלד בטופס (כולל תיאור/סכום/תאריך) נשמר לפני קריאה ממנו
+      saveCurrentExpenseState();
       const fd = new FormData(e.target);
       const id = fd.get("id");
-      const totalAmount = Number(fd.get("amount"));
-      const startDate = fd.get("date") || todayStr();
-      const desc = fd.get("desc");
+      const startDate = ui.expenseFormState.date || fd.get("date") || todayStr();
+      const desc = ui.expenseFormState.desc || fd.get("desc");
+      const totalAmount = Number(ui.expenseFormState.amount || fd.get("amount"));
+      const category = ui.expenseFormState.category || CATEGORIES[0].name;
       
       state.expenses = state.expenses || [];
 
@@ -688,11 +692,10 @@
           state.expenses[idx].desc = desc;
           state.expenses[idx].amount = totalAmount;
           state.expenses[idx].date = startDate;
-          state.expenses[idx].category = ui.expenseFormState.category;
+          state.expenses[idx].category = category;
         }
         ui.editingExpenseId = null;
       } else {
-        const category = ui.expenseFormState.category || CATEGORIES[0].name;
         if (ui.isInstallments) {
           const count = Math.max(2, Number(fd.get("installmentsCount")) || 2);
           const monthlyAmount = Number((totalAmount / count).toFixed(2));
