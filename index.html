@@ -165,8 +165,14 @@
     showBalanceEdit: false, 
     isInstallments: false,
     selectedCategory: CATEGORIES[0].name,
-    // שדות זמניים לטופס הוצאה
-    tempExpense: { desc: "", amount: "", date: "" }
+    tempExpense: { 
+      desc: "", 
+      amount: "", 
+      date: "", 
+      installmentsCount: "6", 
+      interestAmount: "", 
+      customMonthlyAmount: "" 
+    }
   };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
@@ -505,7 +511,7 @@
         <label class="label">תיאור ההוצאה
           <input class="input" id="exp-desc" placeholder="למשל: עדשה, מנוי תוכנה, דלק" value="${valDesc}"/>
         </label>
-        <label class="label">סכום מדויק (₪)
+        <label class="label">סכום ההוצאה המקורי / כולל (₪)
           <input class="input" id="exp-amount" type="number" step="0.01" placeholder="0.00" value="${valAmount}"/>
         </label>
         <label class="label">תאריך הרכישה
@@ -532,9 +538,16 @@
         </label>
 
         ${ui.isInstallments ? `
-          <div style="background:var(--surface-input);padding:14px;border-radius:14px;border:1px solid var(--border)">
+          <div style="background:var(--surface-input);padding:14px;border-radius:14px;border:1px solid var(--border);display:flex;flex-direction:column;gap:12px;">
             <label class="label">מספר תשלומים
-              <input class="input" id="exp-installmentsCount" type="number" min="2" max="36" value="3"/>
+              <input class="input" id="exp-installmentsCount" type="number" min="2" max="36" value="${ui.tempExpense.installmentsCount || 6}"/>
+            </label>
+            <div style="font-size:12px;color:var(--accent);font-weight:600;">מנגנון חישוב ריבית/עמלת תשלומים (אופציונלי):</div>
+            <label class="label">סכום יורד קבוע בכל תשלום חודשי (אם קיים בחשבונית)
+              <input class="input" id="exp-customMonthly" type="number" step="0.01" placeholder="למשל: 106.50" value="${ui.tempExpense.customMonthlyAmount || ''}"/>
+            </label>
+            <label class="label">או: סך הריבית / עמלת התשלומים הכוללת (₪)
+              <input class="input" id="exp-interest" type="number" step="0.01" placeholder="למשל: 30" value="${ui.tempExpense.interestAmount || ''}"/>
             </label>
           </div>
         ` : `
@@ -575,9 +588,16 @@
     const descEl = document.getElementById("exp-desc");
     const amountEl = document.getElementById("exp-amount");
     const dateEl = document.getElementById("exp-date");
+    const instCountEl = document.getElementById("exp-installmentsCount");
+    const customMonthlyEl = document.getElementById("exp-customMonthly");
+    const interestEl = document.getElementById("exp-interest");
+
     if (descEl) ui.tempExpense.desc = descEl.value;
     if (amountEl) ui.tempExpense.amount = amountEl.value;
     if (dateEl) ui.tempExpense.date = dateEl.value;
+    if (instCountEl) ui.tempExpense.installmentsCount = instCountEl.value;
+    if (customMonthlyEl) ui.tempExpense.customMonthlyAmount = customMonthlyEl.value;
+    if (interestEl) ui.tempExpense.interestAmount = interestEl.value;
   }
 
   document.getElementById("app").addEventListener("click", (e) => {
@@ -607,7 +627,7 @@
       ui.editingExpenseId = null;
       ui.isInstallments = false;
       ui.selectedCategory = CATEGORIES[0].name;
-      ui.tempExpense = { desc: "", amount: "", date: "" };
+      ui.tempExpense = { desc: "", amount: "", date: "", installmentsCount: "6", interestAmount: "", customMonthlyAmount: "" };
       render(); 
     } else if (action === "edit-income") {
       ui.tab = "income";
@@ -654,7 +674,7 @@
       ui.editingExpenseId = null;
       ui.showIncomeForm = false;
       ui.showExpenseForm = false;
-      ui.tempExpense = { desc: "", amount: "", date: "" };
+      ui.tempExpense = { desc: "", amount: "", date: "", installmentsCount: "6", interestAmount: "", customMonthlyAmount: "" };
       render();
     } else if (action === "save-expense-direct") {
       const descInput = document.getElementById("exp-desc");
@@ -686,8 +706,23 @@
       } else {
         if (ui.isInstallments) {
           const instInput = document.getElementById("exp-installmentsCount");
-          const count = Math.max(2, Math.min(36, Number(instInput ? instInput.value : 3)));
-          const installmentAmount = Math.round((amount / count) * 100) / 100;
+          const customMonthlyEl = document.getElementById("exp-customMonthly");
+          const interestEl = document.getElementById("exp-interest");
+
+          const count = Math.max(2, Math.min(36, Number(instInput ? instInput.value : 6)));
+          const customMonthly = customMonthlyEl && customMonthlyEl.value ? parseFloat(customMonthlyEl.value) : 0;
+          const interest = interestEl && interestEl.value ? parseFloat(interestEl.value) : 0;
+
+          let installmentAmount = 0;
+
+          if (customMonthly > 0) {
+            installmentAmount = customMonthly;
+          } else if (interest > 0) {
+            installmentAmount = Math.round(((amount + interest) / count) * 100) / 100;
+          } else {
+            installmentAmount = Math.round((amount / count) * 100) / 100;
+          }
+
           for (let i = 0; i < count; i++) {
             state.expenses.push({
               id: uid(),
@@ -715,7 +750,7 @@
       ui.showExpenseForm = false;
       ui.editingExpenseId = null;
       ui.isInstallments = false;
-      ui.tempExpense = { desc: "", amount: "", date: "" };
+      ui.tempExpense = { desc: "", amount: "", date: "", installmentsCount: "6", interestAmount: "", customMonthlyAmount: "" };
       saveToCloud();
     } else if (action === "save-income-direct") {
       const clientInput = document.getElementById("inc-client");
