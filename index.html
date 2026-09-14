@@ -216,6 +216,50 @@
     return dateToStr(target);
   };
 
+  // רכישה מה־25 בחודש והלאה נכנסת למחזור התשלומים של החודש הבא.
+  // לדוגמה: קנייה ב־30.07 ב־3 תשלומים = אוגוסט 1/3, ספטמבר 2/3, אוקטובר 3/3.
+  const calcInstallmentStartDate = (purchaseDateStr) => {
+    const purchaseDate = parseLocalDate(purchaseDateStr);
+    if (Number.isNaN(purchaseDate.getTime())) return purchaseDateStr;
+    return purchaseDate.getDate() >= 25 ? addMonths(purchaseDateStr, 1) : purchaseDateStr;
+  };
+
+  const normalizeInstallmentSchedules = (expenses) => {
+    const normalized = (expenses || []).map((expense) => ({ ...expense }));
+    const groups = new Map();
+
+    normalized.forEach((expense) => {
+      if (!expense.installmentGroupId) return;
+      if (!groups.has(expense.installmentGroupId)) groups.set(expense.installmentGroupId, []);
+      groups.get(expense.installmentGroupId).push(expense);
+    });
+
+    let changed = false;
+
+    groups.forEach((series) => {
+      if (series.every((expense) => Number(expense.scheduleVersion) >= 2)) return;
+
+      series.sort((a, b) => {
+        const aNumber = Number(String(a.installmentInfo || "1/1").split("/")[0]);
+        const bNumber = Number(String(b.installmentInfo || "1/1").split("/")[0]);
+        return aNumber - bNumber;
+      });
+
+      const purchaseDate = series[0].purchaseDate || series[0].date;
+      const firstPaymentDate = calcInstallmentStartDate(purchaseDate);
+
+      series.forEach((expense, index) => {
+        expense.purchaseDate = purchaseDate;
+        expense.date = addMonths(firstPaymentDate, index);
+        expense.scheduleVersion = 2;
+      });
+
+      changed = true;
+    });
+
+    return { expenses: normalized, changed };
+  };
+
   const splitInstallmentAmounts = (originalAmount, count, interest = 0, customMonthly = 0) => {
     const payments = Number(count);
     const originalCents = Math.round(Number(originalAmount) * 100);
@@ -260,6 +304,16 @@
         })),
         expenses: data.expenses || []
       };
+
+      const normalizedSchedules = normalizeInstallmentSchedules(state.expenses);
+      state.expenses = normalizedSchedules.expenses;
+
+      if (normalizedSchedules.changed) {
+        set(dbRef, state).catch(() => {
+          syncStatus = "שגיאה בעדכון התשלומים ❌";
+          render();
+        });
+      }
     } else {
       saveToCloud();
     }
@@ -560,7 +614,7 @@
 
     const valDesc = editingItem ? esc(editingItem.desc) : esc(ui.tempExpense.desc || '');
     const valAmount = editingInstallmentSeries ? editingSeriesTotal : (editingItem ? editingItem.amount : (ui.tempExpense.amount || ''));
-    const valDate = editingInstallmentSeries ? firstSeriesPayment.date : (editingItem ? editingItem.date : (ui.tempExpense.date || todayStr()));
+    const valDate = editingInstallmentSeries ? (firstSeriesPayment.purchaseDate || firstSeriesPayment.date) : (editingItem ? editingItem.date : (ui.tempExpense.date || todayStr()));
 
     const currentList = [...c.currentExpenses].sort((a, b) => a.date.localeCompare(b.date));
     const futureList = [...c.futureExpenses].sort((a, b) => a.date.localeCompare(b.date));
@@ -658,7 +712,7 @@
         <label class="label">${editingInstallmentSeries || ui.isInstallments ? "הסכום הכולל של כל העסקה (₪)" : "סכום ההוצאה (₪)"}
           <input class="input" id="exp-amount" type="number" step="0.01" placeholder="למשל: 3524" value="${valAmount}"/>
         </label>
-        <label class="label">${editingInstallmentSeries || ui.isInstallments ? "תאריך התשלום הראשון בסדרה" : "תאריך הרכישה"}
+        <label class="label">${editingInstallmentSeries || ui.isInstallments ? "תאריך הקנייה" : "תאריך הרכישה"}
           <input class="input" id="exp-date" type="date" value="${valDate}"/>
         </label>
 
@@ -683,7 +737,7 @@
 
         ` : editingInstallmentSeries ? `
           <div style="padding:12px 14px;border-radius:12px;background:rgba(255,112,36,.1);border:1px solid rgba(255,112,36,.35);color:var(--accent);font-size:13px;font-weight:600;">
-            עריכת סדרת התשלומים כולה — שינוי התאריך יעדכן את כל מועדי התשלום.
+            עריכת סדרת התשלומים כולה — קנייה מה־25 בחודש עוברת אוטומטית למחזור התשלום של החודש הבא.
           </div>
         ` : ""}
 
@@ -867,7 +921,9 @@
           const originalCents = Math.round(amountInput * 100);
           const addedCost = Math.max(0, Math.round(fullOriginal * 100) - originalCents) / 100;
 
-          // מחליפים את כל הסדרה בפעולה אחת, לפי תאריך התשלום הראשון שנבחר.
+          const firstPaymentDate = calcInstallmentStartDate(date);
+
+          // מחליפים את כל הסדרה בפעולה אחת, לפי תאריך הקנייה ומחזור החיוב.
           state.expenses = state.expenses.filter(e => e.installmentGroupId !== groupId);
 
           for (let i = 0; i < count; i++) {
@@ -876,7 +932,9 @@
               installmentGroupId: groupId,
               desc,
               amount: installmentAmounts[i] / 100,
-              date: addMonths(date, i),
+              date: addMonths(firstPaymentDate, i),
+              purchaseDate: date,
+              scheduleVersion: 2,
               category: ui.selectedCategory,
               installmentInfo: `${i + 1}/${count}`,
               fullOriginalAmount: fullOriginal,
@@ -901,15 +959,18 @@
           const originalCents = Math.round(amountInput * 100);
           const addedCost = Math.max(0, Math.round(fullOriginal * 100) - originalCents) / 100;
           const installmentGroupId = uid();
+          const firstPaymentDate = calcInstallmentStartDate(date);
 
           for (let i = 0; i < count; i++) {
-            const expDate = addMonths(date, i);
+            const expDate = addMonths(firstPaymentDate, i);
             state.expenses.push({
               id: uid(),
               installmentGroupId,
               desc,
               amount: installmentAmounts[i] / 100,
               date: expDate,
+              purchaseDate: date,
+              scheduleVersion: 2,
               category: ui.selectedCategory,
               installmentInfo: `${i + 1}/${count}`,
               fullOriginalAmount: fullOriginal,
