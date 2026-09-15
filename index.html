@@ -189,11 +189,23 @@
   const todayStr = () => dateToStr(new Date());
   
   const calcExpectedDate = (invoiceDateStr, termDays) => {
-    if (Number(termDays) === 0) return invoiceDateStr;
-    const date = parseLocalDate(invoiceDateStr);
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    endOfMonth.setDate(endOfMonth.getDate() + Number(termDays));
-    return dateToStr(endOfMonth);
+    const invoiceDate = parseLocalDate(invoiceDateStr);
+    const daysToAdd = Number(termDays) || 0;
+
+    if (Number.isNaN(invoiceDate.getTime())) return invoiceDateStr;
+    if (daysToAdd <= 0) return invoiceDateStr;
+
+    // שוטף +30/+60/+90:
+    // קודם מגיעים ליום האחרון בחודש שבו הוצאה החשבונית,
+    // ורק מאותו יום מוסיפים את מספר ימי האשראי.
+    const endOfInvoiceMonth = new Date(
+      invoiceDate.getFullYear(),
+      invoiceDate.getMonth() + 1,
+      0,
+      12
+    );
+    endOfInvoiceMonth.setDate(endOfInvoiceMonth.getDate() + daysToAdd);
+    return dateToStr(endOfInvoiceMonth);
   };
 
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
@@ -589,6 +601,11 @@
     `;
   }
 
+  // ============================================================================
+  // הוצאות — אזור שמור ונעול
+  // אין לשנות את החישובים, חלוקת התשלומים, העריכה, השמירה או סדר התצוגה
+  // באזור הזה ללא בקשה מפורשת של המשתמש.
+  // ============================================================================
   function renderExpenses(c) {
     const editingItem = ui.editingExpenseId ? state.expenses.find(e => e.id === ui.editingExpenseId) : null;
 
@@ -806,6 +823,10 @@
   }
 
   // Event Listeners Routing
+  // ============================================================================
+  // סוף אזור תצוגת ההוצאות השמור
+  // ============================================================================
+
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
