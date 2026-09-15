@@ -674,8 +674,21 @@
   function renderIncome() {
     const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
     const editingItem = ui.editingIncomeId ? state.incomes.find(i => i.id === ui.editingIncomeId) : null;
+    const totalPaid = sorted
+      .filter((income) => income.status === "paid")
+      .reduce((sum, income) => sum + Number(income.amount || 0), 0);
+    const totalPending = sorted
+      .filter((income) => income.status !== "paid")
+      .reduce((sum, income) => sum + Number(income.amount || 0), 0);
+    const totalAllIncome = totalPaid + totalPending;
 
     return `
+      <div class="stat-row">
+        ${statCard("כבר שולם", fmtMoney(totalPaid), "var(--positive)")}
+        ${statCard("עדיין ממתין", fmtMoney(totalPending), "var(--accent)")}
+        ${statCard("סה״כ הכול", fmtMoney(totalAllIncome), "#F7F4EF")}
+      </div>
+
       <button class="add-btn" data-action="toggle-income-form">${ui.editingIncomeId ? "ביטול עריכה" : "+ הוספת עבודה / יום צילום"}</button>
       
       ${(ui.showIncomeForm || ui.editingIncomeId) ? `
