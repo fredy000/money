@@ -112,6 +112,15 @@
     .pill { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
     .pill:hover { border-color: var(--border-focus); color: var(--text); }
     .pill.selected { background: var(--accent); color: #FFFFFF; border-color: var(--accent); font-weight: 700; box-shadow: 0 2px 10px var(--accent-glow); }
+    .login-screen { min-height: 70vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { width: 100%; max-width: 430px; text-align: center; background: var(--surface-card); border: 1px solid var(--border); border-radius: 24px; padding: 34px 24px; box-shadow: var(--shadow); }
+    .login-icon { width: 62px; height: 62px; margin: 0 auto 18px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: linear-gradient(135deg, var(--accent), #D84E00); box-shadow: 0 6px 20px var(--accent-glow); }
+    .login-title { font-size: 23px; font-weight: 800; margin-bottom: 9px; }
+    .login-text { color: var(--text-muted); font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
+    .google-btn { width: 100%; border: 1px solid var(--border); border-radius: 14px; background: #fff; color: #222; padding: 13px 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .google-btn:hover { transform: translateY(-1px); }
+    .login-error { color: var(--negative); font-size: 13px; line-height: 1.5; margin-top: 14px; }
+    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -120,6 +129,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBdtPA1qOg_C2FEpORkzSeTsO6IKl1Klpw",
@@ -135,6 +145,14 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const dbRef = ref(db, "appData");
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+  const ALLOWED_EMAIL = "frdi144@gmail.com";
+
+  let currentUser = null;
+  let authReady = false;
+  let authError = "";
+  let stopDataListener = null;
 
   const TERMS = [
     { days: 0, label: "מיידי" },
@@ -309,38 +327,68 @@
   const daysUntil = (d) => Math.round((parseLocalDate(d) - parseLocalDate(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  onValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      state = {
-        openingBalance: Number(data.openingBalance) || 0,
-        creditCardBillingDay: Number(data.creditCardBillingDay) || 2,
-        incomes: (data.incomes || []).map(inc => ({
-          ...inc,
-          expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
-        })),
-        expenses: data.expenses || []
-      };
+  function startDataListener() {
+    if (stopDataListener) return;
 
-      const normalizedSchedules = normalizeInstallmentSchedules(state.expenses);
-      state.expenses = normalizedSchedules.expenses;
+    stopDataListener = onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        state = {
+          openingBalance: Number(data.openingBalance) || 0,
+          creditCardBillingDay: Number(data.creditCardBillingDay) || 2,
+          incomes: (data.incomes || []).map(inc => ({
+            ...inc,
+            expectedDate: calcExpectedDate(inc.date, inc.termDays || 0)
+          })),
+          expenses: data.expenses || []
+        };
 
-      if (normalizedSchedules.changed) {
-        set(dbRef, state).catch(() => {
-          syncStatus = "שגיאה בעדכון התשלומים ❌";
-          render();
-        });
+        const normalizedSchedules = normalizeInstallmentSchedules(state.expenses);
+        state.expenses = normalizedSchedules.expenses;
+
+        if (normalizedSchedules.changed) {
+          set(dbRef, state).catch(() => {
+            syncStatus = "שגיאה בעדכון התשלומים ❌";
+            render();
+          });
+        }
+      } else {
+        saveToCloud();
       }
-    } else {
-      saveToCloud();
+      render();
+    }, () => {
+      syncStatus = "הגישה לנתונים נחסמה ⚠️";
+      render();
+    });
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    authReady = true;
+    authError = "";
+
+    if (user && String(user.email || "").toLowerCase() === ALLOWED_EMAIL) {
+      currentUser = user;
+      syncStatus = "סנכרון מאובטח 🔒";
+      startDataListener();
+      render();
+      return;
     }
-    render();
-  }, (err) => {
-    syncStatus = "שגיאת הרשאות ⚠️";
-    render();
+
+    if (user) {
+      authError = "החשבון הזה אינו מורשה לצפות בנתונים.";
+      await signOut(auth);
+    }
+
+    currentUser = null;
+    if (stopDataListener) {
+      stopDataListener();
+      stopDataListener = null;
+    }
+    renderLogin();
   });
 
   async function saveToCloud() {
+    if (!currentUser || String(currentUser.email || "").toLowerCase() !== ALLOWED_EMAIL) return;
     try {
       syncStatus = "שומר...";
       render();
@@ -428,6 +476,11 @@
   }
 
   function render() {
+    if (!authReady || !currentUser) {
+      renderLogin();
+      return;
+    }
+
     const c = calc();
     const root = document.getElementById("app");
     root.innerHTML = `
@@ -438,7 +491,10 @@
           </div>
           <span class="brand-text">תזרים לצלם</span>
         </div>
-        <span class="sync-badge">${syncStatus}</span>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span class="sync-badge">${syncStatus}</span>
+          <button class="logout-btn" data-action="logout">יציאה</button>
+        </div>
       </div>
       <div class="tabs">
         <button class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}" data-action="tab" data-tab="dashboard">לוח בקרה</button>
@@ -449,6 +505,25 @@
         ${ui.tab === "dashboard" ? renderAIAssistant(c) + renderDashboard(c) : ""}
         ${ui.tab === "income" ? renderIncome() : ""}
         ${ui.tab === "expenses" ? renderExpenses(c) : ""}
+      </div>
+    `;
+  }
+
+  function renderLogin() {
+    const root = document.getElementById("app");
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="login-screen">
+        <div class="login-card">
+          <div class="login-icon">🔒</div>
+          <div class="login-title">כניסה מאובטחת</div>
+          <div class="login-text">
+            המידע הפיננסי פרטי. רק חשבון Google המורשה יכול לצפות בהכנסות ובהוצאות.
+          </div>
+          <button class="google-btn" data-action="google-login">כניסה באמצעות Google</button>
+          ${authError ? `<div class="login-error">${esc(authError)}</div>` : ""}
+        </div>
       </div>
     `;
   }
@@ -877,7 +952,18 @@
     const action = btn.dataset.action;
     const id = btn.dataset.id;
 
-    if (action === "tab") {
+    if (action === "google-login") {
+      authError = "";
+      googleProvider.setCustomParameters({ login_hint: ALLOWED_EMAIL });
+      signInWithPopup(auth, googleProvider).catch((error) => {
+        authError = error?.code === "auth/popup-closed-by-user"
+          ? "חלון ההתחברות נסגר לפני שהכניסה הושלמה."
+          : "ההתחברות נכשלה. יש לוודא שכניסת Google הופעלה ב-Firebase.";
+        renderLogin();
+      });
+    } else if (action === "logout") {
+      signOut(auth);
+    } else if (action === "tab") {
       ui.tab = btn.dataset.tab;
       render();
     } else if (action === "toggle-balance-edit") {
