@@ -1030,7 +1030,17 @@
       ui.editingIncomeId = null;
       saveToCloud();
     } else if (action === "mark-paid") {
-      state.incomes = state.incomes.map(i => i.id === id ? { ...i, status: "paid", paidDate: todayStr() } : i);
+      const paidIncome = state.incomes.find(i => i.id === id);
+      if (!paidIncome || paidIncome.status === "paid") return;
+
+      // ברגע שהכסף התקבל בפועל, מוסיפים אותו ליתרה הנוכחית פעם אחת בלבד.
+      state.openingBalance = Number(state.openingBalance || 0) + Number(paidIncome.amount || 0);
+      state.incomes = state.incomes.map(i => i.id === id ? {
+        ...i,
+        status: "paid",
+        paidDate: todayStr(),
+        addedToCurrentBalance: true
+      } : i);
       saveToCloud();
     } else if (action === "delete-income") {
       state.incomes = state.incomes.filter(i => i.id !== id);
