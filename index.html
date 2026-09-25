@@ -49,18 +49,10 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     
     .ai-card { background: linear-gradient(135deg, #1C1814 0%, #2A2118 100%); border: 1px solid rgba(255, 112, 36, 0.35); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-    .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .ai-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .ai-badge { background: var(--accent); color: #FFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .ai-title { font-weight: 700; font-size: 16px; color: var(--text); }
-    .ai-text { font-size: 14px; line-height: 1.6; color: #E2DACF; }
-    .ai-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
-    .ai-stat { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--border); }
-    .ai-stat-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
-    .ai-stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
-    .ai-plan { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-    .ai-plan-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(0,0,0,0.22); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
-    .ai-plan-row span:first-child { color: var(--text-muted); }
-    .ai-plan-row strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ai-text { font-size: 14px; line-height: 1.65; color: #E2DACF; }
     .ai-reason { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); color: var(--text-muted); font-size: 12px; line-height: 1.55; }
 
     .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
@@ -72,7 +64,6 @@
     .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .stat-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 12px; display: flex; flex-direction: column; justify-content: space-between; }
     .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
     .stat-value { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; }
     
     .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
@@ -107,7 +98,6 @@
     .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
     .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
 
-    /* כפתורי בחירת קטגוריה מהירים (Pills) */
     .category-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
     .pill { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
     .pill:hover { border-color: var(--border-focus); color: var(--text); }
@@ -120,7 +110,8 @@
     .google-btn { width: 100%; border: 1px solid var(--border); border-radius: 14px; background: #fff; color: #222; padding: 13px 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
     .google-btn:hover { transform: translateY(-1px); }
     .login-error { color: var(--negative); font-size: 13px; line-height: 1.5; margin-top: 14px; }
-    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
+    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+    .logout-btn:hover { border-color: var(--accent); color: var(--text); }
   </style>
 </head>
 <body>
@@ -218,9 +209,6 @@
     if (Number.isNaN(invoiceDate.getTime())) return invoiceDateStr;
     if (daysToAdd <= 0) return invoiceDateStr;
 
-    // שוטף +30/+60/+90:
-    // קודם מגיעים ליום האחרון בחודש שבו הוצאה החשבונית,
-    // ורק מאותו יום מוסיפים את מספר ימי האשראי.
     const endOfInvoiceMonth = new Date(
       invoiceDate.getFullYear(),
       invoiceDate.getMonth() + 1,
@@ -231,18 +219,6 @@
     return dateToStr(endOfInvoiceMonth);
   };
 
-  const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
-    const d = parseLocalDate(expenseDateStr);
-    let month = d.getMonth();
-    let year = d.getFullYear();
-    if (d.getDate() >= billingDay) {
-      month += 1;
-    }
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const chargeDate = new Date(year, month, Math.min(Number(billingDay), lastDay), 12);
-    return dateToStr(chargeDate);
-  };
-
   const addMonths = (d, months) => {
     const source = parseLocalDate(d);
     const target = new Date(source.getFullYear(), source.getMonth() + Number(months), 1, 12);
@@ -251,8 +227,6 @@
     return dateToStr(target);
   };
 
-  // רכישה מה־25 בחודש והלאה נכנסת למחזור התשלומים של החודש הבא.
-  // לדוגמה: קנייה ב־30.07 ב־3 תשלומים = אוגוסט 1/3, ספטמבר 2/3, אוקטובר 3/3.
   const calcInstallmentStartDate = (purchaseDateStr) => {
     const purchaseDate = parseLocalDate(purchaseDateStr);
     if (Number.isNaN(purchaseDate.getTime())) return purchaseDateStr;
@@ -295,22 +269,6 @@
     return { expenses: normalized, changed };
   };
 
-  const splitInstallmentAmounts = (originalAmount, count, interest = 0, customMonthly = 0) => {
-    const payments = Number(count);
-    const originalCents = Math.round(Number(originalAmount) * 100);
-    if (!Number.isInteger(payments) || payments < 2 || payments > 36 || originalCents <= 0) return [];
-
-    if (Number(customMonthly) > 0) {
-      const monthlyCents = Math.round(Number(customMonthly) * 100);
-      return Array(payments).fill(monthlyCents);
-    }
-
-    const totalCents = originalCents + Math.max(0, Math.round(Number(interest || 0) * 100));
-    const base = Math.floor(totalCents / payments);
-    const remainder = totalCents - (base * payments);
-    return Array.from({ length: payments }, (_, index) => base + (index >= payments - remainder ? 1 : 0));
-  };
-  
   const fmtMoney = (n) => {
     const val = Number(n || 0);
     return new Intl.NumberFormat("he-IL", { 
@@ -322,10 +280,115 @@
   };
 
   const fmtDate = (d) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short", year: "2-digit" }).format(parseLocalDate(d));
-  const fmtMonth = (d) => new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric" }).format(parseLocalDate(d));
   const monthKey = (d) => (d ? d.slice(0, 7) : todayStr().slice(0, 7));
   const daysUntil = (d) => Math.round((parseLocalDate(d) - parseLocalDate(todayStr())) / 86400000);
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // ============================================================================
+  // ניהול מפתח GEMINI API בחינם ישירות בדפדפן (localStorage)
+  // ============================================================================
+  window.saveApiKey = function() {
+    const input = document.getElementById("api-key-input");
+    if (input && input.value.trim()) {
+      localStorage.setItem("GEMINI_API_KEY", input.value.trim());
+      render();
+    }
+  };
+
+  window.removeApiKey = function() {
+    localStorage.removeItem("GEMINI_API_KEY");
+    render();
+  };
+
+  function renderAIAssistant(c) {
+    const apiKey = localStorage.getItem("GEMINI_API_KEY");
+
+    if (!apiKey) {
+      return `
+        <div class="ai-card">
+          <div class="ai-header">
+            <span class="ai-title">🤖 יועץ AI פיננסי לצלמים</span>
+            <span class="ai-badge">הפעלה</span>
+          </div>
+          <div class="ai-text" style="text-align:center; padding: 6px 0;">
+            🔑 כדי להפעיל ניתוח AI חכם ומתקדם בלייב, הדבק כאן את מפתח ה-Gemini API שלך:
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+            <input type="password" id="api-key-input" class="input" placeholder="הדבק API Key כאן..." style="text-align:center;" />
+            <button class="submit-btn" onclick="saveApiKey()" style="margin-top:0;">שמור מפתח והפעל AI</button>
+          </div>
+          <div class="ai-reason" style="text-align:center;">
+            🔒 המפתח נשמר בדפדפן שלך בלבד ולא נחשף לשרתים חיצוניים או ל-GitHub.
+          </div>
+        </div>
+      `;
+    }
+
+    setTimeout(() => fetchGeminiAdvice(c), 50);
+
+    return `
+      <div class="ai-card">
+        <div class="ai-header">
+          <span class="ai-title">🤖 יועץ AI פיננסי לצלמים</span>
+          <button class="logout-btn" onclick="removeApiKey()">🔑 החלף מפתח</button>
+        </div>
+        <div id="ai-live-content" class="ai-text">
+          <div style="text-align:center; padding:15px; color:var(--text-muted);">
+            ⏳ מנתח את התזרים, ימי האשראי, המיסים וקרן הציוד...
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function fetchGeminiAdvice(c) {
+    const container = document.getElementById("ai-live-content");
+    if (!container) return;
+
+    const apiKey = localStorage.getItem("GEMINI_API_KEY");
+    if (!apiKey) return;
+
+    const prompt = `
+אתה יועץ פיננסי בכיר, טקטי וממוקד לפרילנסרים בתעשיית הצילום והקולנוע.
+להלן נתוני התזרים המעודכנים של המשתמש (ב-₪):
+- יתרה נוכחית בעו"ש: ${c.actualCurrentBalance}
+- הוצאות צפויות החודש: ${c.amountToPayThisMonth}
+- הוצאות צפויות חודש הבא: ${c.totalExpNextMonth}
+- הכנסות ששולמו החודש: ${c.monthPaidIncome}
+- הכנסות ממתינות (שוטף+): ${c.monthExpectedIncome}
+- סכום חובות באיחור גבייה: ${c.overdueAmount}
+
+הפק ניתוח קצר, קולע ושימושי ב-4 בולטים קצרים (כלול אימוג'ים מתאימים):
+1. נזילות ריאלית: חיווי על היתרה האמיתית לאחר קיזוז רזרבת מיסים (מע"מ ומקדמות מס מוערכות ב-25%-30%).
+2. ציוד ובלאי: המלצה להקצאת רזרבה לשדרוג/תחזוקת ציוד צילום (מצלמות/עדשות/ציוד היקפי).
+3. אופק תזרימי (Runway): הערכה לכמה זמן התזרים יספיק במקרה של ירידה בימי צילום.
+4. השקעות ועודפים: המלצה מעשית לגבי עודפים פנויים (חיסכון/השקעה במדדים או מניות) או אזהרה דחופה אם יש חוסר.
+
+ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
+`;
+
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        container.innerHTML = `⚠️ שגיאה בחיבור ל-API: ${data.error.message}. <br><button class="link-btn" onclick="removeApiKey()" style="margin-top:8px;">הזן מפתח מחדש</button>`;
+        return;
+      }
+
+      const text = data.candidates[0].content.parts[0].text;
+      container.innerHTML = text.replace(/\n/g, "<br>");
+    } catch (err) {
+      container.innerHTML = "⚠️ שגיאה בתקשורת מול ה-AI. בדוק את חיבור האינטרנט.";
+    }
+  }
 
   function startDataListener() {
     if (stopDataListener) return;
@@ -410,30 +473,17 @@
       .filter((income) => income.status !== "paid")
       .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
 
-    const pastExpenses = (state.expenses || []).filter(
-      (expense) => monthKey(expense.date) < thisMonth
-    );
-
     const currentExpenses = (state.expenses || []).filter(
       (expense) => monthKey(expense.date) === thisMonth
     );
 
-    // הכרטיס הראשי של העתיד כולל רק את החודש הבא.
     const futureExpenses = (state.expenses || []).filter(
       (expense) => monthKey(expense.date) === nextMonth
     );
 
-    // התשלומים הרחוקים נשמרים ונגישים דרך הכפתור הייעודי לעריכה.
-    const laterExpenses = (state.expenses || []).filter(
-      (expense) => monthKey(expense.date) > nextMonth
-    );
-
-    const totalExpPast = pastExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
     const totalExpCurrent = currentExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
     const totalExpFuture = futureExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-    const totalExpLater = laterExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 
-    // יתרת הבנק היא בדיוק הסכום שהמשתמש הזין.
     const actualCurrentBalance = Number(state.openingBalance || 0);
     const amountToPayThisMonth = totalExpCurrent;
     const balanceAfterExpenses = actualCurrentBalance - amountToPayThisMonth;
@@ -446,33 +496,165 @@
       .filter((income) => monthKey(income.expectedDate) === thisMonth)
       .reduce((sum, income) => sum + Number(income.amount), 0);
 
-    const finalExpectedBalance = balanceAfterExpenses + monthExpectedIncome;
-    const safeToSpend = Math.max(0, balanceAfterExpenses);
     const overdueIncomes = pending.filter((income) => daysUntil(income.expectedDate) < 0);
     const overdueAmount = overdueIncomes.reduce((sum, income) => sum + Number(income.amount), 0);
 
     return {
-      openingBalance: Number(state.openingBalance || 0),
       actualCurrentBalance,
       amountToPayThisMonth,
       balanceAfterExpenses,
-      finalExpectedBalance,
-      pending,
       monthPaidIncome,
       monthExpectedIncome,
-      totalExpPast,
-      totalExpCurrent,
-      totalExpFuture,
       totalExpNextMonth: totalExpFuture,
-      totalExpLater,
-      safeToSpend,
       overdueAmount,
-      overdueCount: overdueIncomes.length,
-      pastExpenses,
-      currentExpenses,
-      futureExpenses,
-      laterExpenses
+      pending
     };
+  }
+
+  function renderDashboard(c) {
+    return `
+      <div class="hero">
+        <div class="hero-label">הסכום האמיתי שיש לי עכשיו בחשבון</div>
+        <div class="hero-number" style="color:var(--positive)">${fmtMoney(c.actualCurrentBalance)}</div>
+        <button class="link-btn" data-action="toggle-balance-edit">✏️ עדכון הסכום בחשבון</button>
+        ${ui.showBalanceEdit ? `
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="כמה כסף יש לך עכשיו?"/>
+            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שמור סכום</button>
+          </div>` : ""}
+      </div>
+
+      <div class="stat-row">
+        ${statCard("יש לי עכשיו", fmtMoney(c.actualCurrentBalance), "var(--positive)")}
+        ${statCard("אמור לרדת לי", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
+        ${statCard("יישאר לי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 חישוב פשוט וברור</div>
+        <div class="summary-box">
+          <div class="summary-item" style="font-weight:700;color:var(--positive);">
+            <span>1. יש לי עכשיו בחשבון:</span>
+            <span>${fmtMoney(c.actualCurrentBalance)}</span>
+          </div>
+          <div class="summary-item" style="font-weight:700;color:var(--negative);">
+            <span>2. ירדו לי הוצאות החודש:</span>
+            <span>-${fmtMoney(c.amountToPayThisMonth)}</span>
+          </div>
+          <div class="summary-item total">
+            <span>יישאר בבנק בסוף החודש:</span>
+            <span>${fmtMoney(c.balanceAfterExpenses)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function statCard(title, value, color) {
+    return `
+      <div class="stat-card">
+        <div class="stat-dot-row">
+          <span class="dot" style="background:${color}"></span>
+          <span>${title}</span>
+        </div>
+        <div class="stat-value" style="color:${color}">${value}</div>
+      </div>
+    `;
+  }
+
+  function renderIncome() {
+    return `
+      <div class="card">
+        <div class="card-title">💰 הכנסות ועבודות</div>
+        <button class="add-btn" data-action="toggle-income-form">➕ הוסף הכנסה / חשבונית</button>
+        
+        ${ui.showIncomeForm ? `
+          <div class="form-box">
+            <div style="font-weight:700;font-size:16px;">${ui.editingIncomeId ? "עריכת הכנסה" : "הכנסה חדשה"}</div>
+            <label class="label">תיאור העבודה / לקוח
+              <input class="input" id="inc-desc" placeholder="למשל: יום צילום פרסומת" />
+            </label>
+            <label class="label">סכום (₪)
+              <input class="input" id="inc-amount" type="number" step="0.01" placeholder="0.00" />
+            </label>
+            <label class="label">תאריך חשבונית
+              <input class="input" id="inc-date" type="date" value="${todayStr()}" />
+            </label>
+            <label class="label">תנאי תשלום
+              <select class="input" id="inc-terms">
+                ${TERMS.map(t => `<option value="${t.days}">${t.label}</option>`).join("")}
+              </select>
+            </label>
+            <button class="submit-btn" data-action="save-income">שמור הכנסה</button>
+            <button class="cancel-btn" data-action="toggle-income-form">ביטול</button>
+          </div>
+        ` : ""}
+
+        <div style="margin-top:16px;">
+          ${(state.incomes || []).length === 0 ? '<div class="empty">אין הכנסות רשומות</div>' : 
+            state.incomes.map(inc => `
+              <div class="row">
+                <div>
+                  <div class="row-title">${esc(inc.desc)}</div>
+                  <div class="row-sub">
+                    <span>${fmtDate(inc.date)}</span> • 
+                    <span style="color:${inc.status === 'paid' ? 'var(--positive)' : 'var(--accent)'}">
+                      ${inc.status === 'paid' ? 'שולם 🎉' : 'צפוי: ' + fmtDate(inc.expectedDate)}
+                    </span>
+                  </div>
+                </div>
+                <div class="row-amount" style="color:var(--positive)">+${fmtMoney(inc.amount)}</div>
+                <div class="actions-group">
+                  ${inc.status !== 'paid' ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}">✓</button>` : ''}
+                  <button class="icon-btn-muted icon-btn-danger" data-action="delete-income" data-id="${inc.id}">🗑️</button>
+                </div>
+              </div>
+            `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderExpenses(c) {
+    return `
+      <div class="card">
+        <div class="card-title">💳 הוצאות ותשלומים</div>
+        <button class="add-btn" data-action="toggle-expense-form">➕ הוסף הוצאה חדשה</button>
+
+        ${ui.showExpenseForm ? `
+          <div class="form-box">
+            <div style="font-weight:700;font-size:16px;">הוצאה חדשה</div>
+            <label class="label">תיאור ההוצאה
+              <input class="input" id="exp-desc" placeholder="למשל: ציוד צילום, דלק" />
+            </label>
+            <label class="label">סכום (₪)
+              <input class="input" id="exp-amount" type="number" step="0.01" placeholder="0.00" />
+            </label>
+            <label class="label">תאריך הוצאה
+              <input class="input" id="exp-date" type="date" value="${todayStr()}" />
+            </label>
+            <button class="submit-btn" data-action="save-expense">שמור הוצאה</button>
+            <button class="cancel-btn" data-action="toggle-expense-form">ביטול</button>
+          </div>
+        ` : ""}
+
+        <div style="margin-top:16px;">
+          ${(state.expenses || []).length === 0 ? '<div class="empty">אין הוצאות רשומות</div>' : 
+            state.expenses.map(exp => `
+              <div class="row">
+                <div>
+                  <div class="row-title">${esc(exp.desc)}</div>
+                  <div class="row-sub">${fmtDate(exp.date)}</div>
+                </div>
+                <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
+                <div class="actions-group">
+                  <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${exp.id}">🗑️</button>
+                </div>
+              </div>
+            `).join("")}
+        </div>
+      </div>
+    `;
   }
 
   function render() {
@@ -528,454 +710,24 @@
     `;
   }
 
-  function renderAIAssistant(c) {
-    // ============================================================================
-    // יועץ חכם בלוח הבקרה בלבד
-    // הכנסות שממתינות לתשלום אינן נחשבות לכסף זמין עד שהן סומנו כ"שולם".
-    // ============================================================================
-    const currentBalance = Number(c.actualCurrentBalance || 0);
-    const thisMonthExpenses = Number(c.amountToPayThisMonth || 0);
-    const nextMonthExpenses = Number(c.totalExpNextMonth || 0);
-    const typicalMonth = Math.max(thisMonthExpenses, nextMonthExpenses);
-    const emergencyTarget = Math.max(3000, typicalMonth * 2);
-    const afterKnownPayments = currentBalance - thisMonthExpenses - nextMonthExpenses;
-    const trulyFreeMoney = Math.max(0, afterKnownPayments - emergencyTarget);
-
-    const recommendedSaving = Math.floor(trulyFreeMoney * 0.60);
-    const recommendedInvestment = Math.floor(trulyFreeMoney * 0.25);
-    const safeFunMoney = Math.floor(trulyFreeMoney * 0.15);
-    const missingForSafety = Math.max(0, emergencyTarget - afterKnownPayments);
-
-    let advice = "";
-    let investmentText = "";
-
-    if (afterKnownPayments < 0) {
-      advice = `🛑 <strong>כרגע לא כדאי להוציא או להשקיע.</strong> אחרי הוצאות החודש והחודש הבא צפוי חוסר של <strong>${fmtMoney(Math.abs(afterKnownPayments))}</strong>. קודם כדאי להשאיר את הכסף בחשבון ולצמצם הוצאה לא הכרחית.`;
-      investmentText = "לא להשקיע כרגע";
-    } else if (missingForSafety > 0) {
-      advice = `⚠️ <strong>עדיין לא כדאי להשקיע.</strong> לאחר ההוצאות הידועות יישארו <strong>${fmtMoney(afterKnownPayments)}</strong>, אבל כדי להיות מוגן בתקופה חלשה חסרים עוד <strong>${fmtMoney(missingForSafety)}</strong> לכרית הביטחון.`;
-      investmentText = "קודם להשלים כרית ביטחון";
-    } else if (recommendedInvestment < 500) {
-      advice = `💡 <strong>המצב מאוזן, אבל העודף עדיין קטן.</strong> עדיף לשמור אותו נזיל ולא למהר להשקיע. אפשר להוציא להנאה עד <strong>${fmtMoney(safeFunMoney)}</strong> בלי לפגוע בתוכנית.`;
-      investmentText = "להמתין בינתיים";
-    } else {
-      advice = `✅ <strong>אפשר גם לחסוך וגם לשקול השקעה.</strong> אחרי כל ההוצאות הידועות וכרית ביטחון נשאר עודף של <strong>${fmtMoney(trulyFreeMoney)}</strong>. החלוקה המומלצת מופיעה למטה.`;
-      investmentText = `אפשר לשקול עד ${fmtMoney(recommendedInvestment)}`;
-    }
-
-    const collectionTip = c.overdueCount > 0
-      ? ` יש גם <strong>${fmtMoney(c.overdueAmount)}</strong> באיחור — כדאי לגבות אותו לפני שמגדילים הוצאות.`
-      : "";
-
-    return `
-      <div class="ai-card">
-        <div class="ai-header">
-          <span class="ai-badge">AI FINANCIAL ADVISOR</span>
-          <span class="ai-title">היועץ הפיננסי שלך</span>
-        </div>
-        <div class="ai-text">${advice}${collectionTip}</div>
-        <div class="ai-grid">
-          <div class="ai-stat">
-            <div class="ai-stat-label">בטוח להוציא להנאה</div>
-            <div class="ai-stat-value" style="color:${safeFunMoney > 0 ? "var(--positive)" : "var(--negative)"}">${fmtMoney(safeFunMoney)}</div>
-          </div>
-          <div class="ai-stat">
-            <div class="ai-stat-label">המלצת השקעה</div>
-            <div class="ai-stat-value" style="color:${recommendedInvestment >= 500 ? "var(--positive)" : "var(--accent)"}">${investmentText}</div>
-          </div>
-        </div>
-        <div class="ai-plan">
-          <div class="ai-plan-row"><span>🛡️ כרית ביטחון מומלצת</span><strong>${fmtMoney(emergencyTarget)}</strong></div>
-          <div class="ai-plan-row"><span>💰 להעביר לחיסכון עכשיו</span><strong style="color:var(--positive)">${fmtMoney(recommendedSaving)}</strong></div>
-          <div class="ai-plan-row"><span>📈 סכום שאפשר לשקול להשקיע</span><strong style="color:var(--accent)">${fmtMoney(recommendedInvestment)}</strong></div>
-          <div class="ai-plan-row"><span>🎉 מותר להוציא בלי לפגוע בתוכנית</span><strong>${fmtMoney(safeFunMoney)}</strong></div>
-        </div>
-        <div class="ai-reason">
-          החישוב שמרני: הוא מוריד את הוצאות החודש ואת הוצאות החודש הבא, משאיר כרית של לפחות ${fmtMoney(emergencyTarget)}, ולא סופר הכנסות שעדיין לא שולמו. זו המלצת תזרים כללית ולא ייעוץ השקעות אישי.
-        </div>
-      </div>
-    `;
-  }
-
-  function renderDashboard(c) {
-    return `
-      <div class="hero">
-        <div class="hero-label">הסכום האמיתי שיש לי עכשיו בחשבון</div>
-        <div class="hero-number" style="color:var(--positive)">${fmtMoney(c.actualCurrentBalance)}</div>
-        <button class="link-btn" data-action="toggle-balance-edit">✏️ עדכון הסכום בחשבון</button>
-        ${ui.showBalanceEdit ? `
-          <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="כמה כסף יש לך עכשיו?"/>
-            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שמור סכום</button>
-          </div>` : ""}
-      </div>
-
-      <div class="stat-row">
-        ${statCard("יש לי עכשיו", fmtMoney(c.actualCurrentBalance), "var(--positive)")}
-        ${statCard("אמור לרדת לי", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
-        ${statCard("יישאר לי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
-      </div>
-
-      <div class="card">
-        <div class="card-title">📋 חישוב פשוט וברור</div>
-        <div class="summary-box">
-          <div class="summary-item" style="font-weight:700;color:var(--positive);">
-            <span>1. יש לי עכשיו בחשבון:</span>
-            <span>${fmtMoney(c.actualCurrentBalance)}</span>
-          </div>
-          <div class="summary-item sub" style="color:var(--negative)">
-            <span>2. כל ההוצאות של החודש:</span>
-            <span>-${fmtMoney(c.amountToPayThisMonth)}</span>
-          </div>
-          <div class="summary-item total">
-            <span>יישאר לי לאחר הוצאות החודש:</span>
-            <span style="color:${c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)"}">${fmtMoney(c.balanceAfterExpenses)}</span>
-          </div>
-          <div class="summary-item" style="margin-top:6px;border-top:1px dashed var(--border);padding-top:10px;">
-            <span>הכנסות שצפויות להיכנס החודש:</span>
-            <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
-          </div>
-          <div class="summary-item">
-            <span>אם ההכנסות ייכנסו, צפוי להיות:</span>
-            <span style="color:var(--accent)">${fmtMoney(c.finalExpectedBalance)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">⏳ תשלומים בדרך אליך (ממתין מגבייה)</div>
-        ${c.pending.length === 0 ? '<div class="empty">אין תשלומים ממתינים כרגע.</div>' :
-          c.pending.map((inc) => {
-            const d = daysUntil(inc.expectedDate);
-            return `<div class="row">
-              <div style="flex:1">
-                <div class="row-title">${esc(inc.client)}</div>
-                <div class="row-sub">צפוי ב-${fmtDate(inc.expectedDate)} · ${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}</div>
-              </div>
-              <div class="row-amount">${fmtMoney(inc.amount)}</div>
-              <div class="actions-group">
-                <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>
-                <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
-              </div>
-            </div>`;
-          }).join("")}
-      </div>
-    `;
-  }
-
-  function statCard(label, value, dot) {
-    return `<div class="stat-card"><div class="stat-dot-row"><span class="dot" style="background:${dot}"></span>${label}</div><div class="stat-value">${value}</div></div>`;
-  }
-
   // ============================================================================
-  // הכנסות — אזור שמור ונעול
-  // אין לשנות את תנאי התשלום, התאריכים, העריכה או השמירה ללא בקשה מפורשת.
+  // אירועי לחיצה וממשק משתמש (Event Listeners)
   // ============================================================================
-  function renderIncome() {
-    const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
-    const editingItem = ui.editingIncomeId ? state.incomes.find(i => i.id === ui.editingIncomeId) : null;
-    const totalPaid = sorted
-      .filter((income) => income.status === "paid")
-      .reduce((sum, income) => sum + Number(income.amount || 0), 0);
-    const totalPending = sorted
-      .filter((income) => income.status !== "paid")
-      .reduce((sum, income) => sum + Number(income.amount || 0), 0);
-    const totalAllIncome = totalPaid + totalPending;
-
-    return `
-      <div class="stat-row">
-        ${statCard("כבר שולם", fmtMoney(totalPaid), "var(--positive)")}
-        ${statCard("עדיין ממתין", fmtMoney(totalPending), "var(--accent)")}
-        ${statCard("סה״כ הכול", fmtMoney(totalAllIncome), "#F7F4EF")}
-      </div>
-
-      <button class="add-btn" data-action="toggle-income-form">${ui.editingIncomeId ? "ביטול עריכה" : "+ הוספת עבודה / יום צילום"}</button>
-      
-      ${(ui.showIncomeForm || ui.editingIncomeId) ? `
-      <div class="form-box">
-        <div style="font-weight:700;font-size:16px;color:var(--accent);margin-bottom:6px;">
-          ${editingItem ? "✏️ עריכת הכנסה" : "➕ הוספת הכנסה חדשה"}
-        </div>
-        <label class="label">לקוח / תיאור העבודה
-          <input class="input" id="inc-client" placeholder="למשל: צילומי תדמית / פרסומת" value="${editingItem ? esc(editingItem.client) : ''}"/>
-        </label>
-        <label class="label">סכום מדויק (₪)
-          <input class="input" id="inc-amount" type="number" step="0.01" placeholder="0.00" value="${editingItem ? editingItem.amount : ''}"/>
-        </label>
-        <label class="label">תאריך הוצאת החשבונית
-          <input class="input" id="inc-date" type="date" value="${editingItem ? editingItem.date : todayStr()}"/>
-        </label>
-        <label class="label">תנאי תשלום
-          <select class="input" id="inc-term">
-            ${TERMS.map((t) => `<option value="${t.days}" ${editingItem && editingItem.termDays == t.days ? 'selected' : ''}>${t.label}</option>`).join("")}
-          </select>
-        </label>
-        <button type="button" class="submit-btn" data-action="save-income-direct">${editingItem ? "עדכן הכנסה" : "שמור הכנסה"}</button>
-        ${editingItem ? `<button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>` : ''}
-      </div>` : ""}
-
-      <div class="card" style="padding:0 20px;">
-        ${sorted.length === 0 ? '<div class="empty">עדיין לא הוכנסו עבודות.</div>' : sorted.map((inc) => `
-          <div class="row">
-            <div style="flex:1">
-              <div class="row-title">${esc(inc.client)}</div>
-              <div class="row-sub">${fmtDate(inc.date)} · ${inc.status === "paid" ? `<span style="color:var(--positive)">שולם ב-${fmtDate(inc.paidDate)}</span>` : `<span style="color:var(--accent)">צפוי ב-${fmtDate(inc.expectedDate)}</span>`}</div>
-            </div>
-            <div class="row-amount">${fmtMoney(inc.amount)}</div>
-            <div class="actions-group">
-              ${inc.status !== "paid" ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>` : ""}
-              <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
-              <button class="icon-btn-muted icon-btn-danger" data-action="delete-income" data-id="${inc.id}" title="מחיקה">🗑</button>
-            </div>
-          </div>`).join("")}
-      </div>
-    `;
-  }
-
-  // ============================================================================
-  // הוצאות — אזור שמור ונעול
-  // אין לשנות את החישובים, חלוקת התשלומים, העריכה, השמירה או סדר התצוגה
-  // באזור הזה ללא בקשה מפורשת של המשתמש.
-  // ============================================================================
-  function renderExpenses(c) {
-    const editingItem = ui.editingExpenseId ? state.expenses.find(e => e.id === ui.editingExpenseId) : null;
-
-    const editingSeries = editingItem?.installmentGroupId
-      ? (state.expenses || [])
-          .filter((expense) => expense.installmentGroupId === editingItem.installmentGroupId)
-          .sort((a, b) => {
-            const aNumber = Number(String(a.installmentInfo || "1/1").split("/")[0]);
-            const bNumber = Number(String(b.installmentInfo || "1/1").split("/")[0]);
-            return aNumber - bNumber;
-          })
-      : [];
-
-    const editingInstallmentSeries = editingSeries.length > 0;
-    const firstSeriesPayment = editingInstallmentSeries ? editingSeries[0] : null;
-    const editingInstallmentCount = editingInstallmentSeries
-      ? Number(String(firstSeriesPayment.installmentInfo || `1/${editingSeries.length}`).split("/")[1]) || editingSeries.length
-      : Number(ui.tempExpense.installmentsCount || 6);
-
-    const editingSeriesTotal = editingInstallmentSeries
-      ? Number(firstSeriesPayment.fullOriginalAmount) || editingSeries.reduce((sum, expense) => sum + Number(expense.amount), 0)
-      : 0;
-
-    const valDesc = editingItem ? esc(editingItem.desc) : esc(ui.tempExpense.desc || '');
-    const valAmount = editingInstallmentSeries ? editingSeriesTotal : (editingItem ? editingItem.amount : (ui.tempExpense.amount || ''));
-    const valDate = editingInstallmentSeries ? (firstSeriesPayment.purchaseDate || firstSeriesPayment.date) : (editingItem ? editingItem.date : (ui.tempExpense.date || todayStr()));
-
-    const currentList = [...c.currentExpenses].sort((a, b) => a.date.localeCompare(b.date));
-    const futureList = [...c.futureExpenses].sort((a, b) => a.date.localeCompare(b.date));
-    const laterList = [...c.laterExpenses].sort((a, b) => a.date.localeCompare(b.date));
-    const pastList = [...c.pastExpenses].sort((a, b) => b.date.localeCompare(a.date));
-
-    const renderExpenseRow = (exp, isPast) => {
-      const catObj = CATEGORIES.find(c => c.name === exp.category);
-      const icon = catObj ? catObj.icon : "📦";
-      const chargeDate = exp.date;
-      
-      let installmentDetails = "";
-      if (exp.fullOriginalAmount) {
-        installmentDetails = ` · סכום מלא: ${fmtMoney(exp.fullOriginalAmount)}`;
-        if (exp.interestAmount) {
-          installmentDetails += ` (כולל ריבית של ${fmtMoney(exp.interestAmount)})`;
-        }
-      }
-
-      return `
-      <div class="row">
-        <div style="flex:1">
-          <div class="row-title">${icon} ${esc(exp.desc)}</div>
-          <div class="row-sub">
-            תאריך ההוצאה: <strong>${fmtDate(chargeDate)}</strong>
-            ${exp.installmentInfo ? `<span style="color:var(--accent)"> · תשלום ${String(exp.installmentInfo).replace("/", " מתוך ")}</span>` : ""}
-            ${installmentDetails}
-            ${exp.recurring ? " · קבועה" : ""}
-          </div>
-        </div>
-        <div class="row-amount" style="color:var(--negative)">-${fmtMoney(exp.amount)}</div>
-        <div class="actions-group">
-          <button class="icon-btn-muted" data-action="edit-expense" data-id="${exp.id}" title="ערוך">✏️</button>
-          <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${exp.id}" title="מחיקה">🗑</button>
-        </div>
-      </div>`;
-    };
-
-    const groupByCategory = (items) => {
-      const groups = new Map();
-      items.forEach((expense) => {
-        const category = expense.category || "אחר";
-        if (!groups.has(category)) groups.set(category, []);
-        groups.get(category).push(expense);
-      });
-      return [...groups.entries()].sort(([a], [b]) => {
-        const aIndex = CATEGORIES.findIndex(c => c.name === a);
-        const bIndex = CATEGORIES.findIndex(c => c.name === b);
-        return (aIndex < 0 ? 999 : aIndex) - (bIndex < 0 ? 999 : bIndex);
-      });
-    };
-
-    const renderCategoryGroups = (items) => groupByCategory(items).map(([category, expenses]) => {
-      const catObj = CATEGORIES.find(c => c.name === category);
-      const subtotal = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-      return `
-        <div style="padding:12px 0 4px;color:var(--text-muted);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-bottom:1px dashed var(--border);">
-          <span>${catObj?.icon || "📦"} ${esc(category)}</span>
-          <span>${fmtMoney(subtotal)}</span>
-        </div>
-        ${expenses.map((expense) => renderExpenseRow(expense)).join("")}
-      `;
-    }).join("");
-
-    const renderFutureMonths = (items) => {
-      const months = new Map();
-      items.forEach((expense) => {
-        const chargeMonth = monthKey(expense.date);
-        if (!months.has(chargeMonth)) months.set(chargeMonth, []);
-        months.get(chargeMonth).push(expense);
-      });
-      return [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, expenses]) => {
-        const monthTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-        return `
-          <div style="padding:16px 0 6px;color:var(--accent);font-size:14px;font-weight:800;display:flex;justify-content:space-between;">
-            <span>${fmtMonth(`${month}-01`)}</span>
-            <span>${fmtMoney(monthTotal)}</span>
-          </div>
-          ${renderCategoryGroups(expenses)}
-        `;
-      }).join("");
-    };
-
-    return `
-      <button class="add-btn" data-action="toggle-expense-form">${ui.editingExpenseId ? "ביטול עריכה" : "+ הוספת הוצאה חדשה"}</button>
-      
-      ${(ui.showExpenseForm || ui.editingExpenseId) ? `
-      <div class="form-box">
-        <div style="font-weight:700;font-size:16px;color:var(--accent);margin-bottom:6px;">
-          ${editingInstallmentSeries ? "✏️ עריכת סדרת תשלומים" : (editingItem ? "✏️ עריכת הוצאה" : "➕ הוספת הוצאה חדשה")}
-        </div>
-        <label class="label">תיאור ההוצאה
-          <input class="input" id="exp-desc" placeholder="למשל: סופר, תשלומים לציוד" value="${valDesc}"/>
-        </label>
-        <label class="label">${editingInstallmentSeries || ui.isInstallments ? "הסכום הכולל של כל העסקה (₪)" : "סכום ההוצאה (₪)"}
-          <input class="input" id="exp-amount" type="number" step="0.01" placeholder="למשל: 3524" value="${valAmount}"/>
-        </label>
-        <label class="label">${editingInstallmentSeries || ui.isInstallments ? "תאריך הקנייה" : "תאריך הרכישה"}
-          <input class="input" id="exp-date" type="date" value="${valDate}"/>
-        </label>
-
-        <label class="label">בחירת קטגוריה
-          <div class="category-pills">
-            ${CATEGORIES.map((c) => {
-              const currentCat = ui.selectedCategory;
-              return `
-              <div class="pill ${currentCat === c.name ? "selected" : ""}" data-action="select-category" data-cat="${c.name}">
-                <span>${c.icon}</span>
-                <span>${c.name}</span>
-              </div>`;
-            }).join("")}
-          </div>
-        </label>
-        
-        ${!editingItem ? `
-        <label class="label checkbox-label">
-          <input type="checkbox" id="installments-check" style="width:18px;height:18px;accent-color:var(--accent)" ${ui.isInstallments ? "checked" : ""}/> 
-          חלק לתשלומים חודשיים
-        </label>
-
-        ` : editingInstallmentSeries ? `
-          <div style="padding:12px 14px;border-radius:12px;background:rgba(255,112,36,.1);border:1px solid rgba(255,112,36,.35);color:var(--accent);font-size:13px;font-weight:600;">
-            עריכת סדרת התשלומים כולה — קנייה מה־25 בחודש עוברת אוטומטית למחזור התשלום של החודש הבא.
-          </div>
-        ` : ""}
-
-        ${ui.isInstallments || editingInstallmentSeries ? `
-          <div style="background:var(--surface-input);padding:14px;border-radius:14px;border:1px solid var(--border);display:flex;flex-direction:column;gap:12px;">
-            <label class="label">מספר תשלומים
-              <input class="input" id="exp-installmentsCount" type="number" min="2" max="36" value="${editingInstallmentSeries ? editingInstallmentCount : (ui.tempExpense.installmentsCount || 6)}"/>
-            </label>
-            <div style="font-size:12px;color:var(--accent);font-weight:600;">מנגנון חישוב ריבית/תשלום חודשי (אופציונלי):</div>
-            <label class="label">סכום יורד קבוע בכל תשלום חודשי (אם ידוע, למשל: 604.58)
-              <input class="input" id="exp-customMonthly" type="number" step="0.01" placeholder="למשל: 604.58" value="${ui.tempExpense.customMonthlyAmount || ''}"/>
-            </label>
-            <label class="label">או: סך הריבית / עמלת התשלומים הכוללת (₪) (למשל: 24.57)
-              <input class="input" id="exp-interest" type="number" step="0.01" placeholder="למשל: 24.57" value="${ui.tempExpense.interestAmount || ''}"/>
-            </label>
-          </div>
-        ` : !editingItem ? `
-          <label class="label checkbox-label">
-            <input type="checkbox" id="exp-recurring" style="width:18px;height:18px;accent-color:var(--accent)"/> הוצאה חודשית קבועה (מתחדשת)
-          </label>
-        ` : ""}
-
-        <button type="button" class="submit-btn" data-action="save-expense-direct">${editingInstallmentSeries ? "עדכן את כל סדרת התשלומים" : (editingItem ? "עדכן הוצאה" : "שמור הוצאה")}</button>
-        ${editingItem ? `<button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>` : ''}
-      </div>` : ""}
-
-      <div class="card" style="padding:0 20px;">
-        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>⏳ תשלום בחודש הבא — ${fmtMonth(addMonths(todayStr(), 1))}</span>
-          <span>${fmtMoney(c.totalExpFuture)}</span>
-        </div>
-        ${futureList.length === 0 ? '<div class="empty">אין חיובים בחודש הבא.</div>' : renderCategoryGroups(futureList)}
-      </div>
-
-      <button class="link-btn" style="width:100%;margin:0 0 20px;padding:11px 14px;" data-action="toggle-later-expenses">
-        ${ui.showLaterExpenses ? "הסתר תשלומים מחודשים מאוחרים" : "הצג וערוך את שאר התשלומים העתידיים"}
-        ${laterList.length ? `(${laterList.length} תשלומים · ${fmtMoney(c.totalExpLater)})` : ""}
-      </button>
-
-      ${ui.showLaterExpenses ? `
-        <div class="card" style="padding:0 20px;">
-          <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-            <span>📅 תשלומים לאחר החודש הבא</span>
-            <span>${fmtMoney(c.totalExpLater)}</span>
-          </div>
-          ${laterList.length === 0 ? '<div class="empty">אין תשלומים בחודשים מאוחרים יותר.</div>' : renderFutureMonths(laterList)}
-        </div>
-      ` : ""}
-
-      <div class="card" style="padding:0 20px;">
-        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>🔴 משלם עכשיו — ${fmtMonth(todayStr())}</span>
-          <span>${fmtMoney(c.totalExpCurrent)}</span>
-        </div>
-        ${currentList.length === 0 ? '<div class="empty">אין הוצאות בחודש הנוכחי.</div>' : renderCategoryGroups(currentList)}
-      </div>
-
-      <div class="card" style="padding:0 20px;">
-        <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>✅ שולם בעבר</span>
-          <span>${fmtMoney(c.totalExpPast)}</span>
-        </div>
-        ${pastList.length === 0 ? '<div class="empty">אין הוצאות מחודשים קודמים.</div>' : renderCategoryGroups(pastList)}
-      </div>
-    `;
-  }
-
-  // Event Listeners Routing
-  // ============================================================================
-  // סוף אזור תצוגת ההוצאות השמור
-  // ============================================================================
-
-  document.addEventListener("click", (e) => {
+  document.addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
-    
+
     const action = btn.dataset.action;
-    const id = btn.dataset.id;
 
     if (action === "google-login") {
-      authError = "";
-      googleProvider.setCustomParameters({ login_hint: ALLOWED_EMAIL });
-      signInWithPopup(auth, googleProvider).catch((error) => {
-        authError = error?.code === "auth/popup-closed-by-user"
-          ? "חלון ההתחברות נסגר לפני שהכניסה הושלמה."
-          : "ההתחברות נכשלה. יש לוודא שכניסת Google הופעלה ב-Firebase.";
+      try {
+        await signInWithPopup(auth, googleProvider);
+      } catch (err) {
+        authError = "שגיאה בתהליך ההתחברות";
         renderLogin();
-      });
+      }
     } else if (action === "logout") {
-      signOut(auth);
+      await signOut(auth);
     } else if (action === "tab") {
       ui.tab = btn.dataset.tab;
       render();
@@ -983,212 +735,66 @@
       ui.showBalanceEdit = !ui.showBalanceEdit;
       render();
     } else if (action === "save-balance") {
-      const bVal = document.getElementById("balance-input").value;
-      state.openingBalance = Number(bVal) || 0;
-      ui.showBalanceEdit = false;
-      saveToCloud();
+      const val = parseFloat(document.getElementById("balance-input").value);
+      if (!isNaN(val)) {
+        state.openingBalance = val;
+        ui.showBalanceEdit = false;
+        saveToCloud();
+      }
     } else if (action === "toggle-income-form") {
       ui.showIncomeForm = !ui.showIncomeForm;
-      ui.editingIncomeId = null;
       render();
-    } else if (action === "edit-income") {
-      ui.editingIncomeId = id;
-      ui.showIncomeForm = true;
-      ui.tab = "income";
-      render();
-    } else if (action === "cancel-edit") {
-      ui.editingIncomeId = null;
-      ui.editingExpenseId = null;
-      ui.showIncomeForm = false;
-      ui.showExpenseForm = false;
-      ui.isInstallments = false;
-      render();
-    } else if (action === "save-income-direct") {
-      const client = document.getElementById("inc-client").value;
-      const amount = Number(document.getElementById("inc-amount").value);
+    } else if (action === "save-income") {
+      const desc = document.getElementById("inc-desc").value.trim();
+      const amount = parseFloat(document.getElementById("inc-amount").value);
       const date = document.getElementById("inc-date").value;
-      const termDays = Number(document.getElementById("inc-term").value);
+      const termDays = parseInt(document.getElementById("inc-terms").value) || 0;
 
-      if (!client || !amount || !date) return;
-
-      if (ui.editingIncomeId) {
-        state.incomes = state.incomes.map(i => i.id === ui.editingIncomeId ? {
-          ...i, client, amount, date, termDays, expectedDate: calcExpectedDate(date, termDays)
-        } : i);
-      } else {
-        state.incomes.push({
+      if (desc && !isNaN(amount) && date) {
+        const newIncome = {
           id: uid(),
-          client,
+          desc,
           amount,
           date,
           termDays,
-          status: "pending",
-          expectedDate: calcExpectedDate(date, termDays)
-        });
+          expectedDate: calcExpectedDate(date, termDays),
+          status: "pending"
+        };
+        state.incomes.push(newIncome);
+        ui.showIncomeForm = false;
+        saveToCloud();
       }
-      ui.showIncomeForm = false;
-      ui.editingIncomeId = null;
-      saveToCloud();
     } else if (action === "mark-paid") {
-      const paidIncome = state.incomes.find(i => i.id === id);
-      if (!paidIncome || paidIncome.status === "paid") return;
-
-      // ברגע שהכסף התקבל בפועל, מוסיפים אותו ליתרה הנוכחית פעם אחת בלבד.
-      state.openingBalance = Number(state.openingBalance || 0) + Number(paidIncome.amount || 0);
-      state.incomes = state.incomes.map(i => i.id === id ? {
-        ...i,
-        status: "paid",
-        paidDate: todayStr(),
-        addedToCurrentBalance: true
-      } : i);
-      saveToCloud();
+      const id = btn.dataset.id;
+      const inc = state.incomes.find(i => i.id === id);
+      if (inc) {
+        inc.status = "paid";
+        inc.paidDate = todayStr();
+        saveToCloud();
+      }
     } else if (action === "delete-income") {
+      const id = btn.dataset.id;
       state.incomes = state.incomes.filter(i => i.id !== id);
       saveToCloud();
     } else if (action === "toggle-expense-form") {
       ui.showExpenseForm = !ui.showExpenseForm;
-      ui.editingExpenseId = null;
       render();
-    } else if (action === "toggle-later-expenses") {
-      ui.showLaterExpenses = !ui.showLaterExpenses;
-      render();
-    } else if (action === "select-category") {
-      ui.selectedCategory = btn.dataset.cat;
-      document.querySelectorAll('[data-action="select-category"]').forEach((pill) => {
-        pill.classList.toggle("selected", pill.dataset.cat === ui.selectedCategory);
-      });
-    } else if (action === "edit-expense") {
-      const exp = state.expenses.find(e => e.id === id);
-      if (exp) {
-        ui.editingExpenseId = id;
-        ui.selectedCategory = exp.category || CATEGORIES[0].name;
-        ui.isInstallments = !!exp.installmentGroupId;
-        ui.showExpenseForm = true;
-        ui.tab = "expenses";
-        render();
-        requestAnimationFrame(() => document.getElementById("exp-desc")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-      }
-    } else if (action === "delete-expense") {
-      state.expenses = state.expenses.filter(e => e.id !== id);
-      saveToCloud();
-    } else if (action === "save-expense-direct") {
-      const desc = document.getElementById("exp-desc").value;
-      const amountInput = Number(document.getElementById("exp-amount").value);
+    } else if (action === "save-expense") {
+      const desc = document.getElementById("exp-desc").value.trim();
+      const amount = parseFloat(document.getElementById("exp-amount").value);
       const date = document.getElementById("exp-date").value;
 
-      if (!desc || !amountInput || !date) return;
-
-      if (ui.editingExpenseId) {
-        const editedExpense = state.expenses.find(e => e.id === ui.editingExpenseId);
-
-        if (editedExpense?.installmentGroupId) {
-          const count = Number(document.getElementById("exp-installmentsCount")?.value) || 2;
-          const customMonthly = Number(document.getElementById("exp-customMonthly")?.value || 0);
-          const interest = Number(document.getElementById("exp-interest")?.value || 0);
-          const installmentAmounts = splitInstallmentAmounts(amountInput, count, interest, customMonthly);
-
-          if (installmentAmounts.length !== count) return;
-
-          const groupId = editedExpense.installmentGroupId;
-          const fullOriginal = installmentAmounts.reduce((sum, cents) => sum + cents, 0) / 100;
-          const originalCents = Math.round(amountInput * 100);
-          const addedCost = Math.max(0, Math.round(fullOriginal * 100) - originalCents) / 100;
-
-          const firstPaymentDate = calcInstallmentStartDate(date);
-
-          // מחליפים את כל הסדרה בפעולה אחת, לפי תאריך הקנייה ומחזור החיוב.
-          state.expenses = state.expenses.filter(e => e.installmentGroupId !== groupId);
-
-          for (let i = 0; i < count; i++) {
-            state.expenses.push({
-              id: uid(),
-              installmentGroupId: groupId,
-              desc,
-              amount: installmentAmounts[i] / 100,
-              date: addMonths(firstPaymentDate, i),
-              purchaseDate: date,
-              scheduleVersion: 2,
-              category: ui.selectedCategory,
-              installmentInfo: `${i + 1}/${count}`,
-              fullOriginalAmount: fullOriginal,
-              interestAmount: addedCost
-            });
-          }
-        } else {
-          state.expenses = state.expenses.map(e => e.id === ui.editingExpenseId ? {
-            ...e, desc, amount: amountInput, date, category: ui.selectedCategory
-          } : e);
-        }
-      } else {
-        const isInst = document.getElementById("installments-check")?.checked;
-        if (isInst) {
-          const count = Number(document.getElementById("exp-installmentsCount").value) || 2;
-          const customMonthly = Number(document.getElementById("exp-customMonthly")?.value);
-          const interest = Number(document.getElementById("exp-interest")?.value);
-
-          const installmentAmounts = splitInstallmentAmounts(amountInput, count, interest, customMonthly);
-          if (installmentAmounts.length !== count) return;
-          const fullOriginal = installmentAmounts.reduce((sum, cents) => sum + cents, 0) / 100;
-          const originalCents = Math.round(amountInput * 100);
-          const addedCost = Math.max(0, Math.round(fullOriginal * 100) - originalCents) / 100;
-          const installmentGroupId = uid();
-          const firstPaymentDate = calcInstallmentStartDate(date);
-
-          for (let i = 0; i < count; i++) {
-            const expDate = addMonths(firstPaymentDate, i);
-            state.expenses.push({
-              id: uid(),
-              installmentGroupId,
-              desc,
-              amount: installmentAmounts[i] / 100,
-              date: expDate,
-              purchaseDate: date,
-              scheduleVersion: 2,
-              category: ui.selectedCategory,
-              installmentInfo: `${i + 1}/${count}`,
-              fullOriginalAmount: fullOriginal,
-              interestAmount: addedCost
-            });
-          }
-        } else {
-          const recurring = document.getElementById("exp-recurring")?.checked;
-          state.expenses.push({
-            id: uid(),
-            desc,
-            amount: amountInput,
-            date,
-            category: ui.selectedCategory,
-            recurring: !!recurring
-          });
-        }
+      if (desc && !isNaN(amount) && date) {
+        const newExpense = { id: uid(), desc, amount, date };
+        state.expenses.push(newExpense);
+        ui.showExpenseForm = false;
+        saveToCloud();
       }
-
-      ui.showExpenseForm = false;
-      ui.editingExpenseId = null;
-      ui.isInstallments = false;
+    } else if (action === "delete-expense") {
+      const id = btn.dataset.id;
+      state.expenses = state.expenses.filter(e => e.id !== id);
       saveToCloud();
     }
-  });
-
-  document.addEventListener("change", (e) => {
-    if (e.target.id === "installments-check") {
-      ui.isInstallments = e.target.checked;
-      render();
-    }
-  });
-
-  document.addEventListener("input", (e) => {
-    const fields = {
-      "exp-desc": "desc",
-      "exp-amount": "amount",
-      "exp-date": "date",
-      "exp-installmentsCount": "installmentsCount",
-      "exp-customMonthly": "customMonthlyAmount",
-      "exp-interest": "interestAmount"
-    };
-
-    const key = fields[e.target.id];
-    if (key) ui.tempExpense[key] = e.target.value;
   });
 </script>
 </body>
