@@ -147,7 +147,7 @@
   let authError = "";
   let stopDataListener = null;
 
-  // ניהול זיכרון AI
+  // זיכרון AI
   let aiAdviceCache = null;
   let aiLoading = false;
   let aiErrorMsg = null;
@@ -320,7 +320,7 @@
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ============================================================================
-  // מנגנון GEMINI API יציב עם שמות מודלים תקניים בלבד
+  // מנגנון GEMINI API יציב - דגמים תקניים ורשמיים בלבד
   // ============================================================================
   window.saveApiKey = function() {
     const input = document.getElementById("api-key-input");
@@ -428,8 +428,8 @@
 ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
 `;
 
-    // שמות מודלים רשמיים, תקניים ופתוחים ב-Google AI Studio
-    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    // דגמים רשמיים ונתמכים ב-100% בשרתי Gemini API
+    const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
     let success = false;
     let lastError = "";
 
@@ -458,7 +458,7 @@
     }
 
     if (!success) {
-      aiErrorMsg = `שגיאה בחיבור: ${lastError || "לא ניתן להשיג מענה מה-AI כעת. בדוק את חיבור האינטרנט או את תקינות ה-API Key."}`;
+      aiErrorMsg = `שגיאה בחיבור: ${lastError || "בדוק שהמפתח תקין ושיש חיבור אינטרנט זמין."}`;
     }
 
     aiLoading = false;
