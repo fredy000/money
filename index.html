@@ -147,7 +147,7 @@
   let authError = "";
   let stopDataListener = null;
 
-  // משתני ניהול זיכרון AI (מניעת עומס ושיגור בקשות חוזרות ונשנות)
+  // ניהול זיכרון AI למניעת שיגור בקשות כפולות ועומסים
   let aiAdviceCache = null;
   let aiLoading = false;
   let aiErrorMsg = null;
@@ -320,7 +320,7 @@
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ============================================================================
-  // ניהול מנוע AI עם מניעת עומסים ומנגנון Fallback
+  // מנגנון ניהול GEMINI API יציב עם FALLBACK אוטומטי
   // ============================================================================
   window.saveApiKey = function() {
     const input = document.getElementById("api-key-input");
@@ -367,7 +367,6 @@
       `;
     }
 
-    // הפעלה ראשונית של השאילתה רק אם אין לנו ניתוח שורר בזיכרון
     if (!aiAdviceCache && !aiLoading && !aiErrorMsg) {
       setTimeout(() => fetchGeminiAdvice(c), 100);
     }
@@ -429,9 +428,10 @@
 ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
 `;
 
-    // ניסיון פנייה למודלים יציבים בסדר יורד
-    const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+    // בדיקת דגמים נתמכים באופן סדרתי (Fallback)
+    const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"];
     let success = false;
+    let lastError = "";
 
     for (const modelName of modelsToTry) {
       try {
@@ -447,20 +447,18 @@
           aiAdviceCache = data.candidates[0].content.parts[0].text;
           success = true;
           break;
-        } else if (data.error && data.error.message && data.error.message.includes("demand")) {
-          console.warn(`Model ${modelName} overloaded, trying next model...`);
-          continue;
         } else if (data.error) {
-          aiErrorMsg = `שגיאה בחיבור ל-API: ${data.error.message}`;
-          break;
+          console.warn(`Model ${modelName} returned error:`, data.error.message);
+          lastError = data.error.message;
         }
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error(`Fetch error with ${modelName}:`, err);
+        lastError = err.message;
       }
     }
 
-    if (!success && !aiErrorMsg) {
-      aiErrorMsg = "עומס זמני בשרתי ה-AI של Google. לחץ על כפתור 'רענן' כדי לנסות שוב.";
+    if (!success) {
+      aiErrorMsg = `שגיאה בחיבור: ${lastError || "לא ניתן להשיג מענה מה-AI כעת. בדוק את חיבור האינטרנט או את תקינות ה-API Key."}`;
     }
 
     aiLoading = false;
