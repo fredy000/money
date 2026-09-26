@@ -147,6 +147,11 @@
   let authError = "";
   let stopDataListener = null;
 
+  // משתני ניהול זיכרון AI (מניעת עומס ושיגור בקשות חוזרות ונשנות)
+  let aiAdviceCache = null;
+  let aiLoading = false;
+  let aiErrorMsg = null;
+
   const TERMS = [
     { days: 0, label: "מיידי" },
     { days: 30, label: "שוטף +30" },
@@ -315,19 +320,27 @@
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ============================================================================
-  // ניהול GEMINI 3.8 FLASH API בחינם בדפדפן
+  // ניהול מנוע AI עם מניעת עומסים ומנגנון Fallback
   // ============================================================================
   window.saveApiKey = function() {
     const input = document.getElementById("api-key-input");
     if (input && input.value.trim()) {
       localStorage.setItem("GEMINI_API_KEY", input.value.trim());
+      aiAdviceCache = null;
       render();
     }
   };
 
   window.removeApiKey = function() {
     localStorage.removeItem("GEMINI_API_KEY");
+    aiAdviceCache = null;
     render();
+  };
+
+  window.triggerAiRefresh = function() {
+    aiAdviceCache = null;
+    const c = calc();
+    fetchGeminiAdvice(c);
   };
 
   function renderAIAssistant(c) {
@@ -354,29 +367,48 @@
       `;
     }
 
-    setTimeout(() => fetchGeminiAdvice(c), 50);
+    // הפעלה ראשונית של השאילתה רק אם אין לנו ניתוח שורר בזיכרון
+    if (!aiAdviceCache && !aiLoading && !aiErrorMsg) {
+      setTimeout(() => fetchGeminiAdvice(c), 100);
+    }
+
+    let contentHtml = "";
+    if (aiLoading) {
+      contentHtml = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ מנתח את התזרים, ימי האשראי, המיסים וקרן הציוד...</div>`;
+    } else if (aiErrorMsg) {
+      contentHtml = `⚠️ ${aiErrorMsg} <br><button class="link-btn" onclick="triggerAiRefresh()" style="margin-top:8px;">🔄 נסה שוב</button>`;
+    } else if (aiAdviceCache) {
+      contentHtml = aiAdviceCache.replace(/\n/g, "<br>");
+    } else {
+      contentHtml = `<div style="text-align:center; padding:15px; color:var(--text-muted);">לחץ על רענן לקבלת ניתוח AI עדכני.</div>`;
+    }
 
     return `
       <div class="ai-card">
         <div class="ai-header">
           <span class="ai-title">🤖 יועץ AI פיננסי לצלמים</span>
-          <button class="logout-btn" onclick="removeApiKey()">🔑 החלף מפתח</button>
-        </div>
-        <div id="ai-live-content" class="ai-text">
-          <div style="text-align:center; padding:15px; color:var(--text-muted);">
-            ⏳ מנתח את התזרים, ימי האשראי, המיסים וקרן הציוד...
+          <div style="display:flex; gap:6px;">
+            <button class="logout-btn" onclick="triggerAiRefresh()">🔄 רענן</button>
+            <button class="logout-btn" onclick="removeApiKey()">🔑 החלף מפתח</button>
           </div>
         </div>
+        <div class="ai-text">${contentHtml}</div>
       </div>
     `;
   }
 
   async function fetchGeminiAdvice(c) {
-    const container = document.getElementById("ai-live-content");
-    if (!container) return;
+    if (aiLoading) return;
+    aiLoading = true;
+    aiErrorMsg = null;
+    render();
 
     const apiKey = localStorage.getItem("GEMINI_API_KEY");
-    if (!apiKey) return;
+    if (!apiKey) {
+      aiLoading = false;
+      render();
+      return;
+    }
 
     const prompt = `
 אתה יועץ פיננסי בכיר, טקטי וממוקד לפרילנסרים בתעשיית הצילום והקולנוע.
@@ -397,27 +429,42 @@
 ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
 `;
 
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
+    // ניסיון פנייה למודלים יציבים בסדר יורד
+    const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+    let success = false;
 
-      const data = await res.json();
+    for (const modelName of modelsToTry) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
 
-      if (data.error) {
-        container.innerHTML = `⚠️ שגיאה בחיבור ל-API: ${data.error.message}. <br><button class="link-btn" onclick="removeApiKey()" style="margin-top:8px;">הזן מפתח מחדש</button>`;
-        return;
+        const data = await res.json();
+
+        if (res.ok && data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+          aiAdviceCache = data.candidates[0].content.parts[0].text;
+          success = true;
+          break;
+        } else if (data.error && data.error.message && data.error.message.includes("demand")) {
+          console.warn(`Model ${modelName} overloaded, trying next model...`);
+          continue;
+        } else if (data.error) {
+          aiErrorMsg = `שגיאה בחיבור ל-API: ${data.error.message}`;
+          break;
+        }
+      } catch (e) {
+        console.error(e);
       }
-
-      const text = data.candidates[0].content.parts[0].text;
-      container.innerHTML = text.replace(/\n/g, "<br>");
-    } catch (err) {
-      container.innerHTML = "⚠️ שגיאה בתקשורת מול ה-AI. בדוק את חיבור האינטרנט.";
     }
+
+    if (!success && !aiErrorMsg) {
+      aiErrorMsg = "עומס זמני בשרתי ה-AI של Google. לחץ על כפתור 'רענן' כדי לנסות שוב.";
+    }
+
+    aiLoading = false;
+    render();
   }
 
   function startDataListener() {
@@ -863,6 +910,7 @@
       if (!isNaN(val)) {
         state.openingBalance = val;
         ui.showBalanceEdit = false;
+        aiAdviceCache = null;
         saveToCloud();
       }
     } else if (action === "toggle-income-form") {
@@ -902,6 +950,7 @@
         }
         ui.showIncomeForm = false;
         ui.editingIncomeId = null;
+        aiAdviceCache = null;
         saveToCloud();
       }
     } else if (action === "mark-paid") {
@@ -910,11 +959,13 @@
       if (inc) {
         inc.status = "paid";
         inc.paidDate = todayStr();
+        aiAdviceCache = null;
         saveToCloud();
       }
     } else if (action === "delete-income") {
       const id = btn.dataset.id;
       state.incomes = state.incomes.filter(i => i.id !== id);
+      aiAdviceCache = null;
       saveToCloud();
     } else if (action === "toggle-expense-form") {
       ui.showExpenseForm = !ui.showExpenseForm;
@@ -992,6 +1043,7 @@
         ui.showExpenseForm = false;
         ui.editingExpenseId = null;
         ui.isInstallments = false;
+        aiAdviceCache = null;
         saveToCloud();
       }
     } else if (action === "delete-expense") {
@@ -1004,6 +1056,7 @@
       } else {
         state.expenses = state.expenses.filter(e => e.id !== id);
       }
+      aiAdviceCache = null;
       saveToCloud();
     }
   });
