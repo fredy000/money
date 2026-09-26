@@ -147,7 +147,7 @@
   let authError = "";
   let stopDataListener = null;
 
-  // ניהול זיכרון AI למניעת שיגור בקשות כפולות ועומסים
+  // ניהול זיכרון AI
   let aiAdviceCache = null;
   let aiLoading = false;
   let aiErrorMsg = null;
@@ -320,7 +320,7 @@
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ============================================================================
-  // מנגנון ניהול GEMINI API יציב עם FALLBACK אוטומטי
+  // מנגנון GEMINI API יציב עם שמות מודלים תקניים בלבד
   // ============================================================================
   window.saveApiKey = function() {
     const input = document.getElementById("api-key-input");
@@ -428,8 +428,8 @@
 ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
 `;
 
-    // בדיקת דגמים נתמכים באופן סדרתי (Fallback)
-    const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"];
+    // שמות מודלים רשמיים, תקניים ופתוחים ב-Google AI Studio
+    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
     let success = false;
     let lastError = "";
 
