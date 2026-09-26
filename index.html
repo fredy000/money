@@ -320,7 +320,7 @@
   const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ============================================================================
-  // מנגנון GEMINI API יציב - דגמים תקניים ורשמיים בלבד
+  // מנגנון קריאת GEMINI API
   // ============================================================================
   window.saveApiKey = function() {
     const input = document.getElementById("api-key-input");
@@ -428,7 +428,7 @@
 ענה בקצרה, ישירות לשורה התחתונה, ללא הקדמות מנומסות.
 `;
 
-    // דגמים רשמיים ונתמכים ב-100% בשרתי Gemini API
+    // בדיקת דגמים רשמיים ונתמכים בלבד
     const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
     let success = false;
     let lastError = "";
