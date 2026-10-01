@@ -6,7 +6,7 @@
   <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
-
+    
     :root {
       --bg: #0C0B0A;
       --surface: #161412;
@@ -26,616 +26,113 @@
       --radius: 16px;
       --shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-
-    * {
-      box-sizing: border-box;
-      transition: background 0.2s, border-color 0.2s, transform 0.1s;
-    }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      font-family: 'Rubik', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    #app {
-      width: 100%;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 28px 18px 80px;
-    }
-
-    input, select, button {
-      font-family: inherit;
-      outline: none;
-    }
-
-    input:focus,
-    select:focus,
-    button:focus-visible {
-      border-color: var(--accent) !important;
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-
-    ::placeholder {
-      color: #615848;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 42px;
-      height: 42px;
-      background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 15px var(--accent-glow);
-      color: #FFF;
-    }
-
-    .brand-text {
-      font-weight: 800;
-      font-size: 22px;
-      color: var(--text);
-      letter-spacing: -0.5px;
-    }
-
-    .sync-badge {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 20px;
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      backdrop-filter: blur(10px);
-    }
-
-    .tabs {
-      display: flex;
-      gap: 8px;
-      background: var(--surface);
-      padding: 6px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-
-    .tab-btn {
-      flex: 1;
-      padding: 12px 0;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      border-radius: 12px;
-      font-size: 14.5px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .tab-btn.active {
-      background: var(--surface-card);
-      color: var(--accent);
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
-    .section {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .ai-card {
-      background: linear-gradient(135deg, #1C1814 0%, #2A2118 100%);
-      border: 1px solid rgba(255, 112, 36, 0.35);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .ai-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .ai-badge {
-      background: var(--accent);
-      color: #FFF;
-      font-size: 11px;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .ai-title {
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--text);
-    }
-
-    .ai-text {
-      font-size: 14px;
-      line-height: 1.65;
-      color: #E2DACF;
-    }
-
-    .ai-reason {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px dashed var(--border);
-      color: var(--text-muted);
-      font-size: 12px;
-      line-height: 1.55;
-    }
-
-    .hero {
-      background: linear-gradient(160deg, #28211B 0%, #171411 100%);
-      border: 1px solid rgba(255, 112, 36, 0.25);
-      border-radius: 24px;
-      padding: 26px 20px;
-      text-align: center;
-      box-shadow: var(--shadow);
-    }
-
-    .hero-label {
-      color: var(--text-muted);
-      font-size: 13.5px;
-      font-weight: 500;
-      margin-bottom: 6px;
-    }
-
-    .hero-number {
-      font-weight: 800;
-      font-size: 40px;
-      color: var(--text);
-      line-height: 1.1;
-      font-variant-numeric: tabular-nums;
-      word-break: break-all;
-    }
-
-    .link-btn {
-      margin-top: 12px;
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      display: inline-block;
-    }
-
-    .link-btn:hover {
-      color: var(--text);
-      border-color: var(--accent);
-    }
-
-    .stat-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .stat-card {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 14px 12px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .stat-dot-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      font-weight: 500;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      flex-shrink: 0;
-    }
-
-    .stat-value {
-      font-size: 14.5px;
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }
-
-    .card {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      margin-bottom: 20px;
-    }
-
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-
-    .summary-box {
-      background: var(--surface-input);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-    }
-
-    .summary-item.sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      padding-right: 12px;
-    }
-
-    .summary-item.total {
-      background: rgba(255, 112, 36, 0.12);
-      border: 1px solid var(--accent);
-      padding: 12px;
-      border-radius: 12px;
-      font-weight: 800;
-      font-size: 15px;
-      color: var(--text);
-      margin-top: 6px;
-    }    .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .row:last-child {
-      border-bottom: none;
-    }
-
-    .row-title {
-      color: var(--text);
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    .row-sub {
-      color: var(--text-muted);
-      font-size: 12.5px;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .row-amount {
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
-      font-size: 15.5px;
-      font-weight: 700;
-      white-space: nowrap;
-      margin-right: auto;
-    }
-
-    .actions-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .icon-btn {
-      background: var(--positive-bg);
-      border: 1px solid rgba(78, 184, 104, 0.3);
-      color: var(--positive);
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: bold;
-    }
-
-    .icon-btn:hover {
-      background: var(--positive);
-      color: #000;
-    }
-
-    .icon-btn-muted {
-      background: var(--surface-input);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 13.5px;
-    }
-
-    .icon-btn-muted:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .icon-btn-danger:hover {
-      border-color: var(--negative);
-      color: var(--negative);
-    }
-
-    .add-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%);
-      color: #FFF;
-      border: none;
-      border-radius: 16px;
-      padding: 14px 0;
-      font-size: 15.5px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 20px var(--accent-glow);
-      margin-bottom: 12px;
-    }
-
-    .add-btn:active {
-      transform: scale(0.98);
-    }
-
-    .form-box {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
-    }
-
-    .label {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-    }
-
-    .input {
-      background: var(--surface-input);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      color: var(--text);
-      font-size: 15px;
-      width: 100%;
-    }
-
-    .submit-btn {
-      background: var(--accent);
-      color: #FFF;
-      border: none;
-      border-radius: 12px;
-      padding: 13px 0;
-      font-size: 15.5px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 8px;
-      box-shadow: 0 4px 15px var(--accent-glow);
-      width: 100%;
-    }
-
-    .cancel-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 0;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 6px;
-    }
-
-    .empty {
-      color: var(--text-muted);
-      font-size: 14px;
-      padding: 16px 0;
-      text-align: center;
-    }
-
-    .checkbox-label {
-      flex-direction: row-reverse;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-      display: flex;
-      cursor: pointer;
-      user-select: none;
-      font-size: 14px;
-      color: var(--text);
-    }
-
-    .category-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .pill {
-      background: var(--surface-input);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .pill:hover {
-      border-color: var(--border-focus);
-      color: var(--text);
-    }
-
-    .pill.selected {
-      background: var(--accent);
-      color: #FFFFFF;
-      border-color: var(--accent);
-      font-weight: 700;
-      box-shadow: 0 2px 10px var(--accent-glow);
-    }
-
-    .login-screen {
-      min-height: 70vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 430px;
-      text-align: center;
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 34px 24px;
-      box-shadow: var(--shadow);
-    }
-
-    .login-icon {
-      width: 62px;
-      height: 62px;
-      margin: 0 auto 18px;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      background: linear-gradient(135deg, var(--accent), #D84E00);
-      box-shadow: 0 6px 20px var(--accent-glow);
-    }
-
-    .login-title {
-      font-size: 23px;
-      font-weight: 800;
-      margin-bottom: 9px;
-    }
-
-    .login-text {
-      color: var(--text-muted);
-      font-size: 14px;
-      line-height: 1.65;
-      margin-bottom: 22px;
-    }
-
-    .google-btn {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
-      color: #222;
-      padding: 13px 16px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .google-btn:hover {
-      transform: translateY(-1px);
-    }
-
-    .login-error {
-      color: var(--negative);
-      font-size: 13px;
-      line-height: 1.5;
-      margin-top: 14px;
-    }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 20px;
-      padding: 6px 12px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    .logout-btn:hover {
-      border-color: var(--accent);
-      color: var(--text);
+    
+    * { box-sizing: border-box; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+    body { margin: 0; background: var(--bg); font-family: 'Rubik', system-ui, -apple-system, sans-serif; min-height: 100vh; color: var(--text); -webkit-font-smoothing: antialiased; }
+    #app { width: 100%; max-width: 720px; margin: 0 auto; padding: 28px 18px 80px; }
+    
+    input, select, button { font-family: inherit; outline: none; }
+    input:focus, select:focus, button:focus-visible { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-glow); }
+    ::placeholder { color: #615848; }
+    
+    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .brand-logo { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px var(--accent-glow); color: #FFF; }
+    .brand-text { font-weight: 800; font-size: 22px; color: var(--text); letter-spacing: -0.5px; }
+    .sync-badge { font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); backdrop-filter: blur(10px); }
+    
+    .tabs { display: flex; gap: 8px; background: var(--surface); padding: 6px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; }
+    .tab-btn { flex: 1; padding: 12px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 12px; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: var(--surface-card); color: var(--accent); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    
+    .section { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .ai-card { background: linear-gradient(135deg, #1C1814 0%, #2A2118 100%); border: 1px solid rgba(255, 112, 36, 0.35); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .ai-badge { background: var(--accent); color: #FFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ai-title { font-weight: 700; font-size: 16px; color: var(--text); }
+    .ai-text { font-size: 14px; line-height: 1.6; color: #E2DACF; }
+    .ai-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .ai-stat { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--border); }
+    .ai-stat-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+    .ai-stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .ai-plan { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .ai-plan-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(0,0,0,0.22); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+    .ai-plan-row span:first-child { color: var(--text-muted); }
+    .ai-plan-row strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ai-reason { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); color: var(--text-muted); font-size: 12px; line-height: 1.55; }
+
+    .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
+    .hero-label { color: var(--text-muted); font-size: 13.5px; font-weight: 500; margin-bottom: 6px; }
+    .hero-number { font-weight: 800; font-size: 40px; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; word-break: break-all; }
+    .link-btn { margin-top: 12px; background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-block; }
+    .link-btn:hover { color: var(--text); border-color: var(--accent); }
+    
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .stat-value { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; }
+    
+    .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
+    .card-title { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+    
+    .summary-box { background: var(--surface-input); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .summary-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+    .summary-item.sub { font-size: 13px; color: var(--text-muted); padding-right: 12px; }
+    .summary-item.total { background: rgba(255, 112, 36, 0.12); border: 1px solid var(--accent); padding: 12px; border-radius: 12px; font-weight: 800; font-size: 15px; color: var(--text); margin-top: 6px; }
+
+    .row { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .row:last-child { border-bottom: none; }
+    .row-title { color: var(--text); font-size: 15px; font-weight: 600; }
+    .row-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .row-amount { color: var(--text); font-variant-numeric: tabular-nums; font-size: 15.5px; font-weight: 700; white-space: nowrap; margin-right: auto; }
+    .actions-group { display: flex; align-items: center; gap: 6px; }
+
+    .icon-btn { background: var(--positive-bg); border: 1px solid rgba(78, 184, 104, 0.3); color: var(--positive); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; font-weight: bold; }
+    .icon-btn:hover { background: var(--positive); color: #000; }
+    .icon-btn-muted { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13.5px; }
+    .icon-btn-muted:hover { border-color: var(--accent); color: var(--accent); }
+    .icon-btn-danger:hover { border-color: var(--negative); color: var(--negative); }
+    
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #D84E00 100%); color: #FFF; border: none; border-radius: 16px; padding: 14px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); margin-bottom: 12px; }
+    .add-btn:active { transform: scale(0.98); }
+    
+    .form-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+    .input { background: var(--surface-input); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; width: 100%; }
+    .submit-btn { background: var(--accent); color: #FFF; border: none; border-radius: 12px; padding: 13px 0; font-size: 15.5px; font-weight: 700; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 15px var(--accent-glow); width: 100%; }
+    .cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
+    .empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; text-align: center; }
+    .checkbox-label { flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; display: flex; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
+
+    .category-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .pill { background: var(--surface-input); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+    .pill:hover { border-color: var(--border-focus); color: var(--text); }
+    .pill.selected { background: var(--accent); color: #FFFFFF; border-color: var(--accent); font-weight: 700; box-shadow: 0 2px 10px var(--accent-glow); }
+
+    .login-screen { min-height: 70vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { width: 100%; max-width: 430px; text-align: center; background: var(--surface-card); border: 1px solid var(--border); border-radius: 24px; padding: 34px 24px; box-shadow: var(--shadow); }
+    .login-icon { width: 62px; height: 62px; margin: 0 auto 18px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: linear-gradient(135deg, var(--accent), #D84E00); box-shadow: 0 6px 20px var(--accent-glow); }
+    .login-title { font-size: 23px; font-weight: 800; margin-bottom: 9px; }
+    .login-text { color: var(--text-muted); font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
+    .google-btn { width: 100%; border: 1px solid var(--border); border-radius: 14px; background: #fff; color: #222; padding: 13px 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .google-btn:hover { transform: translateY(-1px); }
+    .login-error { color: var(--negative); font-size: 13px; line-height: 1.5; margin-top: 14px; }
+    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
+
+    @media (max-width: 560px) {
+      #app { padding: 18px 12px 60px; }
+      .brand { gap: 10px; }
+      .brand-text { font-size: 18px; }
+      .sync-badge { display: none; }
+      .hero-number { font-size: 34px; }
+      .stat-row { grid-template-columns: 1fr; }
+      .row { align-items: flex-start; flex-wrap: wrap; }
+      .row-amount { margin-right: 0; margin-left: auto; }
+      .actions-group { width: 100%; justify-content: flex-end; }
+      .ai-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -675,7 +172,7 @@
     { days: 0, label: "מיידי" },
     { days: 30, label: "שוטף +30" },
     { days: 60, label: "שוטף +60" },
-    { days: 90, label: "שוטף +90" }
+    { days: 90, label: "שוטף +90" },
   ];
 
   const CATEGORIES = [
@@ -730,7 +227,6 @@
   const parseLocalDate = (value) => {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
     if (!match) return new Date(NaN);
-
     return new Date(
       Number(match[1]),
       Number(match[2]) - 1,
@@ -764,7 +260,6 @@
 
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
     const d = parseLocalDate(expenseDateStr);
-
     let month = d.getMonth();
     let year = d.getFullYear();
 
@@ -823,21 +318,30 @@
 
     normalized.forEach((expense) => {
       if (!expense.installmentGroupId) return;
+
       if (!groups.has(expense.installmentGroupId)) {
         groups.set(expense.installmentGroupId, []);
       }
+
       groups.get(expense.installmentGroupId).push(expense);
     });
 
     let changed = false;
 
     groups.forEach((series) => {
-      if (series.every((expense) => Number(expense.scheduleVersion) >= 2)) return;
+      if (
+        series.every(
+          (expense) => Number(expense.scheduleVersion) >= 2
+        )
+      ) {
+        return;
+      }
 
       series.sort((a, b) => {
         const aNumber = Number(
           String(a.installmentInfo || "1/1").split("/")[0]
         );
+
         const bNumber = Number(
           String(b.installmentInfo || "1/1").split("/")[0]
         );
@@ -846,8 +350,7 @@
       });
 
       const purchaseDate =
-        series[0].purchaseDate ||
-        series[0].date;
+        series[0].purchaseDate || series[0].date;
 
       const firstPaymentDate =
         calcInstallmentStartDate(purchaseDate);
@@ -910,27 +413,46 @@
       { length: payments },
       (_, index) =>
         base +
-        (index >= payments - remainder ? 1 : 0)
+        (
+          index >= payments - remainder
+            ? 1
+            : 0
+        )
     );
   };
 
   const fmtMoney = (n) => {
     const val = Number(n || 0);
 
-    return new Intl.NumberFormat("he-IL", {
-      style: "currency",
-      currency: "ILS",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(val);
+    return new Intl.NumberFormat(
+      "he-IL",
+      {
+        style: "currency",
+        currency: "ILS",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }
+    ).format(val);
   };
 
   const fmtDate = (d) =>
-    new Intl.DateTimeFormat("he-IL", {
-      day: "numeric",
-      month: "short",
-      year: "2-digit"
-    }).format(parseLocalDate(d));
+    new Intl.DateTimeFormat(
+      "he-IL",
+      {
+        day: "numeric",
+        month: "short",
+        year: "2-digit"
+      }
+    ).format(parseLocalDate(d));
+
+  const fmtMonth = (d) =>
+    new Intl.DateTimeFormat(
+      "he-IL",
+      {
+        month: "long",
+        year: "numeric"
+      }
+    ).format(parseLocalDate(d));
 
   const monthKey = (d) =>
     d
@@ -957,536 +479,107 @@
       }[c])
     );
 
-
-  // ============================================================================
-  // יועץ Gemini דרך Cloudflare Worker
-  // מפתח Gemini נשמר ב-Cloudflare ולא נמצא בקוד האתר
-  // ============================================================================
-
-  const AI_WORKER_URL =
-    "https://money-gemini.frdi144.workers.dev/";
-
-  let aiAdvice = "";
-  let aiLoading = false;
-  let aiError = "";
-  let aiRequestSignature = "";
-
-
-  function renderAIAssistant(c) {
-
-    const signature = JSON.stringify({
-      currentBalance:
-        c.actualCurrentBalance,
-
-      expensesThisMonth:
-        c.amountToPayThisMonth,
-
-      expensesNextMonth:
-        c.totalExpNextMonth,
-
-      paidIncomeThisMonth:
-        c.monthPaidIncome,
-
-      expectedIncomeThisMonth:
-        c.monthExpectedIncome,
-
-      overdueAmount:
-        c.overdueAmount,
-
-      overdueCount:
-        c.overdueCount,
-
-      incomes:
-        state.incomes || [],
-
-      expenses:
-        state.expenses || []
-    });
-
-
-    if (
-      signature !== aiRequestSignature &&
-      !aiLoading
-    ) {
-      aiRequestSignature = signature;
-      aiAdvice = "";
-      aiError = "";
-
-      setTimeout(
-        () => fetchGeminiAdvice(c, signature),
-        50
-      );
-    }
-
-
-    let content = "";
-
-
-    if (
-      aiLoading ||
-      (!aiAdvice && !aiError)
-    ) {
-
-      content = `
-        <div
-          style="
-            text-align:center;
-            padding:15px;
-            color:var(--text-muted);
-          "
-        >
-          ⏳ מנתח את התזרים, ההכנסות וההוצאות שלך...
-        </div>
-      `;
-
-    } else if (aiError) {
-
-      content = `
-        <div style="color:var(--negative);">
-          ⚠️ ${esc(aiError)}
-        </div>
-      `;
-
-    } else {
-
-      content =
-        formatAIAdvice(aiAdvice);
-    }
-
-
-    return `
-      <div class="ai-card">
-
-        <div class="ai-header">
-
-          <span class="ai-title">
-            🤖 יועץ AI פיננסי לצלמים
-          </span>
-
-          <span class="ai-badge">
-            GEMINI
-          </span>
-
-        </div>
-
-
-        <div
-          id="ai-live-content"
-          class="ai-text"
-        >
-          ${content}
-        </div>
-
-
-        <div class="ai-reason">
-          הניתוח מבוסס על הנתונים המעודכנים במערכת.
-          מפתח ה-AI נשמר באופן מאובטח ב-Cloudflare
-          ואינו נמצא בקוד האתר.
-        </div>
-
-      </div>
-    `;
-  }
-
-
-  function formatAIAdvice(text) {
-
-    return esc(text)
-
-      .replace(
-        /\*\*(.*?)\*\*/g,
-        "<strong>$1</strong>"
-      )
-
-      .replace(
-        /\n/g,
-        "<br>"
-      );
-  }
-
-
-  async function fetchGeminiAdvice(
-    c,
-    signature
-  ) {
-
-    aiLoading = true;
-    aiError = "";
-
-
-    const container =
-      document.getElementById(
-        "ai-live-content"
-      );
-
-
-    if (container) {
-
-      container.innerHTML = `
-        <div
-          style="
-            text-align:center;
-            padding:15px;
-            color:var(--text-muted);
-          "
-        >
-          ⏳ מנתח את התזרים, ההכנסות וההוצאות שלך...
-        </div>
-      `;
-    }
-
-
-    const payload = {
-
-      currentBalance:
-        Number(
-          c.actualCurrentBalance || 0
-        ),
-
-      expensesThisMonth:
-        Number(
-          c.amountToPayThisMonth || 0
-        ),
-
-      expensesNextMonth:
-        Number(
-          c.totalExpNextMonth || 0
-        ),
-
-      balanceAfterThisMonthExpenses:
-        Number(
-          c.balanceAfterExpenses || 0
-        ),
-
-      expectedEndOfMonthBalance:
-        Number(
-          c.finalExpectedBalance || 0
-        ),
-
-      paidIncomeThisMonth:
-        Number(
-          c.monthPaidIncome || 0
-        ),
-
-      expectedIncomeThisMonth:
-        Number(
-          c.monthExpectedIncome || 0
-        ),
-
-      overdueAmount:
-        Number(
-          c.overdueAmount || 0
-        ),
-
-      overdueCount:
-        Number(
-          c.overdueCount || 0
-        ),
-
-
-      incomes:
-        (state.incomes || []).map(
-          (income) => ({
-
-            description:
-              income.desc || "",
-
-            amount:
-              Number(
-                income.amount || 0
-              ),
-
-            invoiceDate:
-              income.date || "",
-
-            expectedDate:
-              income.expectedDate || "",
-
-            paidDate:
-              income.paidDate || "",
-
-            status:
-              income.status || "pending",
-
-            termDays:
-              Number(
-                income.termDays || 0
-              )
-
-          })
-        ),
-
-
-      expenses:
-        (state.expenses || []).map(
-          (expense) => ({
-
-            description:
-              expense.desc || "",
-
-            category:
-              expense.category || "",
-
-            amount:
-              Number(
-                expense.amount || 0
-              ),
-
-            purchaseDate:
-              expense.purchaseDate || "",
-
-            chargeDate:
-              expense.date || "",
-
-            installmentInfo:
-              expense.installmentInfo || ""
-
-          })
-        )
-    };
-
-
-    try {
-
-      const response =
-        await fetch(
-          AI_WORKER_URL,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify(payload)
-          }
-        );
-
-
-      const result =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          result?.details?.error?.message ||
-          result?.error ||
-          "שגיאה בחיבור ל-AI"
-        );
-      }
-
-
-      if (
-        signature !==
-        aiRequestSignature
-      ) {
-        return;
-      }
-
-
-      aiAdvice =
-        String(
-          result.advice ||
-          "לא התקבלה תשובה מה-AI."
-        );
-
-      aiError = "";
-
-
-    } catch (error) {
-
-
-      if (
-        signature !==
-        aiRequestSignature
-      ) {
-        return;
-      }
-
-
-      aiAdvice = "";
-
-      aiError =
-        error?.message ||
-        "שגיאה בתקשורת מול ה-AI.";
-
-
-    } finally {
-
-
-      if (
-        signature ===
-        aiRequestSignature
-      ) {
-
-        aiLoading = false;
-
-
-        const liveContainer =
-          document.getElementById(
-            "ai-live-content"
-          );
-
-
-        if (liveContainer) {
-
-          liveContainer.innerHTML =
-            aiError
-
-              ? `
-                <div
-                  style="
-                    color:var(--negative);
-                  "
-                >
-                  ⚠️ ${esc(aiError)}
-                </div>
-              `
-
-              : formatAIAdvice(
-                  aiAdvice
-                );
-        }
-      }
-    }
-  }
-
-
   function startDataListener() {
+    if (stopDataListener) return;
 
-    if (stopDataListener) {
-      return;
-    }
+    stopDataListener = onValue(
+      dbRef,
+      (snapshot) => {
+        const data = snapshot.val();
 
+        if (data) {
+          state = {
+            openingBalance:
+              Number(data.openingBalance) || 0,
 
-    stopDataListener =
-      onValue(
-        dbRef,
+            creditCardBillingDay:
+              Number(data.creditCardBillingDay) || 2,
 
-        (snapshot) => {
+            incomes:
+              (data.incomes || []).map((inc) => ({
+                ...inc,
+                expectedDate: calcExpectedDate(
+                  inc.date,
+                  inc.termDays || 0
+                )
+              })),
 
-          const data =
-            snapshot.val();
+            expenses:
+              data.expenses || []
+          };
 
+          const normalizedSchedules =
+            normalizeInstallmentSchedules(
+              state.expenses
+            );
 
-          if (data) {
+          state.expenses =
+            normalizedSchedules.expenses;
 
-            state = {
-
-              openingBalance:
-                Number(
-                  data.openingBalance
-                ) || 0,
-
-              creditCardBillingDay:
-                Number(
-                  data.creditCardBillingDay
-                ) || 2,
-
-              incomes:
-                (data.incomes || [])
-                  .map(
-                    (inc) => ({
-                      ...inc,
-
-                      expectedDate:
-                        calcExpectedDate(
-                          inc.date,
-                          inc.termDays || 0
-                        )
-                    })
-                  ),
-
-              expenses:
-                data.expenses || []
-            };
-
-
-            const normalizedSchedules =
-              normalizeInstallmentSchedules(
-                state.expenses
-              );
-
-
-            state.expenses =
-              normalizedSchedules.expenses;
-
-
-            if (
-              normalizedSchedules.changed
-            ) {
-
-              set(
-                dbRef,
-                state
-              ).catch(
-                () => {
-
-                  syncStatus =
-                    "שגיאה בעדכון התשלומים ❌";
-
-                  render();
-                }
-              );
-            }
-
-
-          } else {
-
-            saveToCloud();
+          if (normalizedSchedules.changed) {
+            set(dbRef, state).catch(() => {
+              syncStatus =
+                "שגיאה בעדכון התשלומים ❌";
+              render();
+            });
           }
-
-
-          render();
-        },
-
-
-        () => {
-
-          syncStatus =
-            "הגישה לנתונים נחסמה ⚠️";
-
-          render();
+        } else {
+          saveToCloud();
         }
-      );
-  }  onAuthStateChanged(auth, async (user) => {
-    authReady = true;
-    authError = "";
 
-    if (
-      user &&
-      String(user.email || "").toLowerCase() === ALLOWED_EMAIL
-    ) {
-      currentUser = user;
-      syncStatus = "סנכרון מאובטח 🔒";
-      startDataListener();
-      render();
-      return;
+        render();
+      },
+
+      () => {
+        syncStatus =
+          "הגישה לנתונים נחסמה ⚠️";
+        render();
+      }
+    );
+  }
+
+  onAuthStateChanged(
+    auth,
+    async (user) => {
+      authReady = true;
+      authError = "";
+
+      if (
+        user &&
+        String(user.email || "").toLowerCase() ===
+          ALLOWED_EMAIL
+      ) {
+        currentUser = user;
+        syncStatus = "סנכרון מאובטח 🔒";
+
+        startDataListener();
+        render();
+        return;
+      }
+
+      if (user) {
+        authError =
+          "החשבון הזה אינו מורשה לצפות בנתונים.";
+
+        await signOut(auth);
+      }
+
+      currentUser = null;
+
+      if (stopDataListener) {
+        stopDataListener();
+        stopDataListener = null;
+      }
+
+      renderLogin();
     }
-
-    if (user) {
-      authError = "החשבון הזה אינו מורשה לצפות בנתונים.";
-      await signOut(auth);
-    }
-
-    currentUser = null;
-
-    if (stopDataListener) {
-      stopDataListener();
-      stopDataListener = null;
-    }
-
-    renderLogin();
-  });
-
+  );
 
   async function saveToCloud() {
     if (
       !currentUser ||
-      String(currentUser.email || "").toLowerCase() !== ALLOWED_EMAIL
+      String(currentUser.email || "").toLowerCase() !==
+        ALLOWED_EMAIL
     ) {
       return;
     }
@@ -1497,57 +590,67 @@
 
       await set(dbRef, state);
 
-      syncStatus = "סנכרון פעיל ☁️";
+      syncStatus =
+        "סנכרון פעיל ☁️";
     } catch (e) {
-      syncStatus = "שגיאה בשמירה ❌";
+      syncStatus =
+        "שגיאה בשמירה ❌";
     }
 
     render();
   }
 
-
   function calc() {
     const today = todayStr();
     const thisMonth = monthKey(today);
-    const nextMonth = monthKey(addMonths(today, 1));
+    const nextMonth =
+      monthKey(addMonths(today, 1));
 
-    const paid = (state.incomes || []).filter(
-      (income) => income.status === "paid"
-    );
-
-    const pending = (state.incomes || [])
-      .filter(
-        (income) => income.status !== "paid"
-      )
-      .sort(
-        (a, b) =>
-          a.expectedDate.localeCompare(
-            b.expectedDate
-          )
+    const paid =
+      (state.incomes || []).filter(
+        (income) =>
+          income.status === "paid"
       );
+
+    const pending =
+      (state.incomes || [])
+        .filter(
+          (income) =>
+            income.status !== "paid"
+        )
+        .sort(
+          (a, b) =>
+            a.expectedDate.localeCompare(
+              b.expectedDate
+            )
+        );
 
     const pastExpenses =
       (state.expenses || []).filter(
         (expense) =>
-          monthKey(expense.date) < thisMonth
+          monthKey(expense.date) <
+          thisMonth
       );
 
     const currentExpenses =
       (state.expenses || []).filter(
         (expense) =>
-          monthKey(expense.date) === thisMonth
+          monthKey(expense.date) ===
+          thisMonth
       );
 
     const futureExpenses =
       (state.expenses || []).filter(
         (expense) =>
-          monthKey(expense.date) === nextMonth
+          monthKey(expense.date) ===
+          nextMonth
       );
 
     const laterExpenses =
       (state.expenses || []).filter(
         (expense) =>
-          monthKey(expense.date) > nextMonth
+          monthKey(expense.date) >
+          nextMonth
       );
 
     const totalExpPast =
@@ -1649,52 +752,544 @@
         ),
 
       actualCurrentBalance,
-
       amountToPayThisMonth,
-
       balanceAfterExpenses,
-
       finalExpectedBalance,
-
       pending,
-
       monthPaidIncome,
-
       monthExpectedIncome,
-
       totalExpPast,
-
       totalExpCurrent,
-
       totalExpFuture,
-
       totalExpNextMonth:
         totalExpFuture,
-
       totalExpLater,
-
       safeToSpend,
-
       overdueAmount,
-
       overdueCount:
         overdueIncomes.length,
-
       pastExpenses,
-
       currentExpenses,
-
       futureExpenses,
-
       laterExpenses
     };
   }
 
+  function render() {
+    if (
+      !authReady ||
+      !currentUser
+    ) {
+      renderLogin();
+      return;
+    }
 
-  function renderDashboard(c) {
+    const c = calc();
+
+    const root =
+      document.getElementById("app");
+
+    root.innerHTML = `
+      <div class="brand">
+        <div class="brand-logo">
+          <div class="brand-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+          </div>
+
+          <span class="brand-text">
+            תזרים לצלם
+          </span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span class="sync-badge">
+            ${syncStatus}
+          </span>
+
+          <button
+            class="logout-btn"
+            data-action="logout"
+          >
+            יציאה
+          </button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button
+          class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}"
+          data-action="tab"
+          data-tab="dashboard"
+        >
+          לוח בקרה
+        </button>
+
+        <button
+          class="tab-btn ${ui.tab === "income" ? "active" : ""}"
+          data-action="tab"
+          data-tab="income"
+        >
+          הכנסות
+        </button>
+
+        <button
+          class="tab-btn ${ui.tab === "expenses" ? "active" : ""}"
+          data-action="tab"
+          data-tab="expenses"
+        >
+          הוצאות
+        </button>
+      </div>
+
+      <div class="section">
+        ${
+          ui.tab === "dashboard"
+            ? renderAIAssistant(c) +
+              renderDashboard(c)
+            : ""
+        }
+
+        ${
+          ui.tab === "income"
+            ? renderIncome()
+            : ""
+        }
+
+        ${
+          ui.tab === "expenses"
+            ? renderExpenses(c)
+            : ""
+        }
+      </div>
+    `;
+  }
+
+  function renderLogin() {
+    const root =
+      document.getElementById("app");
+
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="login-screen">
+        <div class="login-card">
+          <div class="login-icon">
+            🔒
+          </div>
+
+          <div class="login-title">
+            כניסה מאובטחת
+          </div>
+
+          <div class="login-text">
+            המידע הפיננסי פרטי.
+            רק חשבון Google המורשה
+            יכול לצפות בהכנסות ובהוצאות.
+          </div>
+
+          <button
+            class="google-btn"
+            data-action="google-login"
+          >
+            כניסה באמצעות Google
+          </button>
+
+          ${
+            authError
+              ? `<div class="login-error">${esc(authError)}</div>`
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // Gemini AI
+  // ============================================================================
+
+  const AI_WORKER_URL =
+    "https://money-gemini.frdi144.workers.dev/";
+
+  let aiMessages = [];
+  let aiLoading = false;
+  let aiError = "";
+
+  function buildAIData(c) {
+    return {
+      currentBalance:
+        Number(
+          c.actualCurrentBalance || 0
+        ),
+
+      expensesThisMonth:
+        Number(
+          c.amountToPayThisMonth || 0
+        ),
+
+      expensesNextMonth:
+        Number(
+          c.totalExpNextMonth || 0
+        ),
+
+      balanceAfterThisMonthExpenses:
+        Number(
+          c.balanceAfterExpenses || 0
+        ),
+
+      expectedEndOfMonthBalance:
+        Number(
+          c.finalExpectedBalance || 0
+        ),
+
+      paidIncomeThisMonth:
+        Number(
+          c.monthPaidIncome || 0
+        ),
+
+      expectedIncomeThisMonth:
+        Number(
+          c.monthExpectedIncome || 0
+        ),
+
+      overdueAmount:
+        Number(
+          c.overdueAmount || 0
+        ),
+
+      overdueCount:
+        Number(
+          c.overdueCount || 0
+        ),
+
+      incomes:
+        (state.incomes || []).map(
+          (income) => ({
+            client:
+              income.client || "",
+
+            amount:
+              Number(
+                income.amount || 0
+              ),
+
+            invoiceDate:
+              income.date || "",
+
+            expectedDate:
+              income.expectedDate || "",
+
+            paidDate:
+              income.paidDate || "",
+
+            status:
+              income.status ||
+              "pending",
+
+            termDays:
+              Number(
+                income.termDays || 0
+              )
+          })
+        ),
+
+      expenses:
+        (state.expenses || []).map(
+          (expense) => ({
+            description:
+              expense.desc || "",
+
+            category:
+              expense.category || "",
+
+            amount:
+              Number(
+                expense.amount || 0
+              ),
+
+            purchaseDate:
+              expense.purchaseDate || "",
+
+            chargeDate:
+              expense.date || "",
+
+            installmentInfo:
+              expense.installmentInfo || ""
+          })
+        )
+    };
+  }
+
+  function formatAIText(text) {
+    return esc(text)
+      .replace(
+        /\*\*(.*?)\*\*/g,
+        "<strong>$1</strong>"
+      )
+      .replace(
+        /\n/g,
+        "<br>"
+      );
+  }
+
+  function renderAIAssistant(c) {
+    const messagesHtml =
+      aiMessages.length
+        ? aiMessages
+            .map(
+              (message) => `
+                <div
+                  style="
+                    margin-top:10px;
+                    padding:11px 12px;
+                    border-radius:12px;
+                    background:${
+                      message.role === "user"
+                        ? "rgba(255,112,36,.12)"
+                        : "rgba(0,0,0,.24)"
+                    };
+                    border:1px solid var(--border);
+                  "
+                >
+                  <div
+                    style="
+                      font-size:11px;
+                      font-weight:700;
+                      color:${
+                        message.role === "user"
+                          ? "var(--accent)"
+                          : "var(--positive)"
+                      };
+                      margin-bottom:5px;
+                    "
+                  >
+                    ${
+                      message.role === "user"
+                        ? "אתה"
+                        : "AI"
+                    }
+                  </div>
+
+                  <div class="ai-text">
+                    ${formatAIText(message.text)}
+                  </div>
+                </div>
+              `
+            )
+            .join("")
+        : `
+          <div class="ai-text">
+            שאל אותי משהו פרקטי על הכסף שלך —
+            למשל:
+            <strong>כמה אני יכול להוציא?</strong>,
+            <strong>כדאי לי לקנות ציוד ב־4,000 ₪?</strong>
+            או
+            <strong>כמה להעביר לחיסכון?</strong>
+          </div>
+        `;
+
+    return `
+      <div class="ai-card">
+        <div class="ai-header">
+          <span class="ai-badge">
+            GEMINI
+          </span>
+
+          <span class="ai-title">
+            היועץ הפיננסי שלך
+          </span>
+        </div>
+
+        <div id="ai-chat-messages">
+          ${messagesHtml}
+        </div>
+
+        ${
+          aiLoading
+            ? `
+              <div
+                style="
+                  margin-top:10px;
+                  color:var(--text-muted);
+                  font-size:13px;
+                "
+              >
+                ⏳ בודק את הנתונים...
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          aiError
+            ? `
+              <div
+                style="
+                  margin-top:10px;
+                  color:var(--negative);
+                  font-size:13px;
+                "
+              >
+                ⚠️ ${esc(aiError)}
+              </div>
+            `
+            : ""
+        }
+
+        <div
+          style="
+            display:flex;
+            gap:8px;
+            margin-top:14px;
+            align-items:stretch;
+          "
+        >
+          <input
+            id="ai-question"
+            class="input"
+            style="margin:0;flex:1;"
+            placeholder="שאל אותי על התזרים שלך..."
+            autocomplete="off"
+          />
+
+          <button
+            class="submit-btn"
+            data-action="ask-ai"
+            style="
+              width:auto;
+              margin:0;
+              padding:0 18px;
+              white-space:nowrap;
+            "
+            ${aiLoading ? "disabled" : ""}
+          >
+            שלח
+          </button>
+        </div>
+
+        <div class="ai-reason">
+          קצר ולעניין:
+          תשובות פרקטיות לפי הנתונים
+          שיש במערכת.
+        </div>
+      </div>
+    `;
+  }
+
+  async function askAI(question) {
+    const cleanQuestion =
+      String(question || "").trim();
+
+    if (
+      !cleanQuestion ||
+      aiLoading
+    ) {
+      return;
+    }
+
+    const c = calc();
+
+    aiMessages.push({
+      role: "user",
+      text: cleanQuestion
+    });
+
+    aiLoading = true;
+    aiError = "";
+
+    render();
+
+    try {
+      const payload = {
+        ...buildAIData(c),
+
+        question:
+          cleanQuestion,
+
+        conversation:
+          aiMessages
+            .slice(-8)
+            .map(
+              (message) => ({
+                role:
+                  message.role,
+
+                text:
+                  message.text
+              })
+            ),
+
+        responseStyle:
+          "ענה בעברית. תהיה קצר, פרקטי וישיר. עד 4 נקודות קצרות. תן מספרים מדויקים כשאפשר. אל תחפור ואל תחזור על כל הנתונים. אם נשאלת שאלה, ענה קודם עליה. אם חסר מידע, אמור בקצרה מה חסר. אל תציג ייעוץ השקעות אישי כהבטחה או ודאות."
+      };
+
+      const response =
+        await fetch(
+          AI_WORKER_URL,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify(payload)
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.details?.error?.message ||
+          result?.error ||
+          "שגיאה בחיבור ל-AI"
+        );
+      }
+
+      aiMessages.push({
+        role: "assistant",
+
+        text:
+          String(
+            result.advice ||
+            "לא התקבלה תשובה מה-AI."
+          )
+      });
+    } catch (error) {
+      aiError =
+        error?.message ||
+        "שגיאה בתקשורת מול ה-AI.";
+    } finally {
+      aiLoading = false;
+
+      render();
+
+      requestAnimationFrame(
+        () =>
+          document
+            .getElementById(
+              "ai-question"
+            )
+            ?.focus()
+      );
+    }
+  }  function renderDashboard(c) {
     return `
       <div class="hero">
-
         <div class="hero-label">
           הסכום האמיתי שיש לי עכשיו בחשבון
         </div>
@@ -1745,49 +1340,36 @@
             `
             : ""
         }
-
       </div>
 
-
       <div class="stat-row">
-
         ${statCard(
           "יש לי עכשיו",
-          fmtMoney(
-            c.actualCurrentBalance
-          ),
+          fmtMoney(c.actualCurrentBalance),
           "var(--positive)"
         )}
 
         ${statCard(
           "אמור לרדת לי",
-          fmtMoney(
-            c.amountToPayThisMonth
-          ),
+          fmtMoney(c.amountToPayThisMonth),
           "var(--negative)"
         )}
 
         ${statCard(
           "יישאר לי",
-          fmtMoney(
-            c.balanceAfterExpenses
-          ),
+          fmtMoney(c.balanceAfterExpenses),
           c.balanceAfterExpenses >= 0
             ? "var(--positive)"
             : "var(--negative)"
         )}
-
       </div>
 
-
       <div class="card">
-
         <div class="card-title">
           📋 חישוב פשוט וברור
         </div>
 
         <div class="summary-box">
-
           <div
             class="summary-item"
             style="
@@ -1800,791 +1382,524 @@
             </span>
 
             <span>
-              ${fmtMoney(
-                c.actualCurrentBalance
-              )}
+              ${fmtMoney(c.actualCurrentBalance)}
             </span>
           </div>
-
 
           <div
-            class="summary-item"
-            style="
-              font-weight:700;
-              color:var(--negative);
-            "
+            class="summary-item sub"
+            style="color:var(--negative)"
           >
             <span>
-              2. ירדו לי הוצאות החודש:
+              2. כל ההוצאות של החודש:
             </span>
 
             <span>
-              -${fmtMoney(
-                c.amountToPayThisMonth
-              )}
+              -${fmtMoney(c.amountToPayThisMonth)}
             </span>
           </div>
-
-
-          <div class="summary-item sub">
-
-            <span>
-              • יישאר נקי רק מול הוצאות החודש:
-            </span>
-
-            <span>
-              ${fmtMoney(
-                c.balanceAfterExpenses
-              )}
-            </span>
-
-          </div>
-
-
-          <div
-            class="summary-item"
-            style="
-              font-weight:700;
-              color:var(--positive);
-              margin-top:4px;
-            "
-          >
-
-            <span>
-              3. ייכנסו לי החודש (שטרם שולמו):
-            </span>
-
-            <span>
-              +${fmtMoney(
-                c.monthExpectedIncome
-              )}
-            </span>
-
-          </div>
-
 
           <div class="summary-item total">
-
             <span>
-              צפוי להישאר בסוף החודש:
+              יישאר לי לאחר הוצאות החודש:
             </span>
 
-            <span>
-              ${fmtMoney(
-                c.finalExpectedBalance
-              )}
+            <span
+              style="
+                color:${
+                  c.balanceAfterExpenses >= 0
+                    ? "var(--positive)"
+                    : "var(--negative)"
+                }
+              "
+            >
+              ${fmtMoney(c.balanceAfterExpenses)}
             </span>
-
           </div>
 
+          <div
+            class="summary-item"
+            style="
+              margin-top:6px;
+              border-top:1px dashed var(--border);
+              padding-top:10px;
+            "
+          >
+            <span>
+              הכנסות שצפויות להיכנס החודש:
+            </span>
+
+            <span style="color:var(--positive)">
+              +${fmtMoney(c.monthExpectedIncome)}
+            </span>
+          </div>
+
+          <div class="summary-item">
+            <span>
+              אם ההכנסות ייכנסו, צפוי להיות:
+            </span>
+
+            <span style="color:var(--accent)">
+              ${fmtMoney(c.finalExpectedBalance)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          ⏳ תשלומים בדרך אליך (ממתין מגבייה)
         </div>
 
+        ${
+          c.pending.length === 0
+            ? `
+              <div class="empty">
+                אין תשלומים ממתינים כרגע.
+              </div>
+            `
+            : c.pending
+                .map((inc) => {
+                  const d =
+                    daysUntil(
+                      inc.expectedDate
+                    );
+
+                  return `
+                    <div class="row">
+                      <div style="flex:1">
+                        <div class="row-title">
+                          ${esc(inc.client)}
+                        </div>
+
+                        <div class="row-sub">
+                          צפוי ב-${fmtDate(inc.expectedDate)}
+                          ·
+                          ${
+                            d >= 0
+                              ? "בעוד " + d + " ימים"
+                              : `
+                                <span
+                                  style="color:var(--negative)"
+                                >
+                                  באיחור של ${-d} ימים
+                                </span>
+                              `
+                          }
+                        </div>
+                      </div>
+
+                      <div class="row-amount">
+                        ${fmtMoney(inc.amount)}
+                      </div>
+
+                      <div class="actions-group">
+                        <button
+                          class="icon-btn"
+                          data-action="mark-paid"
+                          data-id="${inc.id}"
+                          title="סמן כשולם"
+                        >
+                          ✓
+                        </button>
+
+                        <button
+                          class="icon-btn-muted"
+                          data-action="edit-income"
+                          data-id="${inc.id}"
+                          title="ערוך"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join("")
+        }
       </div>
     `;
   }
 
-
   function statCard(
-    title,
+    label,
     value,
-    color
+    dot
   ) {
     return `
       <div class="stat-card">
-
         <div class="stat-dot-row">
-
           <span
             class="dot"
-            style="background:${color}"
+            style="background:${dot}"
           ></span>
 
-          <span>
-            ${title}
-          </span>
-
+          ${label}
         </div>
 
-        <div
-          class="stat-value"
-          style="color:${color}"
-        >
+        <div class="stat-value">
           ${value}
         </div>
-
       </div>
     `;
-  }  function renderIncome() {
-    const editInc = ui.editingIncomeId
-      ? state.incomes.find(
-          i => i.id === ui.editingIncomeId
+  }
+
+  // ============================================================================
+  // הכנסות — אזור שמור ונעול
+  // אין לשנות את תנאי התשלום, התאריכים, העריכה או השמירה ללא בקשה מפורשת.
+  // ============================================================================
+
+  function renderIncome() {
+    const sorted =
+      [...(state.incomes || [])]
+        .sort(
+          (a, b) =>
+            a.date < b.date
+              ? 1
+              : -1
+        );
+
+    const editingItem =
+      ui.editingIncomeId
+        ? state.incomes.find(
+            (i) =>
+              i.id === ui.editingIncomeId
+          )
+        : null;
+
+    const totalPaid =
+      sorted
+        .filter(
+          (income) =>
+            income.status === "paid"
         )
-      : null;
+        .reduce(
+          (sum, income) =>
+            sum +
+            Number(
+              income.amount || 0
+            ),
+          0
+        );
+
+    const totalPending =
+      sorted
+        .filter(
+          (income) =>
+            income.status !== "paid"
+        )
+        .reduce(
+          (sum, income) =>
+            sum +
+            Number(
+              income.amount || 0
+            ),
+          0
+        );
+
+    const totalAllIncome =
+      totalPaid +
+      totalPending;
 
     return `
-      <div class="card">
+      <div class="stat-row">
+        ${statCard(
+          "כבר שולם",
+          fmtMoney(totalPaid),
+          "var(--positive)"
+        )}
 
-        <div class="card-title">
-          💰 הכנסות ועבודות (שוטף+)
-        </div>
+        ${statCard(
+          "עדיין ממתין",
+          fmtMoney(totalPending),
+          "var(--accent)"
+        )}
 
-        <button
-          class="add-btn"
-          data-action="toggle-income-form"
-        >
-          ➕ ${editInc ? "ערוך הכנסה" : "הוסף הכנסה / חשבונית"}
-        </button>
+        ${statCard(
+          "סה״כ הכול",
+          fmtMoney(totalAllIncome),
+          "#F7F4EF"
+        )}
+      </div>
 
+      <button
+        class="add-btn"
+        data-action="toggle-income-form"
+      >
         ${
           ui.showIncomeForm
-            ? `
-              <div class="form-box">
-
-                <div
-                  style="
-                    font-weight:700;
-                    font-size:16px;
-                  "
-                >
-                  ${editInc ? "עריכת הכנסה" : "הכנסה חדשה"}
-                </div>
-
-                <label class="label">
-                  תיאור העבודה / שם הלקוח
-
-                  <input
-                    class="input"
-                    id="inc-desc"
-                    value="${editInc ? esc(editInc.desc) : ""}"
-                    placeholder="למשל: סרט תדמית - הפקות בעמ"
-                  />
-                </label>
-
-                <label class="label">
-                  סכום החשבונית (₪)
-
-                  <input
-                    class="input"
-                    id="inc-amount"
-                    type="number"
-                    step="0.01"
-                    value="${editInc ? editInc.amount : ""}"
-                    placeholder="0.00"
-                  />
-                </label>
-
-                <label class="label">
-                  תאריך הוצאת החשבונית
-
-                  <input
-                    class="input"
-                    id="inc-date"
-                    type="date"
-                    value="${editInc ? editInc.date : todayStr()}"
-                  />
-                </label>
-
-                <label class="label">
-                  תנאי תשלום
-
-                  <select
-                    class="input"
-                    id="inc-terms"
-                  >
-                    ${
-                      TERMS.map(
-                        t => `
-                          <option
-                            value="${t.days}"
-                            ${
-                              editInc &&
-                              editInc.termDays == t.days
-                                ? "selected"
-                                : ""
-                            }
-                          >
-                            ${t.label}
-                          </option>
-                        `
-                      ).join("")
-                    }
-                  </select>
-                </label>
-
-                <button
-                  class="submit-btn"
-                  data-action="save-income"
-                >
-                  ${editInc ? "עדכן הכנסה" : "שמור הכנסה"}
-                </button>
-
-                <button
-                  class="cancel-btn"
-                  data-action="toggle-income-form"
-                >
-                  ביטול
-                </button>
-
-              </div>
-            `
-            : ""
+            ? "✕ סגור"
+            : "＋ הוסף הכנסה"
         }
+      </button>
 
-        <div style="margin-top:16px;">
+      ${
+        ui.showIncomeForm
+          ? `
+            <div class="form-box">
+              <div class="card-title">
+                ${
+                  editingItem
+                    ? "✏️ עריכת הכנסה"
+                    : "💰 הכנסה חדשה"
+                }
+              </div>
 
-          ${
-            (state.incomes || []).length === 0
-              ? `
-                <div class="empty">
-                  אין הכנסות רשומות
-                </div>
-              `
-              : state.incomes.map(
-                  inc => {
-                    const overdue =
-                      inc.status !== "paid" &&
-                      daysUntil(inc.expectedDate) < 0;
+              <label class="label">
+                לקוח / פרויקט
 
-                    return `
-                      <div class="row">
+                <input
+                  id="inc-client"
+                  class="input"
+                  type="text"
+                  value="${
+                    editingItem
+                      ? esc(editingItem.client)
+                      : ""
+                  }"
+                  placeholder="למשל: הפקת פרסומת"
+                />
+              </label>
 
-                        <div>
+              <label class="label">
+                סכום
 
-                          <div class="row-title">
-                            ${esc(inc.desc)}
-                          </div>
+                <input
+                  id="inc-amount"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="${
+                    editingItem
+                      ? editingItem.amount
+                      : ""
+                  }"
+                  placeholder="₪"
+                />
+              </label>
 
-                          <div class="row-sub">
+              <label class="label">
+                תאריך חשבונית
 
-                            <span>
-                              חשבונית:
-                              ${fmtDate(inc.date)}
-                            </span>
+                <input
+                  id="inc-date"
+                  class="input"
+                  type="date"
+                  value="${
+                    editingItem
+                      ? editingItem.date
+                      : todayStr()
+                  }"
+                />
+              </label>
 
-                            •
+              <label class="label">
+                תנאי תשלום
 
-                            <span
-                              style="
-                                color:${
-                                  inc.status === "paid"
-                                    ? "var(--positive)"
-                                    : (
-                                        overdue
-                                          ? "var(--negative)"
-                                          : "var(--accent)"
-                                      )
-                                }
-                              "
-                            >
-                              ${
-                                inc.status === "paid"
-                                  ? "שולם 🎉 (" +
-                                    fmtDate(
-                                      inc.paidDate ||
-                                      inc.date
-                                    ) +
-                                    ")"
-                                  : "צפוי: " +
-                                    fmtDate(
-                                      inc.expectedDate
-                                    ) +
-                                    (
-                                      overdue
-                                        ? " [באיחור!]"
-                                        : ""
-                                    )
-                              }
-                            </span>
+                <select
+                  id="inc-term"
+                  class="input"
+                >
+                  ${TERMS.map(
+                    (term) => `
+                      <option
+                        value="${term.days}"
+                        ${
+                          Number(
+                            editingItem?.termDays || 0
+                          ) === term.days
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${term.label}
+                      </option>
+                    `
+                  ).join("")}
+                </select>
+              </label>
 
-                          </div>
+              <button
+                class="submit-btn"
+                data-action="save-income-direct"
+              >
+                ${
+                  editingItem
+                    ? "שמור שינויים"
+                    : "שמור הכנסה"
+                }
+              </button>
 
-                        </div>
+              ${
+                editingItem
+                  ? `
+                    <button
+                      type="button"
+                      class="cancel-btn"
+                      data-action="cancel-edit"
+                    >
+                      ביטול
+                    </button>
 
-                        <div
-                          class="row-amount"
-                          style="color:var(--positive)"
-                        >
-                          +${fmtMoney(inc.amount)}
-                        </div>
+                    <button
+                      type="button"
+                      class="cancel-btn"
+                      data-action="delete-income"
+                      data-id="${editingItem.id}"
+                      style="
+                        color:var(--negative);
+                        border-color:rgba(255,82,82,.3);
+                      "
+                    >
+                      מחק הכנסה
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
+          `
+          : ""
+      }
 
-                        <div class="actions-group">
-
-                          ${
-                            inc.status !== "paid"
-                              ? `
-                                <button
-                                  class="icon-btn"
-                                  data-action="mark-paid"
-                                  data-id="${inc.id}"
-                                  title="סמן כשולם"
-                                >
-                                  ✓
-                                </button>
-                              `
-                              : ""
-                          }
-
-                          <button
-                            class="icon-btn-muted"
-                            data-action="edit-income"
-                            data-id="${inc.id}"
-                          >
-                            ✏️
-                          </button>
-
-                          <button
-                            class="icon-btn-muted icon-btn-danger"
-                            data-action="delete-income"
-                            data-id="${inc.id}"
-                          >
-                            🗑️
-                          </button>
-
-                        </div>
-
-                      </div>
-                    `;
-                  }
-                ).join("")
-          }
-
-        </div>
-
-      </div>
-    `;
-  }
-
-
-  function renderExpenses(c) {
-    const editExp = ui.editingExpenseId
-      ? state.expenses.find(
-          e => e.id === ui.editingExpenseId
-        )
-      : null;
-
-    return `
       <div class="card">
-
         <div class="card-title">
-          💳 הוצאות ותשלומים
+          💵 כל ההכנסות
         </div>
-
-        <button
-          class="add-btn"
-          data-action="toggle-expense-form"
-        >
-          ➕ ${editExp ? "ערוך הוצאה" : "הוסף הוצאה חדשה"}
-        </button>
 
         ${
-          ui.showExpenseForm
+          sorted.length === 0
             ? `
-              <div class="form-box">
-
-                <div
-                  style="
-                    font-weight:700;
-                    font-size:16px;
-                  "
-                >
-                  ${editExp ? "עריכת הוצאה" : "הוצאה חדשה"}
-                </div>
-
-
-                <label class="label">
-                  קטגוריה
-
-                  <div class="category-pills">
-
-                    ${
-                      CATEGORIES.map(
-                        cat => `
-                          <div
-                            class="pill ${
-                              ui.selectedCategory === cat.name
-                                ? "selected"
-                                : ""
-                            }"
-                            data-action="select-category"
-                            data-cat="${cat.name}"
-                          >
-                            <span>
-                              ${cat.icon}
-                            </span>
-
-                            <span>
-                              ${cat.name}
-                            </span>
-                          </div>
-                        `
-                      ).join("")
-                    }
-
-                  </div>
-                </label>
-
-
-                <label class="label">
-                  תיאור ההוצאה / שם העסק
-
-                  <input
-                    class="input"
-                    id="exp-desc"
-                    value="${
-                      editExp
-                        ? esc(editExp.desc)
-                        : ui.tempExpense.desc
-                    }"
-                    placeholder="למשל: יוגנד ציוד צילום, דלק"
-                  />
-                </label>
-
-
-                <label class="label">
-                  סכום כולל (₪)
-
-                  <input
-                    class="input"
-                    id="exp-amount"
-                    type="number"
-                    step="0.01"
-                    value="${
-                      editExp
-                        ? editExp.amount
-                        : ui.tempExpense.amount
-                    }"
-                    placeholder="0.00"
-                  />
-                </label>
-
-
-                <label class="label">
-                  תאריך הרכישה
-
-                  <input
-                    class="input"
-                    id="exp-date"
-                    type="date"
-                    value="${
-                      editExp
-                        ? editExp.purchaseDate ||
-                          editExp.date
-                        : (
-                            ui.tempExpense.date ||
-                            todayStr()
-                          )
-                    }"
-                  />
-                </label>
-
-
-                ${
-                  !editExp
-                    ? `
-                      <label class="checkbox-label">
-
-                        <span>
-                          רכישה בתשלומים בכרטיס אשראי
-                        </span>
-
-                        <input
-                          type="checkbox"
-                          id="exp-is-installments"
-                          ${
-                            ui.isInstallments
-                              ? "checked"
-                              : ""
-                          }
-                          data-action="toggle-installments-checkbox"
-                        />
-
-                      </label>
-
-
-                      ${
-                        ui.isInstallments
-                          ? `
-                            <label class="label">
-                              מספר תשלומים
-
-                              <select
-                                class="input"
-                                id="exp-installments-count"
-                              >
-                                ${
-                                  [
-                                    2,
-                                    3,
-                                    4,
-                                    5,
-                                    6,
-                                    8,
-                                    10,
-                                    12,
-                                    18,
-                                    24,
-                                    36
-                                  ].map(
-                                    n => `
-                                      <option
-                                        value="${n}"
-                                        ${
-                                          ui.tempExpense.installmentsCount == n
-                                            ? "selected"
-                                            : ""
-                                        }
-                                      >
-                                        ${n} תשלומים
-                                      </option>
-                                    `
-                                  ).join("")
-                                }
-                              </select>
-
-                            </label>
-
-
-                            <label class="label">
-                              סכום ריבית כולל (רשות)
-
-                              <input
-                                class="input"
-                                id="exp-interest"
-                                type="number"
-                                step="0.01"
-                                value="${ui.tempExpense.interestAmount}"
-                                placeholder="0.00"
-                              />
-                            </label>
-
-
-                            <label class="label">
-                              חיוב חודשי קבוע מדויק (רשות)
-
-                              <input
-                                class="input"
-                                id="exp-custom-monthly"
-                                type="number"
-                                step="0.01"
-                                value="${ui.tempExpense.customMonthlyAmount}"
-                                placeholder="למשל 1500"
-                              />
-                            </label>
-                          `
-                          : ""
-                      }
-                    `
-                    : ""
-                }
-
-
-                <button
-                  class="submit-btn"
-                  data-action="save-expense"
-                >
-                  ${editExp ? "עדכן הוצאה" : "שמור הוצאה"}
-                </button>
-
-                <button
-                  class="cancel-btn"
-                  data-action="toggle-expense-form"
-                >
-                  ביטול
-                </button>
-
+              <div class="empty">
+                עדיין לא הוספת הכנסות.
               </div>
             `
-            : ""
-        }
+            : sorted
+                .map((inc) => {
+                  const isPaid =
+                    inc.status === "paid";
 
+                  return `
+                    <div class="row">
+                      <div style="flex:1">
+                        <div class="row-title">
+                          ${esc(inc.client)}
+                        </div>
 
-        <div style="margin-top:16px;">
+                        <div class="row-sub">
+                          חשבונית:
+                          ${fmtDate(inc.date)}
 
-          <div
-            style="
-              font-weight:700;
-              font-size:14px;
-              color:var(--text-muted);
-              margin-bottom:8px;
-            "
-          >
-            הוצאות החודש הנוכחי
-          </div>
+                          ·
 
-
-          ${
-            (c.currentExpenses || []).length === 0
-              ? `
-                <div class="empty">
-                  אין הוצאות בחודש זה
-                </div>
-              `
-              : c.currentExpenses
-                  .map(
-                    exp =>
-                      renderExpenseRow(exp)
-                  )
-                  .join("")
-          }
-
-
-          <div
-            style="
-              font-weight:700;
-              font-size:14px;
-              color:var(--text-muted);
-              margin-top:20px;
-              margin-bottom:8px;
-            "
-          >
-            הוצאות החודש הבא
-            (${fmtMoney(c.totalExpFuture)})
-          </div>
-
-
-          ${
-            (c.futureExpenses || []).length === 0
-              ? `
-                <div class="empty">
-                  אין הוצאות לחודש הבא
-                </div>
-              `
-              : c.futureExpenses
-                  .map(
-                    exp =>
-                      renderExpenseRow(exp)
-                  )
-                  .join("")
-          }
-
-
-          ${
-            (c.laterExpenses || []).length > 0
-              ? `
-                <button
-                  class="link-btn"
-                  style="
-                    margin-top:16px;
-                    width:100%;
-                  "
-                  data-action="toggle-later-expenses"
-                >
-                  ${
-                    ui.showLaterExpenses
-                      ? "הסתר תשלומים עתידיים רחוקים"
-                      : `
-                        הצג עוד
-                        ${c.laterExpenses.length}
-                        תשלומים עתידיים רחוקים
-                        (${fmtMoney(c.totalExpLater)})
-                      `
-                  }
-                </button>
-
-
-                ${
-                  ui.showLaterExpenses
-                    ? `
-                      <div
-                        style="
-                          margin-top:12px;
-                          padding-top:12px;
-                          border-top:1px dashed var(--border);
-                        "
-                      >
-                        ${
-                          c.laterExpenses
-                            .map(
-                              exp =>
-                                renderExpenseRow(exp)
-                            )
-                            .join("")
-                        }
+                          ${
+                            isPaid
+                              ? `
+                                <span
+                                  style="color:var(--positive)"
+                                >
+                                  שולם
+                                  ${
+                                    inc.paidDate
+                                      ? "ב-" + fmtDate(inc.paidDate)
+                                      : ""
+                                  }
+                                </span>
+                              `
+                              : `
+                                צפוי:
+                                ${fmtDate(inc.expectedDate)}
+                              `
+                          }
+                        </div>
                       </div>
-                    `
-                    : ""
-                }
-              `
-              : ""
-          }
 
-        </div>
+                      <div class="row-amount">
+                        ${fmtMoney(inc.amount)}
+                      </div>
 
+                      <div class="actions-group">
+                        ${
+                          !isPaid
+                            ? `
+                              <button
+                                class="icon-btn"
+                                data-action="mark-paid"
+                                data-id="${inc.id}"
+                                title="סמן כשולם"
+                              >
+                                ✓
+                              </button>
+                            `
+                            : ""
+                        }
+
+                        <button
+                          class="icon-btn-muted"
+                          data-action="edit-income"
+                          data-id="${inc.id}"
+                          title="ערוך"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join("")
+        }
       </div>
     `;
   }
 
+  // ============================================================================
+  // הוצאות — אזור שמור ונעול
+  // אין לשנות את חישובי התשלומים, החלוקה, העריכה או סדר החודשים ללא בקשה מפורשת.
+  // ============================================================================
 
-  function renderExpenseRow(exp) {
-    const catObj =
+  function renderExpenseRow(expense) {
+    const category =
       CATEGORIES.find(
-        c => c.name === exp.category
-      ) || {
-        icon: "📦"
-      };
+        (item) =>
+          item.name === expense.category
+      );
+
+    const installmentText =
+      expense.installmentInfo
+        ? ` · תשלום ${expense.installmentInfo}`
+        : "";
 
     return `
       <div class="row">
-
-        <div>
-
+        <div style="flex:1;min-width:0;">
           <div class="row-title">
-
-            ${catObj.icon}
-
-            ${esc(exp.desc)}
-
             ${
-              exp.installmentInfo
-                ? `
-                  <span
-                    style="
-                      font-size:12px;
-                      color:var(--accent);
-                    "
-                  >
-                    (${exp.installmentInfo})
-                  </span>
-                `
-                : ""
+              category?.icon || "📦"
             }
-
+            ${esc(expense.desc)}
           </div>
-
 
           <div class="row-sub">
+            ${esc(
+              expense.category || "אחר"
+            )}
 
-            חיוב:
-            ${fmtDate(exp.date)}
+            ${installmentText}
 
-            ${
-              exp.purchaseDate
-                ? `
-                  • קנייה:
-                  ${fmtDate(exp.purchaseDate)}
-                `
-                : ""
-            }
-
+            · ${fmtDate(expense.date)}
           </div>
-
         </div>
 
-
-        <div
-          class="row-amount"
-          style="color:var(--negative)"
-        >
-          -${fmtMoney(exp.amount)}
+        <div class="row-amount">
+          ${fmtMoney(expense.amount)}
         </div>
-
 
         <div class="actions-group">
-
           <button
             class="icon-btn-muted"
             data-action="edit-expense"
-            data-id="${exp.id}"
+            data-id="${expense.id}"
+            title="ערוך"
           >
             ✏️
           </button>
@@ -2592,753 +1907,1543 @@
           <button
             class="icon-btn-muted icon-btn-danger"
             data-action="delete-expense"
-            data-id="${exp.id}"
+            data-id="${expense.id}"
+            title="מחק"
           >
-            🗑️
+            🗑
           </button>
-
         </div>
-
       </div>
     `;
   }
 
+  function renderCategoryGroups(expenses) {
+    const grouped = {};
 
-  function render() {
+    expenses.forEach(
+      (expense) => {
+        const category =
+          expense.category || "אחר";
 
-    if (
-      !authReady ||
-      !currentUser
-    ) {
-      renderLogin();
-      return;
-    }
-
-
-    const c = calc();
-
-    const root =
-      document.getElementById("app");
-
-
-    root.innerHTML = `
-
-      <div class="brand">
-
-        <div class="brand-logo">
-
-          <div class="brand-icon">
-
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path
-                d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
-              />
-
-              <circle
-                cx="12"
-                cy="13"
-                r="3"
-              />
-            </svg>
-
-          </div>
-
-
-          <span class="brand-text">
-            תזרים לצלם
-          </span>
-
-        </div>
-
-
-        <div
-          style="
-            display:flex;
-            align-items:center;
-            gap:7px;
-          "
-        >
-
-          <span class="sync-badge">
-            ${syncStatus}
-          </span>
-
-          <button
-            class="logout-btn"
-            data-action="logout"
-          >
-            יציאה
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <div class="tabs">
-
-        <button
-          class="tab-btn ${
-            ui.tab === "dashboard"
-              ? "active"
-              : ""
-          }"
-          data-action="tab"
-          data-tab="dashboard"
-        >
-          לוח בקרה
-        </button>
-
-
-        <button
-          class="tab-btn ${
-            ui.tab === "income"
-              ? "active"
-              : ""
-          }"
-          data-action="tab"
-          data-tab="income"
-        >
-          הכנסות
-        </button>
-
-
-        <button
-          class="tab-btn ${
-            ui.tab === "expenses"
-              ? "active"
-              : ""
-          }"
-          data-action="tab"
-          data-tab="expenses"
-        >
-          הוצאות
-        </button>
-
-      </div>
-
-
-      <div class="section">
-
-        ${
-          ui.tab === "dashboard"
-            ? renderAIAssistant(c) +
-              renderDashboard(c)
-            : ""
+        if (!grouped[category]) {
+          grouped[category] = [];
         }
 
-        ${
-          ui.tab === "income"
-            ? renderIncome()
-            : ""
-        }
-
-        ${
-          ui.tab === "expenses"
-            ? renderExpenses(c)
-            : ""
-        }
-
-      </div>
-    `;
-  }
-
-
-  function renderLogin() {
-
-    const root =
-      document.getElementById("app");
-
-    if (!root) {
-      return;
-    }
-
-
-    root.innerHTML = `
-
-      <div class="login-screen">
-
-        <div class="login-card">
-
-          <div class="login-icon">
-            🔒
-          </div>
-
-
-          <div class="login-title">
-            כניסה מאובטחת
-          </div>
-
-
-          <div class="login-text">
-
-            המידע הפיננסי פרטי.
-            רק חשבון Google המורשה
-            יכול לצפות בהכנסות ובהוצאות.
-
-          </div>
-
-
-          <button
-            class="google-btn"
-            data-action="google-login"
-          >
-            כניסה באמצעות Google
-          </button>
-
-
-          ${
-            authError
-              ? `
-                <div class="login-error">
-                  ${esc(authError)}
-                </div>
-              `
-              : ""
-          }
-
-        </div>
-
-      </div>
-    `;
-  }  // ============================================================================
-  // אירועי לחיצה וניהול טפסים
-  // ============================================================================
-
-  document.addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-action]");
-
-    if (!btn) return;
-
-    const action = btn.dataset.action;
-
-
-    if (action === "google-login") {
-
-      try {
-        await signInWithPopup(
-          auth,
-          googleProvider
+        grouped[category].push(
+          expense
         );
-      } catch (err) {
-        authError =
-          "שגיאה בתהליך ההתחברות";
-
-        renderLogin();
       }
+    );
 
-
-    } else if (action === "logout") {
-
-      await signOut(auth);
-
-
-    } else if (action === "tab") {
-
-      ui.tab = btn.dataset.tab;
-
-      render();
-
-
-    } else if (
-      action === "toggle-balance-edit"
-    ) {
-
-      ui.showBalanceEdit =
-        !ui.showBalanceEdit;
-
-      render();
-
-
-    } else if (
-      action === "save-balance"
-    ) {
-
-      const val =
-        parseFloat(
-          document.getElementById(
-            "balance-input"
-          ).value
-        );
-
-      if (!isNaN(val)) {
-
-        state.openingBalance = val;
-
-        ui.showBalanceEdit = false;
-
-        saveToCloud();
-      }
-
-
-    } else if (
-      action === "toggle-income-form"
-    ) {
-
-      ui.showIncomeForm =
-        !ui.showIncomeForm;
-
-      ui.editingIncomeId = null;
-
-      render();
-
-
-    } else if (
-      action === "edit-income"
-    ) {
-
-      ui.editingIncomeId =
-        btn.dataset.id;
-
-      ui.showIncomeForm = true;
-
-      render();
-
-
-    } else if (
-      action === "save-income"
-    ) {
-
-      const desc =
-        document
-          .getElementById("inc-desc")
-          .value
-          .trim();
-
-      const amount =
-        parseFloat(
-          document.getElementById(
-            "inc-amount"
-          ).value
-        );
-
-      const date =
-        document.getElementById(
-          "inc-date"
-        ).value;
-
-      const termDays =
-        parseInt(
-          document.getElementById(
-            "inc-terms"
-          ).value
-        ) || 0;
-
-
-      if (
-        desc &&
-        !isNaN(amount) &&
-        date
-      ) {
-
-        if (ui.editingIncomeId) {
-
-          const inc =
-            state.incomes.find(
-              i =>
-                i.id ===
-                ui.editingIncomeId
+    return Object.entries(grouped)
+      .map(
+        ([category, items]) => {
+          const categoryInfo =
+            CATEGORIES.find(
+              (item) =>
+                item.name === category
             );
 
-          if (inc) {
+          const total =
+            items.reduce(
+              (sum, expense) =>
+                sum +
+                Number(
+                  expense.amount || 0
+                ),
+              0
+            );
 
-            inc.desc = desc;
+          return `
+            <div
+              style="
+                padding:14px 0 4px;
+                border-bottom:1px solid var(--border);
+              "
+            >
+              <div
+                style="
+                  display:flex;
+                  justify-content:space-between;
+                  align-items:center;
+                  color:var(--text-muted);
+                  font-size:12px;
+                  font-weight:700;
+                  margin-bottom:2px;
+                "
+              >
+                <span>
+                  ${
+                    categoryInfo?.icon ||
+                    "📦"
+                  }
+                  ${esc(category)}
+                </span>
 
-            inc.amount = amount;
+                <span>
+                  ${fmtMoney(total)}
+                </span>
+              </div>
 
-            inc.date = date;
+              ${items
+                .map(
+                  (expense) =>
+                    renderExpenseRow(
+                      expense
+                    )
+                )
+                .join("")}
+            </div>
+          `;
+        }
+      )
+      .join("");
+  }
 
-            inc.termDays = termDays;
+  function renderFutureMonths(expenses) {
+    const groupedByMonth = {};
 
-            inc.expectedDate =
-              calcExpectedDate(
-                date,
-                termDays
-              );
-          }
+    expenses.forEach(
+      (expense) => {
+        const key =
+          monthKey(expense.date);
 
+        if (!groupedByMonth[key]) {
+          groupedByMonth[key] = [];
+        }
+
+        groupedByMonth[key].push(
+          expense
+        );
+      }
+    );
+
+    return Object.keys(
+      groupedByMonth
+    )
+      .sort()
+      .map((key) => {
+        const items =
+          groupedByMonth[key];
+
+        const total =
+          items.reduce(
+            (sum, expense) =>
+              sum +
+              Number(
+                expense.amount || 0
+              ),
+            0
+          );
+
+        return `
+          <div
+            style="
+              padding-top:14px;
+              margin-top:4px;
+            "
+          >
+            <div
+              style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                font-weight:700;
+                color:var(--text);
+                margin-bottom:4px;
+              "
+            >
+              <span>
+                ${fmtMonth(items[0].date)}
+              </span>
+
+              <span>
+                ${fmtMoney(total)}
+              </span>
+            </div>
+
+            ${renderCategoryGroups(items)}
+          </div>
+        `;
+      })
+      .join("");
+  }  function renderExpenses(c) {
+    const currentList =
+      [...c.currentExpenses].sort(
+        (a, b) =>
+          a.date.localeCompare(b.date)
+      );
+
+    const futureList =
+      [...c.futureExpenses].sort(
+        (a, b) =>
+          a.date.localeCompare(b.date)
+      );
+
+    const laterList =
+      [...c.laterExpenses].sort(
+        (a, b) =>
+          a.date.localeCompare(b.date)
+      );
+
+    const pastList =
+      [...c.pastExpenses].sort(
+        (a, b) =>
+          b.date.localeCompare(a.date)
+      );
+
+    const editingItem =
+      ui.editingExpenseId
+        ? state.expenses.find(
+            (expense) =>
+              expense.id ===
+              ui.editingExpenseId
+          )
+        : null;
+
+    const editingInstallmentSeries =
+      editingItem?.installmentGroupId
+        ? state.expenses
+            .filter(
+              (expense) =>
+                expense.installmentGroupId ===
+                editingItem.installmentGroupId
+            )
+            .sort((a, b) => {
+              const aNumber =
+                Number(
+                  String(
+                    a.installmentInfo ||
+                    "1/1"
+                  ).split("/")[0]
+                );
+
+              const bNumber =
+                Number(
+                  String(
+                    b.installmentInfo ||
+                    "1/1"
+                  ).split("/")[0]
+                );
+
+              return aNumber - bNumber;
+            })
+        : [];
+
+    const editingInstallmentCount =
+      editingInstallmentSeries.length ||
+      Number(
+        String(
+          editingItem?.installmentInfo ||
+          "1/1"
+        ).split("/")[1]
+      ) ||
+      2;
+
+    const editingOriginalAmount =
+      editingItem?.installmentGroupId
+        ? Number(
+            editingItem.fullOriginalAmount ||
+            editingInstallmentSeries.reduce(
+              (sum, expense) =>
+                sum +
+                Number(
+                  expense.amount || 0
+                ),
+              0
+            )
+          ) -
+          Number(
+            editingItem.interestAmount || 0
+          )
+        : Number(
+            editingItem?.amount || 0
+          );
+
+    const editingPurchaseDate =
+      editingItem?.purchaseDate ||
+      editingItem?.date ||
+      todayStr();
+
+    return `
+      <button
+        class="add-btn"
+        data-action="toggle-expense-form"
+      >
+        ${
+          ui.showExpenseForm
+            ? "✕ סגור"
+            : "＋ הוסף הוצאה"
+        }
+      </button>
+
+      ${
+        ui.showExpenseForm
+          ? `
+            <div class="form-box">
+              <div class="card-title">
+                ${
+                  editingItem
+                    ? "✏️ עריכת הוצאה"
+                    : "💳 הוצאה חדשה"
+                }
+              </div>
+
+              <label class="label">
+                תיאור ההוצאה
+
+                <input
+                  id="exp-desc"
+                  class="input"
+                  type="text"
+                  value="${
+                    editingItem
+                      ? esc(
+                          editingItem.desc
+                        )
+                      : ""
+                  }"
+                  placeholder="למשל: קניות בסופר"
+                />
+              </label>
+
+              <label class="label">
+                סכום
+
+                <input
+                  id="exp-amount"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="${
+                    editingItem
+                      ? editingOriginalAmount
+                      : ""
+                  }"
+                  placeholder="₪"
+                />
+              </label>
+
+              <label class="label">
+                תאריך הקנייה
+
+                <input
+                  id="exp-date"
+                  class="input"
+                  type="date"
+                  value="${
+                    editingItem
+                      ? editingPurchaseDate
+                      : todayStr()
+                  }"
+                />
+              </label>
+
+              <div class="label">
+                קטגוריה
+
+                <div class="category-pills">
+                  ${CATEGORIES.map(
+                    (category) => `
+                      <button
+                        type="button"
+                        class="pill ${
+                          ui.selectedCategory ===
+                          category.name
+                            ? "selected"
+                            : ""
+                        }"
+                        data-action="select-category"
+                        data-cat="${category.name}"
+                      >
+                        <span>
+                          ${category.icon}
+                        </span>
+
+                        <span>
+                          ${category.name}
+                        </span>
+                      </button>
+                    `
+                  ).join("")}
+                </div>
+              </div>
+
+              ${
+                !editingItem ||
+                editingItem.installmentGroupId
+                  ? `
+                    <label
+                      class="checkbox-label"
+                    >
+                      <input
+                        id="installments-check"
+                        type="checkbox"
+                        ${
+                          editingItem?.installmentGroupId ||
+                          ui.isInstallments
+                            ? "checked"
+                            : ""
+                        }
+                      />
+
+                      <span>
+                        לפרוס לתשלומים
+                      </span>
+                    </label>
+
+                    <div
+                      id="installments-options"
+                      style="
+                        display:${
+                          editingItem?.installmentGroupId ||
+                          ui.isInstallments
+                            ? "flex"
+                            : "none"
+                        };
+                        flex-direction:column;
+                        gap:14px;
+                        padding:14px;
+                        background:var(--surface-input);
+                        border:1px solid var(--border);
+                        border-radius:14px;
+                      "
+                    >
+                      <label class="label">
+                        מספר תשלומים
+
+                        <input
+                          id="exp-installmentsCount"
+                          class="input"
+                          type="number"
+                          min="2"
+                          max="36"
+                          value="${
+                            editingItem?.installmentGroupId
+                              ? editingInstallmentCount
+                              : ui.tempExpense.installmentsCount
+                          }"
+                        />
+                      </label>
+
+                      <label class="label">
+                        תוספת / ריבית לכל העסקה
+                        <span
+                          style="
+                            font-size:11px;
+                            color:var(--text-muted);
+                          "
+                        >
+                          אם אין ריבית אפשר להשאיר 0
+                        </span>
+
+                        <input
+                          id="exp-interest"
+                          class="input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value="${
+                            editingItem?.installmentGroupId
+                              ? Number(
+                                  editingItem.interestAmount ||
+                                  0
+                                )
+                              : ui.tempExpense.interestAmount
+                          }"
+                          placeholder="0"
+                        />
+                      </label>
+
+                      <label class="label">
+                        סכום חודשי ידני
+                        <span
+                          style="
+                            font-size:11px;
+                            color:var(--text-muted);
+                          "
+                        >
+                          אופציונלי — אם הוזן,
+                          המערכת תשתמש בסכום הזה
+                          לכל תשלום
+                        </span>
+
+                        <input
+                          id="exp-customMonthly"
+                          class="input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value="${
+                            editingItem?.installmentGroupId
+                              ? ""
+                              : ui.tempExpense.customMonthlyAmount
+                          }"
+                          placeholder="אופציונלי"
+                        />
+                      </label>
+                    </div>
+                  `
+                  : ""
+              }
+
+              ${
+                !editingItem
+                  ? `
+                    <label
+                      class="checkbox-label"
+                    >
+                      <input
+                        id="exp-recurring"
+                        type="checkbox"
+                      />
+
+                      <span>
+                        הוצאה קבועה / חוזרת
+                      </span>
+                    </label>
+                  `
+                  : ""
+              }
+
+              ${
+                editingItem?.installmentGroupId
+                  ? `
+                    <div
+                      style="
+                        padding:12px;
+                        background:rgba(255,112,36,.08);
+                        border:1px solid rgba(255,112,36,.25);
+                        border-radius:12px;
+                        color:var(--text-muted);
+                        font-size:12px;
+                        line-height:1.6;
+                      "
+                    >
+                      עריכת הוצאה זו תעדכן
+                      את כל סדרת התשלומים שלה.
+                    </div>
+                  `
+                  : ""
+              }
+
+              <button
+                class="submit-btn"
+                data-action="save-expense-direct"
+              >
+                ${
+                  editingItem
+                    ? "שמור שינויים"
+                    : "שמור הוצאה"
+                }
+              </button>
+
+              ${
+                editingItem
+                  ? `
+                    <button
+                      type="button"
+                      class="cancel-btn"
+                      data-action="cancel-edit"
+                    >
+                      ביטול
+                    </button>
+
+                    <button
+                      type="button"
+                      class="cancel-btn"
+                      data-action="delete-expense"
+                      data-id="${editingItem.id}"
+                      style="
+                        color:var(--negative);
+                        border-color:rgba(255,82,82,.3);
+                      "
+                    >
+                      מחק הוצאה
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
+          `
+          : ""
+      }
+
+      <div
+        class="card"
+        style="padding:0 20px;"
+      >
+        <div
+          style="
+            padding:14px 0;
+            font-weight:700;
+            font-size:15px;
+            color:var(--accent);
+            border-bottom:1px solid var(--border);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          "
+        >
+          <span>
+            ⏳ תשלום בחודש הבא —
+            ${fmtMonth(
+              addMonths(
+                todayStr(),
+                1
+              )
+            )}
+          </span>
+
+          <span>
+            ${fmtMoney(
+              c.totalExpFuture
+            )}
+          </span>
+        </div>
+
+        ${
+          futureList.length === 0
+            ? `
+              <div class="empty">
+                אין חיובים בחודש הבא.
+              </div>
+            `
+            : renderCategoryGroups(
+                futureList
+              )
+        }
+      </div>
+
+      <button
+        class="link-btn"
+        style="
+          width:100%;
+          margin:0 0 20px;
+          padding:11px 14px;
+        "
+        data-action="toggle-later-expenses"
+      >
+        ${
+          ui.showLaterExpenses
+            ? "הסתר תשלומים מחודשים מאוחרים"
+            : "הצג וערוך את שאר התשלומים העתידיים"
+        }
+
+        ${
+          laterList.length
+            ? `(${laterList.length} תשלומים · ${fmtMoney(c.totalExpLater)})`
+            : ""
+        }
+      </button>
+
+      ${
+        ui.showLaterExpenses
+          ? `
+            <div
+              class="card"
+              style="padding:0 20px;"
+            >
+              <div
+                style="
+                  padding:14px 0;
+                  font-weight:700;
+                  font-size:15px;
+                  color:var(--accent);
+                  border-bottom:1px solid var(--border);
+                  display:flex;
+                  justify-content:space-between;
+                  align-items:center;
+                "
+              >
+                <span>
+                  📅 תשלומים לאחר החודש הבא
+                </span>
+
+                <span>
+                  ${fmtMoney(
+                    c.totalExpLater
+                  )}
+                </span>
+              </div>
+
+              ${
+                laterList.length === 0
+                  ? `
+                    <div class="empty">
+                      אין תשלומים בחודשים
+                      מאוחרים יותר.
+                    </div>
+                  `
+                  : renderFutureMonths(
+                      laterList
+                    )
+              }
+            </div>
+          `
+          : ""
+      }
+
+      <div
+        class="card"
+        style="padding:0 20px;"
+      >
+        <div
+          style="
+            padding:14px 0;
+            font-weight:700;
+            font-size:15px;
+            color:var(--negative);
+            border-bottom:1px solid var(--border);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          "
+        >
+          <span>
+            🔴 משלם עכשיו —
+            ${fmtMonth(todayStr())}
+          </span>
+
+          <span>
+            ${fmtMoney(
+              c.totalExpCurrent
+            )}
+          </span>
+        </div>
+
+        ${
+          currentList.length === 0
+            ? `
+              <div class="empty">
+                אין הוצאות בחודש הנוכחי.
+              </div>
+            `
+            : renderCategoryGroups(
+                currentList
+              )
+        }
+      </div>
+
+      <div
+        class="card"
+        style="padding:0 20px;"
+      >
+        <div
+          style="
+            padding:14px 0;
+            font-weight:700;
+            font-size:15px;
+            color:var(--positive);
+            border-bottom:1px solid var(--border);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          "
+        >
+          <span>
+            ✅ שולם בעבר
+          </span>
+
+          <span>
+            ${fmtMoney(
+              c.totalExpPast
+            )}
+          </span>
+        </div>
+
+        ${
+          pastList.length === 0
+            ? `
+              <div class="empty">
+                אין הוצאות מחודשים קודמים.
+              </div>
+            `
+            : renderCategoryGroups(
+                pastList
+              )
+        }
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // Event Listeners
+  // ============================================================================
+
+  document.addEventListener(
+    "click",
+    (e) => {
+      const btn =
+        e.target.closest(
+          "[data-action]"
+        );
+
+      if (!btn) return;
+
+      const action =
+        btn.dataset.action;
+
+      const id =
+        btn.dataset.id;
+
+      if (
+        action ===
+        "google-login"
+      ) {
+        authError = "";
+
+        googleProvider.setCustomParameters({
+          login_hint:
+            ALLOWED_EMAIL
+        });
+
+        signInWithPopup(
+          auth,
+          googleProvider
+        ).catch((error) => {
+          authError =
+            error?.code ===
+            "auth/popup-closed-by-user"
+              ? "חלון ההתחברות נסגר לפני שהכניסה הושלמה."
+              : "ההתחברות נכשלה. יש לוודא שכניסת Google הופעלה ב-Firebase.";
+
+          renderLogin();
+        });
+
+      } else if (
+        action === "logout"
+      ) {
+        signOut(auth);
+
+      } else if (
+        action === "tab"
+      ) {
+        ui.tab =
+          btn.dataset.tab;
+
+        render();
+
+      } else if (
+        action ===
+        "toggle-balance-edit"
+      ) {
+        ui.showBalanceEdit =
+          !ui.showBalanceEdit;
+
+        render();
+
+      } else if (
+        action ===
+        "save-balance"
+      ) {
+        const bVal =
+          document.getElementById(
+            "balance-input"
+          ).value;
+
+        state.openingBalance =
+          Number(bVal) || 0;
+
+        ui.showBalanceEdit =
+          false;
+
+        saveToCloud();
+
+      } else if (
+        action === "ask-ai"
+      ) {
+        const input =
+          document.getElementById(
+            "ai-question"
+          );
+
+        const question =
+          input?.value || "";
+
+        if (input) {
+          input.value = "";
+        }
+
+        askAI(question);
+
+      } else if (
+        action ===
+        "toggle-income-form"
+      ) {
+        ui.showIncomeForm =
+          !ui.showIncomeForm;
+
+        ui.editingIncomeId =
+          null;
+
+        render();
+
+      } else if (
+        action ===
+        "edit-income"
+      ) {
+        ui.editingIncomeId =
+          id;
+
+        ui.showIncomeForm =
+          true;
+
+        ui.tab =
+          "income";
+
+        render();
+
+      } else if (
+        action ===
+        "cancel-edit"
+      ) {
+        ui.editingIncomeId =
+          null;
+
+        ui.editingExpenseId =
+          null;
+
+        ui.showIncomeForm =
+          false;
+
+        ui.showExpenseForm =
+          false;
+
+        ui.isInstallments =
+          false;
+
+        render();
+
+      } else if (
+        action ===
+        "save-income-direct"
+      ) {
+        const client =
+          document.getElementById(
+            "inc-client"
+          ).value;
+
+        const amount =
+          Number(
+            document.getElementById(
+              "inc-amount"
+            ).value
+          );
+
+        const date =
+          document.getElementById(
+            "inc-date"
+          ).value;
+
+        const termDays =
+          Number(
+            document.getElementById(
+              "inc-term"
+            ).value
+          );
+
+        if (
+          !client ||
+          !amount ||
+          !date
+        ) {
+          return;
+        }
+
+        if (
+          ui.editingIncomeId
+        ) {
+          state.incomes =
+            state.incomes.map(
+              (income) =>
+                income.id ===
+                ui.editingIncomeId
+                  ? {
+                      ...income,
+                      client,
+                      amount,
+                      date,
+                      termDays,
+                      expectedDate:
+                        calcExpectedDate(
+                          date,
+                          termDays
+                        )
+                    }
+                  : income
+            );
         } else {
-
           state.incomes.push({
-
             id: uid(),
-
-            desc,
-
+            client,
             amount,
-
             date,
-
             termDays,
-
+            status: "pending",
             expectedDate:
               calcExpectedDate(
                 date,
                 termDays
-              ),
-
-            status: "pending"
+              )
           });
         }
 
+        ui.showIncomeForm =
+          false;
 
-        ui.showIncomeForm = false;
-
-        ui.editingIncomeId = null;
-
-        saveToCloud();
-      }
-
-
-    } else if (
-      action === "mark-paid"
-    ) {
-
-      const id =
-        btn.dataset.id;
-
-      const inc =
-        state.incomes.find(
-          i => i.id === id
-        );
-
-      if (inc) {
-
-        inc.status = "paid";
-
-        inc.paidDate =
-          todayStr();
+        ui.editingIncomeId =
+          null;
 
         saveToCloud();
-      }
 
-
-    } else if (
-      action === "delete-income"
-    ) {
-
-      const id =
-        btn.dataset.id;
-
-      state.incomes =
-        state.incomes.filter(
-          i => i.id !== id
-        );
-
-      saveToCloud();
-
-
-    } else if (
-      action === "toggle-expense-form"
-    ) {
-
-      ui.showExpenseForm =
-        !ui.showExpenseForm;
-
-      ui.editingExpenseId = null;
-
-      ui.isInstallments = false;
-
-      render();
-
-
-    } else if (
-      action === "select-category"
-    ) {
-
-      ui.selectedCategory =
-        btn.dataset.cat;
-
-      render();
-
-
-    } else if (
-      action ===
-      "toggle-installments-checkbox"
-    ) {
-
-      ui.isInstallments =
-        e.target.checked;
-
-      render();
-
-
-    } else if (
-      action ===
-      "toggle-later-expenses"
-    ) {
-
-      ui.showLaterExpenses =
-        !ui.showLaterExpenses;
-
-      render();
-
-
-    } else if (
-      action === "edit-expense"
-    ) {
-
-      ui.editingExpenseId =
-        btn.dataset.id;
-
-      const exp =
-        state.expenses.find(
-          e =>
-            e.id ===
-            ui.editingExpenseId
-        );
-
-      if (exp) {
-
-        ui.selectedCategory =
-          exp.category ||
-          CATEGORIES[0].name;
-      }
-
-      ui.showExpenseForm = true;
-
-      render();
-
-
-    } else if (
-      action === "save-expense"
-    ) {
-
-      const desc =
-        document
-          .getElementById("exp-desc")
-          .value
-          .trim();
-
-      const amount =
-        parseFloat(
-          document.getElementById(
-            "exp-amount"
-          ).value
-        );
-
-      const purchaseDate =
-        document.getElementById(
-          "exp-date"
-        ).value;
-
-
-      if (
-        desc &&
-        !isNaN(amount) &&
-        purchaseDate
+      } else if (
+        action === "mark-paid"
       ) {
+        const paidIncome =
+          state.incomes.find(
+            (income) =>
+              income.id === id
+          );
 
-        if (ui.editingExpenseId) {
+        if (
+          !paidIncome ||
+          paidIncome.status ===
+            "paid"
+        ) {
+          return;
+        }
 
-          const exp =
+        state.openingBalance =
+          Number(
+            state.openingBalance ||
+            0
+          ) +
+          Number(
+            paidIncome.amount ||
+            0
+          );
+
+        state.incomes =
+          state.incomes.map(
+            (income) =>
+              income.id === id
+                ? {
+                    ...income,
+                    status: "paid",
+                    paidDate:
+                      todayStr(),
+                    addedToCurrentBalance:
+                      true
+                  }
+                : income
+          );
+
+        saveToCloud();
+
+      } else if (
+        action ===
+        "delete-income"
+      ) {
+        state.incomes =
+          state.incomes.filter(
+            (income) =>
+              income.id !== id
+          );
+
+        saveToCloud();
+
+      } else if (
+        action ===
+        "toggle-expense-form"
+      ) {
+        ui.showExpenseForm =
+          !ui.showExpenseForm;
+
+        ui.editingExpenseId =
+          null;
+
+        render();
+
+      } else if (
+        action ===
+        "toggle-later-expenses"
+      ) {
+        ui.showLaterExpenses =
+          !ui.showLaterExpenses;
+
+        render();
+
+      } else if (
+        action ===
+        "select-category"
+      ) {
+        ui.selectedCategory =
+          btn.dataset.cat;
+
+        document
+          .querySelectorAll(
+            '[data-action="select-category"]'
+          )
+          .forEach((pill) => {
+            pill.classList.toggle(
+              "selected",
+              pill.dataset.cat ===
+                ui.selectedCategory
+            );
+          });
+
+      } else if (
+        action ===
+        "edit-expense"
+      ) {
+        const exp =
+          state.expenses.find(
+            (expense) =>
+              expense.id === id
+          );
+
+        if (exp) {
+          ui.editingExpenseId =
+            id;
+
+          ui.selectedCategory =
+            exp.category ||
+            CATEGORIES[0].name;
+
+          ui.isInstallments =
+            !!exp.installmentGroupId;
+
+          ui.showExpenseForm =
+            true;
+
+          ui.tab =
+            "expenses";
+
+          render();
+
+          requestAnimationFrame(
+            () =>
+              document
+                .getElementById(
+                  "exp-desc"
+                )
+                ?.scrollIntoView({
+                  behavior:
+                    "smooth",
+                  block:
+                    "center"
+                })
+          );
+        }
+
+      } else if (
+        action ===
+        "delete-expense"
+      ) {
+        state.expenses =
+          state.expenses.filter(
+            (expense) =>
+              expense.id !== id
+          );
+
+        saveToCloud();
+
+      } else if (
+        action ===
+        "save-expense-direct"
+      ) {
+        const desc =
+          document.getElementById(
+            "exp-desc"
+          ).value;
+
+        const amountInput =
+          Number(
+            document.getElementById(
+              "exp-amount"
+            ).value
+          );
+
+        const date =
+          document.getElementById(
+            "exp-date"
+          ).value;
+
+        if (
+          !desc ||
+          !amountInput ||
+          !date
+        ) {
+          return;
+        }
+
+        if (
+          ui.editingExpenseId
+        ) {
+          const editedExpense =
             state.expenses.find(
-              e =>
-                e.id ===
+              (expense) =>
+                expense.id ===
                 ui.editingExpenseId
             );
 
-          if (exp) {
+          if (
+            editedExpense
+              ?.installmentGroupId
+          ) {
+            const count =
+              Number(
+                document.getElementById(
+                  "exp-installmentsCount"
+                )?.value
+              ) || 2;
 
-            exp.desc = desc;
+            const customMonthly =
+              Number(
+                document.getElementById(
+                  "exp-customMonthly"
+                )?.value || 0
+              );
 
-            exp.amount = amount;
+            const interest =
+              Number(
+                document.getElementById(
+                  "exp-interest"
+                )?.value || 0
+              );
 
-            exp.category =
-              ui.selectedCategory;
+            const installmentAmounts =
+              splitInstallmentAmounts(
+                amountInput,
+                count,
+                interest,
+                customMonthly
+              );
 
-            exp.purchaseDate =
-              purchaseDate;
+            if (
+              installmentAmounts.length !==
+              count
+            ) {
+              return;
+            }
 
-            exp.date =
-              calcCreditChargeDate(
-                purchaseDate,
-                state.creditCardBillingDay
+            const groupId =
+              editedExpense
+                .installmentGroupId;
+
+            const fullOriginal =
+              installmentAmounts.reduce(
+                (sum, cents) =>
+                  sum + cents,
+                0
+              ) / 100;
+
+            const originalCents =
+              Math.round(
+                amountInput * 100
+              );
+
+            const addedCost =
+              Math.max(
+                0,
+                Math.round(
+                  fullOriginal * 100
+                ) -
+                originalCents
+              ) / 100;
+
+            const firstPaymentDate =
+              calcInstallmentStartDate(
+                date
+              );
+
+            state.expenses =
+              state.expenses.filter(
+                (expense) =>
+                  expense
+                    .installmentGroupId !==
+                  groupId
+              );
+
+            for (
+              let i = 0;
+              i < count;
+              i++
+            ) {
+              state.expenses.push({
+                id: uid(),
+                installmentGroupId:
+                  groupId,
+                desc,
+                amount:
+                  installmentAmounts[i] /
+                  100,
+                date:
+                  addMonths(
+                    firstPaymentDate,
+                    i
+                  ),
+                purchaseDate:
+                  date,
+                scheduleVersion:
+                  2,
+                category:
+                  ui.selectedCategory,
+                installmentInfo:
+                  `${i + 1}/${count}`,
+                fullOriginalAmount:
+                  fullOriginal,
+                interestAmount:
+                  addedCost
+              });
+            }
+          } else {
+            state.expenses =
+              state.expenses.map(
+                (expense) =>
+                  expense.id ===
+                  ui.editingExpenseId
+                    ? {
+                        ...expense,
+                        desc,
+                        amount:
+                          amountInput,
+                        date,
+                        category:
+                          ui.selectedCategory
+                      }
+                    : expense
               );
           }
 
+        } else {
+          const isInst =
+            document.getElementById(
+              "installments-check"
+            )?.checked;
 
-        } else if (
-          ui.isInstallments
-        ) {
+          if (isInst) {
+            const count =
+              Number(
+                document.getElementById(
+                  "exp-installmentsCount"
+                ).value
+              ) || 2;
 
-          const count =
-            parseInt(
-              document.getElementById(
-                "exp-installments-count"
-              ).value
-            ) || 2;
+            const customMonthly =
+              Number(
+                document.getElementById(
+                  "exp-customMonthly"
+                )?.value
+              );
 
-          const interest =
-            parseFloat(
-              document.getElementById(
-                "exp-interest"
-              ).value
-            ) || 0;
+            const interest =
+              Number(
+                document.getElementById(
+                  "exp-interest"
+                )?.value
+              );
 
-          const customMonthly =
-            parseFloat(
-              document.getElementById(
-                "exp-custom-monthly"
-              ).value
-            ) || 0;
+            const installmentAmounts =
+              splitInstallmentAmounts(
+                amountInput,
+                count,
+                interest,
+                customMonthly
+              );
 
-          const groupId =
-            uid();
+            if (
+              installmentAmounts.length !==
+              count
+            ) {
+              return;
+            }
 
+            const fullOriginal =
+              installmentAmounts.reduce(
+                (sum, cents) =>
+                  sum + cents,
+                0
+              ) / 100;
 
-          const partsCents =
-            splitInstallmentAmounts(
-              amount,
-              count,
-              interest,
-              customMonthly
-            );
+            const originalCents =
+              Math.round(
+                amountInput * 100
+              );
 
+            const addedCost =
+              Math.max(
+                0,
+                Math.round(
+                  fullOriginal * 100
+                ) -
+                originalCents
+              ) / 100;
 
-          const firstPaymentDate =
-            calcInstallmentStartDate(
-              purchaseDate
-            );
+            const installmentGroupId =
+              uid();
 
+            const firstPaymentDate =
+              calcInstallmentStartDate(
+                date
+              );
 
-          partsCents.forEach(
-            (cents, i) => {
-
-              const paymentMonthDate =
+            for (
+              let i = 0;
+              i < count;
+              i++
+            ) {
+              const expDate =
                 addMonths(
                   firstPaymentDate,
                   i
                 );
 
-
-              const chargeDate =
-                calcCreditChargeDate(
-                  paymentMonthDate,
-                  state.creditCardBillingDay
-                );
-
-
               state.expenses.push({
-
                 id: uid(),
-
-                installmentGroupId:
-                  groupId,
-
-                scheduleVersion: 2,
-
+                installmentGroupId,
                 desc,
-
                 amount:
-                  cents / 100,
-
+                  installmentAmounts[i] /
+                  100,
+                date:
+                  expDate,
+                purchaseDate:
+                  date,
+                scheduleVersion:
+                  2,
                 category:
                   ui.selectedCategory,
-
-                purchaseDate,
-
-                date:
-                  chargeDate,
-
                 installmentInfo:
-                  `${i + 1}/${count}`
+                  `${i + 1}/${count}`,
+                fullOriginalAmount:
+                  fullOriginal,
+                interestAmount:
+                  addedCost
               });
             }
-          );
 
+          } else {
+            const recurring =
+              document.getElementById(
+                "exp-recurring"
+              )?.checked;
 
-        } else {
-
-          const chargeDate =
-            calcCreditChargeDate(
-              purchaseDate,
-              state.creditCardBillingDay
-            );
-
-
-          state.expenses.push({
-
-            id: uid(),
-
-            desc,
-
-            amount,
-
-            category:
-              ui.selectedCategory,
-
-            purchaseDate,
-
-            date:
-              chargeDate
-          });
+            state.expenses.push({
+              id: uid(),
+              desc,
+              amount:
+                amountInput,
+              date,
+              category:
+                ui.selectedCategory,
+              recurring:
+                !!recurring
+            });
+          }
         }
 
+        ui.showExpenseForm =
+          false;
 
-        ui.showExpenseForm = false;
+        ui.editingExpenseId =
+          null;
 
-        ui.editingExpenseId = null;
-
-        ui.isInstallments = false;
+        ui.isInstallments =
+          false;
 
         saveToCloud();
       }
+    }
+  );  document.addEventListener("change", (e) => {
+    if (e.target.id === "installments-check") {
+      ui.isInstallments = e.target.checked;
 
-
-    } else if (
-      action === "delete-expense"
-    ) {
-
-      const id =
-        btn.dataset.id;
-
-
-      const target =
-        state.expenses.find(
-          e => e.id === id
+      const options =
+        document.getElementById(
+          "installments-options"
         );
 
-
-      if (
-        target &&
-        target.installmentGroupId
-      ) {
-
-        if (
-          confirm(
-            "האם למחוק את כל סדרת התשלומים של הוצאה זו?"
-          )
-        ) {
-
-          state.expenses =
-            state.expenses.filter(
-              e =>
-                e.installmentGroupId !==
-                target.installmentGroupId
-            );
-        }
-
-      } else {
-
-        state.expenses =
-          state.expenses.filter(
-            e => e.id !== id
-          );
+      if (options) {
+        options.style.display =
+          ui.isInstallments
+            ? "flex"
+            : "none";
       }
-
-
-      saveToCloud();
     }
   });
 
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "exp-desc") {
+      ui.tempExpense.desc =
+        e.target.value;
+    }
+
+    if (e.target.id === "exp-amount") {
+      ui.tempExpense.amount =
+        e.target.value;
+    }
+
+    if (e.target.id === "exp-date") {
+      ui.tempExpense.date =
+        e.target.value;
+    }
+
+    if (
+      e.target.id ===
+      "exp-installmentsCount"
+    ) {
+      ui.tempExpense.installmentsCount =
+        e.target.value;
+    }
+
+    if (
+      e.target.id ===
+      "exp-interest"
+    ) {
+      ui.tempExpense.interestAmount =
+        e.target.value;
+    }
+
+    if (
+      e.target.id ===
+      "exp-customMonthly"
+    ) {
+      ui.tempExpense.customMonthlyAmount =
+        e.target.value;
+    }
+  });
+
+  // מאפשר לשלוח הודעה ל-AI גם עם Enter
+  document.addEventListener("keydown", (e) => {
+    if (
+      e.target.id === "ai-question" &&
+      e.key === "Enter" &&
+      !e.shiftKey
+    ) {
+      e.preventDefault();
+
+      const input =
+        document.getElementById(
+          "ai-question"
+        );
+
+      const question =
+        input?.value || "";
+
+      if (input) {
+        input.value = "";
+      }
+
+      askAI(question);
+    }
+  });
+
+  if (!authReady) {
+    renderLogin();
+  }
 </script>
 </body>
 </html>
