@@ -134,6 +134,13 @@
       .actions-group { width: 100%; justify-content: flex-end; }
       .ai-grid { grid-template-columns: 1fr; }
     }
+  
+    /* AI chat readability */
+    .ai-chat-message, .ai-message, .ai-response, .ai-text {
+      font-size: 16px !important;
+      line-height: 1.75 !important;
+    }
+
   </style>
 </head>
 
@@ -1045,8 +1052,7 @@
   function renderAIAssistant(c) {
     const messagesHtml =
       aiMessages.length
-        ? aiMessages
-            .map(
+        ? aiMessages.slice(-2).map(
               (message) => `
                 <div
                   style="
@@ -1230,7 +1236,7 @@
             ),
 
         responseStyle:
-          "ענה בעברית. תהיה קצר, פרקטי וישיר. עד 4 נקודות קצרות. תן מספרים מדויקים כשאפשר. אל תחפור ואל תחזור על כל הנתונים. אם נשאלת שאלה, ענה קודם עליה. אם חסר מידע, אמור בקצרה מה חסר. אל תציג ייעוץ השקעות אישי כהבטחה או ודאות."
+          "ענה בעברית קלילה וברורה. ענה קודם בשורה התחתונה. בדרך כלל 1–3 משפטים קצרים בלבד, בלי הקדמות ובלי לחזור על הנתונים. אם צריך, הוסף לכל היותר נקודה פרקטית אחת. תן מספרים מדויקים כשאפשר. רק אם המשתמש מבקש פירוט, הרחב. אם חסר מידע, אמור במשפט קצר מה חסר. אל תציג ייעוץ השקעות אישי כהבטחה או ודאות."
       };
 
       const response =
