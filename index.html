@@ -447,6 +447,9 @@
     const today = todayStr();
     const thisMonth = monthKey(today);
     const nextMonth = monthKey(addMonths(today, 1));
+    const billingDay = Number(state.creditCardBillingDay) || 2;
+    const currentBillingDate = calcCreditChargeDate(today, billingDay);
+    const nextBillingDate = addMonths(currentBillingDate, 1);
 
     const paid = (state.incomes || []).filter((income) => income.status === "paid");
 
@@ -456,9 +459,9 @@
 
     // A charge is paid only when its actual card debit date has arrived.
     const pastExpenses = (state.expenses || []).filter((expense) => expense.date <= today);
-    const currentExpenses = (state.expenses || []).filter((expense) => expense.date > today && monthKey(expense.date) === thisMonth);
-    const futureExpenses = (state.expenses || []).filter((expense) => expense.date > today && monthKey(expense.date) === nextMonth);
-    const laterExpenses = (state.expenses || []).filter((expense) => monthKey(expense.date) > nextMonth);
+    const currentExpenses = (state.expenses || []).filter((expense) => expense.date > today && expense.date <= currentBillingDate);
+    const futureExpenses = (state.expenses || []).filter((expense) => expense.date > currentBillingDate && expense.date <= nextBillingDate);
+    const laterExpenses = (state.expenses || []).filter((expense) => expense.date > nextBillingDate);
 
     const totalExpPast = pastExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
     const totalExpCurrent = currentExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
@@ -472,7 +475,7 @@
       .reduce((sum, expense) => sum + Number(expense.amount), 0);
 
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalDeductedPast;
-    const amountToPayThisMonth = totalExpCurrent + totalExpFuture;
+    const amountToPayThisMonth = totalExpCurrent;
     const balanceAfterExpenses = actualCurrentBalance - amountToPayThisMonth;
 
     const monthPaidIncome = paid
@@ -503,6 +506,8 @@
       totalExpCurrent,
       totalExpFuture,
       totalExpNextMonth: totalExpFuture,
+      currentBillingDate,
+      nextBillingDate,
       totalExpLater,
       safeToSpend,
       overdueAmount,
@@ -1227,10 +1232,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>⏳ חיובים ב־2 לחודש הבא — ${fmtMonth(addMonths(todayStr(), 1))}</span>
+          <span>⏳ חיובים למחזור הבא — ${fmtDate(c.nextBillingDate)}</span>
           <span>${fmtMoney(c.totalExpFuture)}</span>
         </div>
-        ${futureList.length === 0 ? `<div class="empty">אין חיובים בחודש הבא.</div>` : renderCategoryGroups(futureList)}
+        ${futureList.length === 0 ? `<div class="empty">אין חיובים במחזור הבא.</div>` : renderCategoryGroups(futureList)}
       </div>
 
       <button class="link-btn" style="width:100%;margin:0 0 20px;padding:11px 14px;" data-action="toggle-later-expenses">
@@ -1250,10 +1255,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>🔴 חיובים שטרם ירדו החודש — ${fmtMonth(todayStr())}</span>
+          <span>🔴 החודש הנוכחי — חיוב ב־${fmtDate(c.currentBillingDate)}</span>
           <span>${fmtMoney(c.totalExpCurrent)}</span>
         </div>
-        ${currentList.length === 0 ? `<div class="empty">אין הוצאות בחודש הנוכחי.</div>` : renderCategoryGroups(currentList)}
+        ${currentList.length === 0 ? `<div class="empty">אין חיובים במחזור הנוכחי.</div>` : renderCategoryGroups(currentList)}
       </div>
 
       <div class="card" style="padding:0 20px;">
