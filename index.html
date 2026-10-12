@@ -1,9 +1,19 @@
 <!DOCTYPE html>
+<!--
+  תזרים לצלם — גרסה מתוקנת
+  תיקונים עיקריים:
+  1. היתרה יורדת אוטומטית מהוצאות מחודשים קודמים (הבאג המרכזי).
+  2. "עדכון הסכום בחשבון" קובע נקודת עוגן — מרגע זה הוצאות חדשות מפחיתות אוטומטית,
+     בלי לספור פעמיים את מה שכבר מגולם ביתרה שהזנת.
+  3. הסרת הכתיבה האוטומטית לענן בזמן טעינת תשלומים (מונע דריסת נתונים ולולאה).
+  4. ולידציה: אין שמירת סכומים שליליים או אפס.
+  5. צבע היתרה הופך לאדום כשהיא שלילית.
+-->
 <html dir="rtl" lang="he">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ניהול תקציב - מערכת חכמה</title>
+  <title>תזרים לצלם - מעקב הכנסות, הוצאות ועוזר AI</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
 
@@ -57,6 +67,10 @@
     .ai-stat { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--border); }
     .ai-stat-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
     .ai-stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .ai-plan { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .ai-plan-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(0,0,0,0.22); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+    .ai-plan-row span:first-child { color: var(--text-muted); }
+    .ai-plan-row strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .ai-reason { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); color: var(--text-muted); font-size: 12px; line-height: 1.55; }
 
     .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
@@ -135,7 +149,7 @@
 </head>
 
 <body>
-<div id="app">טוען נתונים ופונקציות AI...</div>
+<div id="app">טוען נתונים ועוזר AI...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -167,31 +181,33 @@
 
   const TERMS = [
     { days: 0, label: "מיידי" },
-    { days: 30, label: "שוטף + 30" },
-    { days: 60, label: "שוטף + 60" },
-    { days: 90, label: "שוטף + 90" },
+    { days: 30, label: "שוטף +30" },
+    { days: 60, label: "שוטף +60" },
+    { days: 90, label: "שוטף +90" },
   ];
 
   const CATEGORIES = [
     { name: "סופר", icon: "🛒" },
+    { name: "דירה", icon: "🏠" },
     { name: "דלק", icon: "🚗" },
-    { name: "חשמל", icon: "⚡" },
-    { name: "יציאות ובילויים", icon: "🍕" },
-    { name: "ארנונה", icon: "🏠" },
-    { name: "קופת חולים", icon: "💊" },
-    { name: "אירועים", icon: "🎉" },
+    { name: "יציאות עם חברים", icon: "🍻" },
+    { name: "אוכל", icon: "🍕" },
+    { name: "מוצרי חשמל", icon: "🔌" },
+    { name: "חוויה", icon: "🎟️" },
     { name: "אחר", icon: "📦" }
   ];
 
   let state = {
     openingBalance: 4513.73,
+    // נקודת עוגן: היתרה שהזנת כבר מגלמת את כל ההוצאות עד לתאריך הזה.
+    // ריק = מפחיתים את כל ההוצאות שעברו.
     openingBalanceDate: "",
     incomes: [],
     expenses: [],
     creditCardBillingDay: 2
   };
 
-  let syncStatus = "סנכרון תקין 🔄";
+  let syncStatus = "סנכרון פעיל ☁️";
 
   let ui = {
     tab: "dashboard",
@@ -243,7 +259,6 @@
     return dateToStr(endOfInvoiceMonth);
   };
 
-  // חישוב מדויק של מועד חיוב האשראי לפי יום החיוב (למשל ה-2 לחודש)
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
     const d = parseLocalDate(expenseDateStr);
     let month = d.getMonth();
@@ -261,56 +276,45 @@
 
   const addMonths = (d, months) => {
     const source = parseLocalDate(d);
+
     const target = new Date(source.getFullYear(), source.getMonth() + Number(months), 1, 12);
+
     const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
     target.setDate(Math.min(source.getDate(), lastDay));
+
     return dateToStr(target);
   };
 
   const calcInstallmentStartDate = (purchaseDateStr) => {
     const purchaseDate = parseLocalDate(purchaseDateStr);
+
     if (Number.isNaN(purchaseDate.getTime())) {
       return purchaseDateStr;
     }
+
     return purchaseDate.getDate() >= 25 ? addMonths(purchaseDateStr, 1) : purchaseDateStr;
   };
 
-  const normalizeInstallmentSchedules = (expenses) => {
-    const normalized = (expenses || []).map((expense) => ({ ...expense }));
-    const groups = new Map();
-
-    normalized.forEach((expense) => {
-      if (!expense.installmentGroupId) return;
-      if (!groups.has(expense.installmentGroupId)) {
-        groups.set(expense.installmentGroupId, []);
-      }
-      groups.get(expense.installmentGroupId).push(expense);
-    });
-
-    groups.forEach((series) => {
-      if (series.every((expense) => Number(expense.scheduleVersion) >= 2)) {
-        return;
-      }
-
-      series.sort((a, b) => {
-        const aNumber = Number(String(a.installmentInfo || "1/1").split("/")[0]);
-        const bNumber = Number(String(b.installmentInfo || "1/1").split("/")[0]);
-        return aNumber - bNumber;
-      });
-
-      const purchaseDate = series[0].purchaseDate || series[0].date;
-      const firstPaymentDate = calcInstallmentStartDate(purchaseDate);
-
-      series.forEach((expense, index) => {
+  // Normalize dates for the card billing cycle. Keep original purchase dates.
+  const normalizeInstallmentSchedules = (expenses) => (expenses || []).map((item) => {
+    const expense = { ...item };
+    if (expense.installmentGroupId) {
+      const index = Math.max(0, Number(String(expense.installmentInfo || "1/1").split("/")[0]) - 1);
+      const purchaseDate = expense.purchaseDate || expense.date;
+      if (!Number.isNaN(parseLocalDate(purchaseDate).getTime())) {
         expense.purchaseDate = purchaseDate;
-        const targetMonthDate = addMonths(firstPaymentDate, index);
-        expense.date = calcCreditChargeDate(targetMonthDate, state.creditCardBillingDay || 2);
-        expense.scheduleVersion = 2;
-      });
-    });
-
-    return normalized;
-  };
+        expense.date = calcCreditChargeDate(addMonths(purchaseDate, index), state.creditCardBillingDay || 2);
+        expense.scheduleVersion = 3;
+      }
+    } else {
+      const purchaseDate = expense.purchaseDate || expense.date;
+      if (!Number.isNaN(parseLocalDate(purchaseDate).getTime())) {
+        expense.purchaseDate = purchaseDate;
+        expense.date = calcCreditChargeDate(purchaseDate, state.creditCardBillingDay || 2);
+      }
+    }
+    return expense;
+  });
 
   const splitInstallmentAmounts = (originalAmount, count, interest = 0, customMonthly = 0) => {
     const payments = Number(count);
@@ -388,7 +392,7 @@
         render();
       },
       () => {
-        syncStatus = "שגיאת סנכרון ⚠️";
+        syncStatus = "הגישה לנתונים נחסמה ⚠️";
         render();
       }
     );
@@ -400,14 +404,14 @@
 
     if (user && String(user.email || "").toLowerCase() === ALLOWED_EMAIL) {
       currentUser = user;
-      syncStatus = "מחובר 👤";
+      syncStatus = "סנכרון מאובטח 🔒";
       startDataListener();
       render();
       return;
     }
 
     if (user) {
-      authError = "החשבון אינו מורשה במערכת.";
+      authError = "החשבון הזה אינו מורשה לצפות בנתונים.";
       await signOut(auth);
     }
 
@@ -422,6 +426,7 @@
   });
 
   async function saveToCloud() {
+    state.expenses = normalizeInstallmentSchedules(state.expenses);
     if (!currentUser || String(currentUser.email || "").toLowerCase() !== ALLOWED_EMAIL) {
       return;
     }
@@ -430,9 +435,9 @@
       syncStatus = "שומר...";
       render();
       await set(dbRef, state);
-      syncStatus = "סנכרון תקין 🔄";
+      syncStatus = "סנכרון פעיל ☁️";
     } catch (e) {
-      syncStatus = "שגיאת שמירה ❌";
+      syncStatus = "שגיאה בשמירה ❌";
     }
 
     render();
@@ -449,9 +454,10 @@
       .filter((income) => income.status !== "paid")
       .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
 
-    const pastExpenses = (state.expenses || []).filter((expense) => monthKey(expense.date) < thisMonth);
-    const currentExpenses = (state.expenses || []).filter((expense) => monthKey(expense.date) === thisMonth);
-    const futureExpenses = (state.expenses || []).filter((expense) => monthKey(expense.date) === nextMonth);
+    // A charge is paid only when its actual card debit date has arrived.
+    const pastExpenses = (state.expenses || []).filter((expense) => expense.date <= today);
+    const currentExpenses = (state.expenses || []).filter((expense) => expense.date > today && monthKey(expense.date) === thisMonth);
+    const futureExpenses = (state.expenses || []).filter((expense) => expense.date > today && monthKey(expense.date) === nextMonth);
     const laterExpenses = (state.expenses || []).filter((expense) => monthKey(expense.date) > nextMonth);
 
     const totalExpPast = pastExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
@@ -459,14 +465,14 @@
     const totalExpFuture = futureExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
     const totalExpLater = laterExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 
+    // Anchor balance already includes debits that occurred before the anchor.
     const anchorDate = state.openingBalanceDate || "";
     const totalDeductedPast = pastExpenses
       .filter((expense) => !anchorDate || expense.date > anchorDate)
       .reduce((sum, expense) => sum + Number(expense.amount), 0);
 
     const actualCurrentBalance = Number(state.openingBalance || 0) - totalDeductedPast;
-
-    const amountToPayThisMonth = totalExpCurrent;
+    const amountToPayThisMonth = totalExpCurrent + totalExpFuture;
     const balanceAfterExpenses = actualCurrentBalance - amountToPayThisMonth;
 
     const monthPaidIncome = paid
@@ -526,7 +532,7 @@
               <circle cx="12" cy="13" r="3"/>
             </svg>
           </div>
-          <span class="brand-text">ניהול תקציב</span>
+          <span class="brand-text">תזרים לצלם</span>
         </div>
 
         <div style="display:flex;align-items:center;gap:7px;">
@@ -536,7 +542,7 @@
       </div>
 
       <div class="tabs">
-        <button class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}" data-action="tab" data-tab="dashboard">סקירה כללית</button>
+        <button class="tab-btn ${ui.tab === "dashboard" ? "active" : ""}" data-action="tab" data-tab="dashboard">לוח בקרה</button>
         <button class="tab-btn ${ui.tab === "income" ? "active" : ""}" data-action="tab" data-tab="income">הכנסות</button>
         <button class="tab-btn ${ui.tab === "expenses" ? "active" : ""}" data-action="tab" data-tab="expenses">הוצאות</button>
       </div>
@@ -556,17 +562,21 @@
     root.innerHTML = `
       <div class="login-screen">
         <div class="login-card">
-          <div class="login-icon">👤</div>
-          <div class="login-title">התחברות למערכת</div>
+          <div class="login-icon">🔒</div>
+          <div class="login-title">כניסה מאובטחת</div>
           <div class="login-text">
-            יש להתחבר באמצעות חשבון Google המורשה כדי לגשת לנתונים.
+            המידע הפיננסי פרטי. רק חשבון Google המורשה יכול לצפות בהכנסות ובהוצאות.
           </div>
-          <button class="google-btn" data-action="google-login">התחבר באמצעות Google</button>
+          <button class="google-btn" data-action="google-login">כניסה באמצעות Google</button>
           ${authError ? `<div class="login-error">${esc(authError)}</div>` : ""}
         </div>
       </div>
     `;
   }
+
+  // ============================================================================
+  // Gemini AI
+  // ============================================================================
 
   const AI_WORKER_URL = "https://money-gemini.frdi144.workers.dev/";
 
@@ -624,10 +634,10 @@
         `).join("")
       : `
         <div class="ai-text">
-          שאל אותי שאלות על התקציב שלך – למשל:<br>
-          <strong>כמה כסף נשאר לי?</strong>,<br>
-          <strong>כמה אני מרוויח בחודש?</strong><br>
-          או <strong>כמה הוצאות יש לי?</strong>
+          שאל אותי משהו פרקטי על הכסף שלך — למשל:
+          <strong>כמה אני יכול להוציא?</strong>,
+          <strong>כדאי לי לקנות ציוד ב־4,000 ₪?</strong>
+          או <strong>כמה להעביר לחיסכון?</strong>
         </div>
       `;
 
@@ -648,23 +658,23 @@
       <div class="ai-card">
         <div class="ai-header">
           <span class="ai-badge">GEMINI</span>
-          <span class="ai-title">העוזר הדיגיטלי שלך</span>
+          <span class="ai-title">היועץ הפיננסי שלך</span>
         </div>
 
         <div id="ai-chat-messages">${messagesHtml}</div>
 
-        ${aiLoading ? `<div style="margin-top:10px;color:var(--text-muted);font-size:13px;">⏳ מעבד את הנתונים...</div>` : ""}
+        ${aiLoading ? `<div style="margin-top:10px;color:var(--text-muted);font-size:13px;">⏳ בודק את הנתונים...</div>` : ""}
         ${aiError ? `<div style="margin-top:10px;color:var(--negative);font-size:13px;">⚠️ ${esc(aiError)}</div>` : ""}
 
         ${pendingActionHtml}
 
         <div style="display:flex;gap:8px;margin-top:14px;align-items:stretch;">
-          <input id="ai-question" class="input" style="margin:0;flex:1;" placeholder="שאל אותי על הנתונים שלך..." autocomplete="off" />
+          <input id="ai-question" class="input" style="margin:0;flex:1;" placeholder="שאל אותי על התזרים שלך..." autocomplete="off" />
           <button class="submit-btn" data-action="ask-ai" style="width:auto;margin:0;padding:0 18px;white-space:nowrap;" ${aiLoading ? "disabled" : ""}>שלח</button>
         </div>
 
         <div class="ai-reason">
-          טיפ לשימוש: אפשר לשאול כל שאלה על הנתונים ששמרת במערכת.
+          קצר ולעניין: תשובות פרקטיות לפי הנתונים שיש במערכת.
         </div>
       </div>
     `;
@@ -690,13 +700,13 @@
   function describeAIAction(action) {
     if (!action) return "";
     const amount = Number(action.amount || 0);
-    if (action.type === "add_expense") return `הוספת הוצאה: ${action.description || "הוצאה"} · ${fmtMoney(amount)} · ${action.category || "אחר"}`;
-    if (action.type === "add_income") return `הוספת הכנסה: ${action.client || "לקוח"} · ${fmtMoney(amount)}`;
-    if (action.type === "delete_expense") return `מחיקת ההוצאה: ${action.description || ""}`;
-    if (action.type === "delete_income") return `מחיקת ההכנסה: ${action.client || ""}`;
-    if (action.type === "mark_income_paid") return `סימון ההכנסה מ-${action.client || "הלקוח"} לשלם`;
-    if (action.type === "set_balance") return `עדכון היתרה בסכום של ${fmtMoney(amount)}`;
-    return "ביצוע פעולת שרת";
+    if (action.type === "add_expense") return `להוסיף הוצאה: ${action.description || "הוצאה"} · ${fmtMoney(amount)} · ${action.category || "אחר"}`;
+    if (action.type === "add_income") return `להוסיף הכנסה: ${action.client || "לקוח"} · ${fmtMoney(amount)}`;
+    if (action.type === "delete_expense") return `למחוק את ההוצאה: ${action.description || ""}`;
+    if (action.type === "delete_income") return `למחוק את ההכנסה: ${action.client || ""}`;
+    if (action.type === "mark_income_paid") return `לסמן את ההכנסה מ-${action.client || "הלקוח"} כשולמה`;
+    if (action.type === "set_balance") return `לעדכן את היתרה בחשבון ל-${fmtMoney(amount)}`;
+    return "לבצע שינוי בנתונים";
   }
 
   function findBestByText(items, field, query) {
@@ -786,13 +796,13 @@
         ...buildAIData(c),
         question: cleanQuestion,
         conversation: aiMessages.slice(-8).map((message) => ({ role: message.role, text: message.text })),
-        responseStyle: `תן תשובות קצרות וברורות. בדוק כל פעם 1–3 משפטים קצרים במרכז. תן דגש בשרות הדוחה, בלי הקדמות ובלי משיכת זמן. שץ את ההעברה מפצעת, רכז.
+        responseStyle: `ענה בעברית קלילה וברורה. בדרך כלל 1–3 משפטים קצרים בלבד. ענה קודם בשורה התחתונה, בלי הקדמות ובלי לחזור על הנתונים. רק אם המשתמש מבקש פירוט, הרחב.
 
-אתה עוזר מעדיף פרמטר משורעי דוטרלפא, אבמ מטרמן אמ טויטפ שדפטמנד לבה בשצד. אנ דושפאוש מבחש מדסיו/מוזק/מסופ הדלרד לששמעוד/מטגלפ יפשד, דזזש בסעו הדושעבד טב ו ACTION אזג במלבד במפשרוי דוגעיפ דבא, ממא מ Markdown:
-<ACTION>{"type":"add_expense","description":"חשמל","amount":350,"category":"חשמל","date":"${todayStr()}"}</ACTION>
-סעוין מושפין במלבד: add_expense, add_income, delete_expense, delete_income, mark_income_paid, set_balance.
+אתה גם יכול להכין פעולות לשינוי המערכת, אבל לעולם אל תטען שהפעולה כבר בוצעה. אם המשתמש מבקש להוסיף/למחוק/לסמן הכנסה כשולמה/לעדכן יתרה, החזר בסוף התשובה תג ACTION אחד בלבד בפורמט המדויק הבא, ללא Markdown:
+<ACTION>{"type":"add_expense","description":"דלק","amount":350,"category":"דלק","date":"${todayStr()}"}</ACTION>
+סוגים מותרים בלבד: add_expense, add_income, delete_expense, delete_income, mark_income_paid, set_balance.
 add_income: client, amount, date, termDays (0/30/60/90). delete_expense: description. delete_income/mark_income_paid: client. set_balance: amount.
-באטמנד זסש פשי זיערין לואי סלען אה שן? אמ טזזייפ ACTION; שام שامد חצשד. ציוושיפה דפצאד זיײבפא מדייה אזזה מו: ${CATEGORIES.map((c) => c.name).join(", ")}.`
+בפעולה חסר פרט חיוני כמו סכום או שם? אל תחזיר ACTION; שאל שאלה קצרה. קטגוריית הוצאה חייבת להיות אחת מ: ${CATEGORIES.map((c) => c.name).join(", ")}.`
       };
 
       const response = await fetch(AI_WORKER_URL, {
@@ -804,16 +814,16 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.details?.error?.message || result?.error || "שגיאה בגישה מ-AI");
+        throw new Error(result?.details?.error?.message || result?.error || "שגיאה בחיבור ל-AI");
       }
 
-      const parsedAI = extractAIAction(String(result.advice || "מה דתצבל טששב הוד-AI."));
+      const parsedAI = extractAIAction(String(result.advice || "לא התקבלה תשובה מה-AI."));
 
       pendingAIAction = parsedAI.action;
 
       aiMessages.push({
         role: "assistant",
-        text: parsedAI.cleanText || (pendingAIAction ? "הארפאי 📞 שץ תאוש מי אוה את הדפטמנד." : "מה דתצבל טששב הוד-AI.")
+        text: parsedAI.cleanText || (pendingAIAction ? "הבנתי 👍 רק תאשר לי את הפעולה." : "לא התקבלה תשובה מה-AI.")
       });
     } catch (error) {
       aiError = error?.message || "שגיאה בתקשורת מול ה-AI.";
@@ -829,66 +839,66 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <div class="hero">
-        <div class="hero-label">הסכום הנוכחי שיש לי עובר בשפלב</div>
+        <div class="hero-label">הסכום האמיתי שיש לי עכשיו בחשבון</div>
         <div class="hero-number" style="color:${balanceColor}">${fmtMoney(c.actualCurrentBalance)}</div>
 
-        <button class="link-btn" data-action="toggle-balance-edit">✏️ עדכן הסכום בשלב</button>
+        <button class="link-btn" data-action="toggle-balance-edit">✏️ עדכון הסכום בחשבון</button>
 
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="כמה לסו ייש ממ תלשייו?" />
-            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שמור סלען</button>
+            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="כמה כסף יש לך עכשיו?" />
+            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שמור סכום</button>
             <div class="hint">
-              עדכן את היתרה הנוכחי בשלב לוורט. מורט זה למ דפצאד שפייפסח תפזח מורד אהוייעוייא.
+              הזן את היתרה האמיתית בחשבון כרגע. חיובים עתידיים יופחתו רק במועד החיוב שלהם.
             </div>
           </div>
         ` : ""}
       </div>
 
       <div class="stat-row">
-        ${statCard("יש מי תלשייו", fmtMoney(c.actualCurrentBalance), balanceColor)}
-        ${statCard("סכום להוציא החודש", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
-        ${statCard("יישאר מי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
+        ${statCard("יש לי עכשיו", fmtMoney(c.actualCurrentBalance), balanceColor)}
+        ${statCard("אמור לרדת לי", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
+        ${statCard("יישאר לי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
       </div>
 
       <div class="card">
-        <div class="card-title">📉 סיכום הוצאות ויתרה</div>
+        <div class="card-title">📋 חישוב פשוט וברור</div>
 
         <div class="summary-box">
           <div class="summary-item" style="font-weight:700;color:var(--positive);">
-            <span>1. יש מי תלשייו בשפלב:</span>
+            <span>1. יש לי עכשיו בחשבון:</span>
             <span>${fmtMoney(c.actualCurrentBalance)}</span>
           </div>
 
           <div class="summary-item sub" style="color:var(--negative);">
-            <span>2. למ דפצאד שפ ממ דזגשפ:</span>
+            <span>2. חיובים שעדיין צפויים לרדת:</span>
             <span>-${fmtMoney(c.amountToPayThisMonth)}</span>
           </div>
 
           <div class="summary-item total">
-            <span>ייישאר מי מאש דפצאד דזגשפ:</span>
-            <span style="color:${c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)}">
+            <span>יישאר לי לאחר הוצאות החודש:</span>
+            <span style="color:${c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)"}">
               ${fmtMoney(c.balanceAfterExpenses)}
             </span>
           </div>
 
           <div class="summary-item" style="margin-top:6px;border-top:1px dashed var(--border);padding-top:10px;">
-            <span>הכנסה שצפויה מחודש דזגשפ:</span>
+            <span>הכנסות שצפויות להיכנס החודש:</span>
             <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
           </div>
 
           <div class="summary-item">
-            <span>אן דדלרסף ייולס, צפש יידיע:</span>
+            <span>אם ההכנסות ייכנסו, צפוי להיות:</span>
             <span style="color:var(--accent)">${fmtMoney(c.finalExpectedBalance)}</span>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">⏳ תשלומים בדרך (ממתינים לתשלום)</div>
+        <div class="card-title">⏳ תשלומים בדרך אליך (ממתין מגבייה)</div>
 
         ${c.pending.length === 0
-          ? `<div class="empty">אין תשלומים ממתינים לורט.</div>`
+          ? `<div class="empty">אין תשלומים ממתינים כרגע.</div>`
           : c.pending.map((inc) => {
               const d = daysUntil(inc.expectedDate);
               return `
@@ -896,12 +906,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
                   <div style="flex:1">
                     <div class="row-title">${esc(inc.client)}</div>
                     <div class="row-sub">
-                      צפש ב-${fmtDate(inc.expectedDate)} ·${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}
+                      צפוי ב-${fmtDate(inc.expectedDate)} ·
+                      ${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}
                     </div>
                   </div>
                   <div class="row-amount">${fmtMoney(inc.amount)}</div>
                   <div class="actions-group">
-                    <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סופ לפששמן">✓</button>
+                    <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>
                     <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
                   </div>
                 </div>
@@ -923,6 +934,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     `;
   }
 
+  // ============================================================================
+  // הכנסות
+  // ============================================================================
+
   function renderIncome() {
     const sorted = [...(state.incomes || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -940,31 +955,31 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <div class="stat-row">
-        ${statCard("סה\"כ ששמן", fmtMoney(totalPaid), "var(--positive)")}
-        ${statCard("צפוי ממתינים", fmtMoney(totalPending), "var(--accent)")}
-        ${statCard("סך הכל הכנסות", fmtMoney(totalAllIncome), "#F7F4EF")}
+        ${statCard("כבר שולם", fmtMoney(totalPaid), "var(--positive)")}
+        ${statCard("עדיין ממתין", fmtMoney(totalPending), "var(--accent)")}
+        ${statCard("סה״כ הכול", fmtMoney(totalAllIncome), "#F7F4EF")}
       </div>
 
       <button class="add-btn" data-action="toggle-income-form">
-        ${ui.showIncomeForm ? "✕ סגור" : "➕ הוסף הכנסה"}
+        ${ui.showIncomeForm ? "✕ סגור" : "＋ הוסף הכנסה"}
       </button>
 
       ${ui.showIncomeForm ? `
         <div class="form-box">
-          <div class="card-title">${editingItem ? "✏️ עריכת הכנסה" : "📌 הכנסה חדשה"}</div>
+          <div class="card-title">${editingItem ? "✏️ עריכת הכנסה" : "💰 הכנסה חדשה"}</div>
 
           <label class="label">
-            לקוח / מקור
-            <input id="inc-client" class="input" type="text" value="${editingItem ? esc(editingItem.client) : ""}" placeholder="שם הלקוח" />
+            לקוח / פרויקט
+            <input id="inc-client" class="input" type="text" value="${editingItem ? esc(editingItem.client) : ""}" placeholder="למשל: הפקת פרסומת" />
           </label>
 
           <label class="label">
             סכום
-            <input id="inc-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingItem.amount : ""}" placeholder="¤" />
+            <input id="inc-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingItem.amount : ""}" placeholder="₪" />
           </label>
 
           <label class="label">
-            תאריך ההכנסה
+            תאריך חשבונית
             <input id="inc-date" class="input" type="date" value="${editingItem ? editingItem.date : todayStr()}" />
           </label>
 
@@ -991,10 +1006,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       ` : ""}
 
       <div class="card">
-        <div class="card-title">📋 רשימת הכנסות</div>
+        <div class="card-title">💵 כל ההכנסות</div>
 
         ${sorted.length === 0
-          ? `<div class="empty">אין עדיין הכנסות.</div>`
+          ? `<div class="empty">עדיין לא הוספת הכנסות.</div>`
           : sorted.map((inc) => {
               const isPaid = inc.status === "paid";
               return `
@@ -1002,14 +1017,15 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
                   <div style="flex:1">
                     <div class="row-title">${esc(inc.client)}</div>
                     <div class="row-sub">
-                      תאריך: ${fmtDate(inc.date)} ·${isPaid
+                      חשבונית: ${fmtDate(inc.date)} ·
+                      ${isPaid
                         ? `<span style="color:var(--positive)">שולם ${inc.paidDate ? "ב-" + fmtDate(inc.paidDate) : ""}</span>`
                         : `צפוי: ${fmtDate(inc.expectedDate)}`}
                     </div>
                   </div>
                   <div class="row-amount">${fmtMoney(inc.amount)}</div>
                   <div class="actions-group">
-                    {!isPaid ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כהושלם">✓</button>` : ""}
+                    ${!isPaid ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כשולם">✓</button>` : ""}
                     <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
                   </div>
                 </div>
@@ -1019,6 +1035,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     `;
   }
 
+  // ============================================================================
+  // הוצאות
+  // ============================================================================
+
   function renderExpenseRow(expense) {
     const category = CATEGORIES.find((item) => item.name === expense.category);
     const installmentText = expense.installmentInfo ? ` · תשלום ${expense.installmentInfo}` : "";
@@ -1027,12 +1047,12 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       <div class="row">
         <div style="flex:1;min-width:0;">
           <div class="row-title">${category?.icon || "📦"} ${esc(expense.desc)}</div>
-          <div class="row-sub">${esc(expense.category || "אחר")}${installmentText} · חיוב ב-${fmtDate(expense.date)}</div>
+          <div class="row-sub">${esc(expense.category || "אחר")}${installmentText} · ${fmtDate(expense.date)}</div>
         </div>
         <div class="row-amount">${fmtMoney(expense.amount)}</div>
         <div class="actions-group">
           <button class="icon-btn-muted" data-action="edit-expense" data-id="${expense.id}" title="ערוך">✏️</button>
-          <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${expense.id}" title="מחק">🗑️</button>
+          <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${expense.id}" title="מחק">🗑</button>
         </div>
       </div>
     `;
@@ -1121,25 +1141,25 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <button class="add-btn" data-action="toggle-expense-form">
-        ${ui.showExpenseForm ? "✕ סגור" : "➕ הוסף הוצאה"}
+        ${ui.showExpenseForm ? "✕ סגור" : "＋ הוסף הוצאה"}
       </button>
 
       ${ui.showExpenseForm ? `
         <div class="form-box">
-          <div class="card-title">${editingItem ? "✏️ עריכת הוצאה" : "🛒 הוצאה חדשה"}</div>
+          <div class="card-title">${editingItem ? "✏️ עריכת הוצאה" : "💳 הוצאה חדשה"}</div>
 
           <label class="label">
             תיאור ההוצאה
-            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="למשל: קנייה בסופר" />
+            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="למשל: קניות בסופר" />
           </label>
 
           <label class="label">
             סכום
-            <input id="exp-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingOriginalAmount : ""}" placeholder="¤" />
+            <input id="exp-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingOriginalAmount : ""}" placeholder="₪" />
           </label>
 
           <label class="label">
-            תאריך רכישה
+            תאריך הקנייה
             <input id="exp-date" class="input" type="date" value="${editingItem ? editingPurchaseDate : todayStr()}" />
           </label>
 
@@ -1155,10 +1175,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
             </div>
           </div>
 
-          {!editingItem || editingItem.installmentGroupId ? `
+          ${!editingItem || editingItem.installmentGroupId ? `
             <label class="checkbox-label">
               <input id="installments-check" type="checkbox" ${editingItem?.installmentGroupId || ui.isInstallments ? "checked" : ""} />
-              <span>פרוס לתשלומים</span>
+              <span>לפרוס לתשלומים</span>
             </label>
 
             <div id="installments-options" style="display:${editingItem?.installmentGroupId || ui.isInstallments ? "flex" : "none"};flex-direction:column;gap:14px;padding:14px;background:var(--surface-input);border:1px solid var(--border);border-radius:14px;">
@@ -1168,23 +1188,23 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
               </label>
 
               <label class="label">
-                ריבית / תוספת למחיר הכולל
-                <span style="font-size:11px;color:var(--text-muted);">אין ריבית? אפשר להשאיר 0</span>
+                תוספת / ריבית לכל העסקה
+                <span style="font-size:11px;color:var(--text-muted);">אם אין ריבית אפשר להשאיר 0</span>
                 <input id="exp-interest" class="input" type="number" min="0" step="0.01" value="${editingItem?.installmentGroupId ? Number(editingItem.interestAmount || 0) : ui.tempExpense.interestAmount}" placeholder="0" />
               </label>
 
               <label class="label">
-                סכום חודשי קבוע
-                <span style="font-size:11px;color:var(--text-muted);">אופציונלי – אם תזין, המערכת תשתמש בסכום קבוע לכל תשלום</span>
+                סכום חודשי ידני
+                <span style="font-size:11px;color:var(--text-muted);">אופציונלי — אם הוזן, המערכת תשתמש בסכום הזה לכל תשלום</span>
                 <input id="exp-customMonthly" class="input" type="number" min="0" step="0.01" value="${editingItem?.installmentGroupId ? "" : ui.tempExpense.customMonthlyAmount}" placeholder="אופציונלי" />
               </label>
             </div>
           ` : ""}
 
-          {!editingItem ? `
+          ${!editingItem ? `
             <label class="checkbox-label">
               <input id="exp-recurring" type="checkbox" />
-              <span>הוצאה חודשית / קבועה</span>
+              <span>הוצאה קבועה / חוזרת</span>
             </label>
           ` : ""}
 
@@ -1207,44 +1227,48 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>⏳ תשלום בחודש הבא – ${fmtMonth(addMonths(todayStr(), 1))}</span>
+          <span>⏳ חיובים ב־2 לחודש הבא — ${fmtMonth(addMonths(todayStr(), 1))}</span>
           <span>${fmtMoney(c.totalExpFuture)}</span>
         </div>
-        ${futureList.length === 0 ? `<div class="empty">אין תשלומים בחודש הבא.</div>` : renderCategoryGroups(futureList)}
+        ${futureList.length === 0 ? `<div class="empty">אין חיובים בחודש הבא.</div>` : renderCategoryGroups(futureList)}
       </div>
 
       <button class="link-btn" style="width:100%;margin:0 0 20px;padding:11px 14px;" data-action="toggle-later-expenses">
-        ${ui.showLaterExpenses ? "הסתר תשלומים מאוחרים יותר" : "הצג ופרט את שאר התשלומים העתידיים"}
+        ${ui.showLaterExpenses ? "הסתר תשלומים מחודשים מאוחרים" : "הצג וערוך את שאר התשלומים העתידיים"}
         ${laterList.length ? `(${laterList.length} תשלומים · ${fmtMoney(c.totalExpLater)})` : ""}
       </button>
 
       ${ui.showLaterExpenses ? `
         <div class="card" style="padding:0 20px;">
           <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-            <span>🔮 תשלומים אחרי חודש הבא</span>
+            <span>📅 תשלומים לאחר החודש הבא</span>
             <span>${fmtMoney(c.totalExpLater)}</span>
           </div>
-          ${laterList.length === 0 ? `<div class="empty">אין תשלומים עתידיים מאוחרים יותר.</div>` : renderFutureMonths(laterList)}
+          ${laterList.length === 0 ? `<div class="empty">אין תשלומים בחודשים מאוחרים יותר.</div>` : renderFutureMonths(laterList)}
         </div>
       ` : ""}
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>📌 חודש נוכחי (לפי חיוב אשראי) – ${fmtMonth(todayStr())}</span>
+          <span>🔴 חיובים שטרם ירדו החודש — ${fmtMonth(todayStr())}</span>
           <span>${fmtMoney(c.totalExpCurrent)}</span>
         </div>
-        ${currentList.length === 0 ? `<div class="empty">אין הוצאה בחודש הנוכחי.</div>` : renderCategoryGroups(currentList)}
+        ${currentList.length === 0 ? `<div class="empty">אין הוצאות בחודש הנוכחי.</div>` : renderCategoryGroups(currentList)}
       </div>
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>✅ חודש קודם / עבר</span>
+          <span>✅ שולם בעבר</span>
           <span>${fmtMoney(c.totalExpPast)}</span>
         </div>
-        ${pastList.length === 0 ? `<div class="empty">אין הוצאות בחודש קודם.</div>` : renderCategoryGroups(pastList)}
+        ${pastList.length === 0 ? `<div class="empty">אין הוצאות מחודשים קודמים.</div>` : renderCategoryGroups(pastList)}
       </div>
     `;
   }
+
+  // ============================================================================
+  // Event Listeners
+  // ============================================================================
 
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
@@ -1258,8 +1282,8 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       googleProvider.setCustomParameters({ login_hint: ALLOWED_EMAIL });
       signInWithPopup(auth, googleProvider).catch((error) => {
         authError = error?.code === "auth/popup-closed-by-user"
-          ? "התחברות בוטלה עקב סגירת חלון ההתחברות."
-          : "התחברות נכשלה. יש לוודא הגדרות Google ב-Firebase.";
+          ? "חלון ההתחברות נסגר לפני שהכניסה הושלמה."
+          : "ההתחברות נכשלה. יש לוודא שכניסת Google הופעלה ב-Firebase.";
         renderLogin();
       });
 
@@ -1281,6 +1305,8 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       if (!Number.isFinite(amount) || amount < 0) return;
 
       state.openingBalance = amount;
+      // נקודת עוגן חדשה: היתרה שהזנת כבר כוללת את כל ההוצאות עד היום,
+      // ולכן לא נפחית אותן שוב.
       state.openingBalanceDate = todayStr();
 
       ui.showBalanceEdit = false;
@@ -1298,13 +1324,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       const ok = executeAIAction(actionToRun);
       aiMessages.push({
         role: "assistant",
-        text: ok ? "בוצע בהצלחה ✓" : "שגיאה בביצוע הפעולה."
+        text: ok ? "בוצע 👍" : "לא הצלחתי לבצע את הפעולה. חסר לי פרט או שלא מצאתי את הפריט."
       });
       render();
 
     } else if (action === "cancel-ai-action") {
       pendingAIAction = null;
-      aiMessages.push({ role: "assistant", text: "בוטל." });
+      aiMessages.push({ role: "assistant", text: "בוטל 👍" });
       render();
 
     } else if (action === "toggle-income-form") {
@@ -1405,11 +1431,9 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     } else if (action === "save-expense-direct") {
       const desc = document.getElementById("exp-desc").value.trim();
       const amountInput = Number(document.getElementById("exp-amount").value);
-      const date = document.getElementById("exp-date").value; // תאריך רכישה
+      const date = document.getElementById("exp-date").value;
 
       if (!desc || !date || !isValidAmount(amountInput)) return;
-
-      const billingDay = state.creditCardBillingDay || 2;
 
       if (ui.editingExpenseId) {
         const editedExpense = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
@@ -1431,15 +1455,14 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           state.expenses = state.expenses.filter((expense) => expense.installmentGroupId !== groupId);
 
           for (let i = 0; i < count; i++) {
-            const targetMonthDate = addMonths(firstPaymentDate, i);
             state.expenses.push({
               id: uid(),
               installmentGroupId: groupId,
               desc,
               amount: installmentAmounts[i] / 100,
-              date: calcCreditChargeDate(targetMonthDate, billingDay),
+              date: calcCreditChargeDate(addMonths(date, i), state.creditCardBillingDay || 2),
               purchaseDate: date,
-              scheduleVersion: 2,
+              scheduleVersion: 3,
               category: ui.selectedCategory,
               installmentInfo: `${i + 1}/${count}`,
               fullOriginalAmount: fullOriginal,
@@ -1447,16 +1470,8 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
             });
           }
         } else {
-          // הוצאה רגילה בעריכה - מחשבים מחדש את תאריך החיוב לפי יום החיוב באשראי
           state.expenses = state.expenses.map((expense) => expense.id === ui.editingExpenseId
-            ? { 
-                ...expense, 
-                desc, 
-                amount: amountInput, 
-                date: calcCreditChargeDate(date, billingDay), 
-                purchaseDate: date,
-                category: ui.selectedCategory 
-              }
+            ? { ...expense, desc, amount: amountInput, date: calcCreditChargeDate(date, state.creditCardBillingDay || 2), purchaseDate: date, category: ui.selectedCategory }
             : expense);
         }
 
@@ -1478,15 +1493,14 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           const firstPaymentDate = calcInstallmentStartDate(date);
 
           for (let i = 0; i < count; i++) {
-            const targetMonthDate = addMonths(firstPaymentDate, i);
             state.expenses.push({
               id: uid(),
               installmentGroupId,
               desc,
               amount: installmentAmounts[i] / 100,
-              date: calcCreditChargeDate(targetMonthDate, billingDay),
+              date: calcCreditChargeDate(addMonths(date, i), state.creditCardBillingDay || 2),
               purchaseDate: date,
-              scheduleVersion: 2,
+              scheduleVersion: 3,
               category: ui.selectedCategory,
               installmentInfo: `${i + 1}/${count}`,
               fullOriginalAmount: fullOriginal,
@@ -1495,12 +1509,11 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           }
         } else {
           const recurring = document.getElementById("exp-recurring")?.checked;
-          // הוצאה חדשה רגילה - מחשבים את תאריך החיוב (למשל ה-2 לחודש)
           state.expenses.push({
             id: uid(),
             desc,
             amount: amountInput,
-            date: calcCreditChargeDate(date, billingDay),
+            date: calcCreditChargeDate(date, state.creditCardBillingDay || 2),
             purchaseDate: date,
             category: ui.selectedCategory,
             recurring: !!recurring
@@ -1532,6 +1545,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     if (e.target.id === "exp-customMonthly") ui.tempExpense.customMonthlyAmount = e.target.value;
   });
 
+  // מאפשר לשלוח הודעה ל-AI גם עם Enter
   document.addEventListener("keydown", (e) => {
     if (e.target.id === "ai-question" && e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
