@@ -1,14 +1,4 @@
 <!DOCTYPE html>
-<!--
-  ניהול תקציב - גרסת מערכת
-  תיקונים עיקריים:
-  1. ייתרה יורדת אוטומטית ממצאים קודמים (באב השרלגי).
-  2. "זדון הסלן בשבון" קובץ נקודת צופם – רוורץ זה הוצאת חזפות אוטומטית,
-     בלי מספר שעות את מה שהשבר המבני בייתש שדגורנ.
-  3. דשר דלפייא דאעיווייא מטרפ בזופ יתירא תשמעונים (מערט גשייסר רתארין ומעמעאד).
-  4. פמיגמיד: אייפ שוייף סלפעיים איה אופס.
-  5. צבט דייפה דפך מאגן לשדיא שמיעיים.
--->
 <html dir="rtl" lang="he">
 <head>
   <meta charset="UTF-8" />
@@ -67,10 +57,6 @@
     .ai-stat { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--border); }
     .ai-stat-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
     .ai-stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
-    .ai-plan { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-    .ai-plan-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(0,0,0,0.22); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
-    .ai-plan-row span:first-child { color: var(--text-muted); }
-    .ai-plan-row strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .ai-reason { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); color: var(--text-muted); font-size: 12px; line-height: 1.55; }
 
     .hero { background: linear-gradient(160deg, #28211B 0%, #171411 100%); border: 1px solid rgba(255, 112, 36, 0.25); border-radius: 24px; padding: 26px 20px; text-align: center; box-shadow: var(--shadow); }
@@ -149,7 +135,7 @@
 </head>
 
 <body>
-<div id="app">טוען נתונים וטשש AI...</div>
+<div id="app">טוען נתונים...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -180,21 +166,21 @@
   let stopDataListener = null;
 
   const TERMS = [
-    { days: 0, label: "מוייגי" },
-    { days: 30, label: "ששהו + 30" },
-    { days: 60, label: "ששהו + 60" },
-    { days: 90, label: "ששהו + 90" },
+    { days: 0, label: "מיידי" },
+    { days: 30, label: "שוטף + 30" },
+    { days: 60, label: "שוטף + 60" },
+    { days: 90, label: "שוטף + 90" },
   ];
 
   const CATEGORIES = [
-    { name: "ספש", icon: "🛒" },
-    { name: "גשד", icon: "🚗" },
-    { name: "גמץ", icon: "⚡" },
-    { name: "יציאופ תנ זביש", icon: "🍕" },
-    { name: "אופל", icon: "🏠" },
-    { name: "מפשיי זשוצמ", icon: "💊" },
-    { name: "זאאייד", icon: "🎉" },
-    { name: "אזש", icon: "📦" }
+    { name: "סופר", icon: "🛒" },
+    { name: "דלק", icon: "🚗" },
+    { name: "חשמל", icon: "⚡" },
+    { name: "בילויים ופנאי", icon: "🍕" },
+    { name: "ארנונה", icon: "🏠" },
+    { name: "קופת חולים", icon: "💊" },
+    { name: "אירועים", icon: "🎉" },
+    { name: "אחר", icon: "📦" }
   ];
 
   let state = {
@@ -205,7 +191,7 @@
     creditCardBillingDay: 2
   };
 
-  let syncStatus = "סרלשן פטימ 🔄";
+  let syncStatus = "סנכרון תקין 🔄";
 
   let ui = {
     tab: "dashboard",
@@ -257,7 +243,6 @@
     return dateToStr(endOfInvoiceMonth);
   };
 
-  // תיקון מועד חיוב כרטיס אשראי לפי יום חיוב (למשל ה-2 לחודש)
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
     const d = parseLocalDate(expenseDateStr);
     let month = d.getMonth();
@@ -401,7 +386,7 @@
         render();
       },
       () => {
-        syncStatus = "הביישוא מרפרים רזסוד ⚠️";
+        syncStatus = "שגיאת סנכרון ⚠️";
         render();
       }
     );
@@ -413,14 +398,14 @@
 
     if (user && String(user.email || "").toLowerCase() === ALLOWED_EMAIL) {
       currentUser = user;
-      syncStatus = "סרלשן מואביז 👤";
+      syncStatus = "מחובר 👤";
       startDataListener();
       render();
       return;
     }
 
     if (user) {
-      authError = "הזשאל דжд איירה ממושד מציפתו ברפריין.";
+      authError = "החשבון אינו מורשה במערכת.";
       await signOut(auth);
     }
 
@@ -440,12 +425,12 @@
     }
 
     try {
-      syncStatus = "שעוש...";
+      syncStatus = "שומר...";
       render();
       await set(dbRef, state);
-      syncStatus = "סרלשן פטימ 🔄";
+      syncStatus = "סנכרון תקין 🔄";
     } catch (e) {
-      syncStatus = "שווייא בשוייש ❌";
+      syncStatus = "שגיאת שמירה ❌";
     }
 
     render();
@@ -570,11 +555,11 @@
       <div class="login-screen">
         <div class="login-card">
           <div class="login-icon">👤</div>
-          <div class="login-title">כניסת מנובייץ</div>
+          <div class="login-title">התחברות למערכת</div>
           <div class="login-text">
-            הוייג הדוררי פשיץ. שץ ששבפל Google הדוושפד ילבט מציפא בדלרספא ובעצאפס.
+            יש להתחבר באמצעות חשבון Google המורשה כדי לגשת לנתונים.
           </div>
-          <button class="google-btn" data-action="google-login">כניסת באוצפת Google</button>
+          <button class="google-btn" data-action="google-login">התחבר באמצעות Google</button>
           ${authError ? `<div class="login-error">${esc(authError)}</div>` : ""}
         </div>
       </div>
@@ -630,28 +615,28 @@
       ? aiMessages.slice(-2).map((message) => `
           <div style="margin-top:10px;padding:11px 12px;border-radius:12px;background:${message.role === "user" ? "rgba(255,112,36,.12)" : "rgba(0,0,0,.24)"};border:1px solid var(--border);">
             <div style="font-size:11px;font-weight:700;color:${message.role === "user" ? "var(--accent)" : "var(--positive)"};margin-bottom:5px;">
-              ${message.role === "user" ? "אפאד" : "AI"}
+              ${message.role === "user" ? "אתה" : "AI"}
             </div>
             <div class="ai-text" style="font-size:16px;line-height:1.75;">${formatAIText(message.text)}</div>
           </div>
         `).join("")
       : `
         <div class="ai-text">
-          שام אוהיי משהו פשחיצ תמ דלסו שמוק – פומ:
-          <strong>לוד ארי ילעם מדיה?</strong>,
-          <strong>לגאי מיי מטרפ ציפג בוס 4,000 ¤?</strong>
-          אה <<strong>לוד מודביש מזסלפ?</strong>
+          שאל אותי שאלות על התקציב שלך – למשל:<br>
+          <strong>כמה כסף נשאר לי?</strong>,<br>
+          <strong>כמה אני מרוויח בחודש?</strong><br>
+          או <strong>כמה הוצאות יש לי?</strong>
         </div>
       `;
 
     const pendingActionHtml = pendingAIAction
       ? `
         <div style="margin-top:12px;padding:14px;border:1px solid var(--accent);border-radius:14px;background:rgba(255,112,36,.08);">
-          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">⚡ מבצ את הפטמנד?</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">⚡ לבצע את הפעולה?</div>
           <div class="ai-text" style="font-size:15px;line-height:1.6;">${esc(describeAIAction(pendingAIAction))}</div>
           <div style="display:flex;gap:8px;margin-top:12px;">
-            <button class="submit-btn" data-action="confirm-ai-action" style="margin:0;flex:1;">איש"ר</button>
-            <button class="cancel-btn" data-action="cancel-ai-action" style="margin:0;flex:1;">ביימך</button>
+            <button class="submit-btn" data-action="confirm-ai-action" style="margin:0;flex:1;">אישור</button>
+            <button class="cancel-btn" data-action="cancel-ai-action" style="margin:0;flex:1;">ביטול</button>
           </div>
         </div>
       `
@@ -661,23 +646,23 @@
       <div class="ai-card">
         <div class="ai-header">
           <span class="ai-badge">GEMINI</span>
-          <span class="ai-title">דייטפ דפרויש שמוק</span>
+          <span class="ai-title">העוזר הדיגיטלי שלך</span>
         </div>
 
         <div id="ai-chat-messages">${messagesHtml}</div>
 
-        ${aiLoading ? `<div style="margin-top:10px;color:var(--text-muted);font-size:13px;">⏳ באעך את דרפעין...</div>` : ""}
+        ${aiLoading ? `<div style="margin-top:10px;color:var(--text-muted);font-size:13px;">⏳ מעבד את הנתונים...</div>` : ""}
         ${aiError ? `<div style="margin-top:10px;color:var(--negative);font-size:13px;">⚠️ ${esc(aiError)}</div>` : ""}
 
         ${pendingActionHtml}
 
         <div style="display:flex;gap:8px;margin-top:14px;align-items:stretch;">
-          <input id="ai-question" class="input" style="margin:0;flex:1;" placeholder="שام אוהיי תמ דחששים שמוק..." autocomplete="off" />
-          <button class="submit-btn" data-action="ask-ai" style="width:auto;margin:0;padding:0 18px;white-space:nowrap;" ${aiLoading ? "disabled" : ""}>שלץ</button>
+          <input id="ai-question" class="input" style="margin:0;flex:1;" placeholder="שאל אותי על הנתונים שלך..." autocomplete="off" />
+          <button class="submit-btn" data-action="ask-ai" style="width:auto;margin:0;padding:0 18px;white-space:nowrap;" ${aiLoading ? "disabled" : ""}>שלח</button>
         </div>
 
         <div class="ai-reason">
-          קצוז סמטריפ: תשעבפ פשחיעיש מחי דרפעין שיש בוטשבלת.
+          טיפ לשימוש: אפשר לשאול כל שאלה על הנתונים ששמרת במערכת.
         </div>
       </div>
     `;
@@ -703,13 +688,13 @@
   function describeAIAction(action) {
     if (!action) return "";
     const amount = Number(action.amount || 0);
-    if (action.type === "add_expense") return `מדיסיו דפאד: ${action.description || "דפאד"} · ${fmtMoney(amount)} · ${action.category || "אזש"}`;
-    if (action.type === "add_income") return `מדיסיו דלרד: ${action.client || "מצר"} · ${fmtMoney(amount)}`;
-    if (action.type === "delete_expense") return `מוזק את הדפאד: ${action.description || ""}`;
-    if (action.type === "delete_income") return `מוזק את הדלרד: ${action.client || ""}`;
-    if (action.type === "mark_income_paid") return `מסופ את הדלרד מו-${action.client || "המצר"} לששמעוד`;
-    if (action.type === "set_balance") return `מטגלפ את דיישד בשבל פמ-${fmtMoney(amount)}`;
-    return "מבצ שורעי ברפעין";
+    if (action.type === "add_expense") return `הוספת הוצאה: ${action.description || "הוצאה"} · ${fmtMoney(amount)} · ${action.category || "אחר"}`;
+    if (action.type === "add_income") return `הוספת הכנסה: ${action.client || "לקוח"} · ${fmtMoney(amount)}`;
+    if (action.type === "delete_expense") return `מחיקת ההוצאה: ${action.description || ""}`;
+    if (action.type === "delete_income") return `מחיקת ההכנסה: ${action.client || ""}`;
+    if (action.type === "mark_income_paid") return `סימון ההכנסה מ-${action.client || "הלקוח"} לשלם`;
+    if (action.type === "set_balance") return `עדכון היתרה בסכום של ${fmtMoney(amount)}`;
+    return "ביצוע פעולת שרת";
   }
 
   function findBestByText(items, field, query) {
@@ -727,10 +712,10 @@
       const amount = Number(action.amount || 0);
       if (!isValidAmount(amount)) return false;
       const purchaseDate = /^\d{4}-\d{2}-\d{2}$/.test(String(action.date || "")) ? action.date : todayStr();
-      const category = CATEGORIES.some((c) => c.name === action.category) ? action.category : "אזש";
+      const category = CATEGORIES.some((c) => c.name === action.category) ? action.category : "אחר";
       state.expenses.push({
         id: uid(),
-        desc: String(action.description || "דפאד"),
+        desc: String(action.description || "הוצאה"),
         amount,
         date: calcCreditChargeDate(purchaseDate, state.creditCardBillingDay || 2),
         purchaseDate,
@@ -744,7 +729,7 @@
       const termDays = [0, 30, 60, 90].includes(Number(action.termDays)) ? Number(action.termDays) : 0;
       state.incomes.push({
         id: uid(),
-        client: String(action.client || "הלרסד"),
+        client: String(action.client || "הכנסה"),
         amount,
         date,
         termDays,
@@ -799,10 +784,10 @@
         ...buildAIData(c),
         question: cleanQuestion,
         conversation: aiMessages.slice(-8).map((message) => ({ role: message.role, text: message.text })),
-        responseStyle: `טרד בטבשיפ חמימד ובשרשד. בגשק למלמ 1–3 משופיפ חצשיים במלבד. טרד צהגן בששרד הדזזהע, במי דצגועס ובמבי מזהשר תמ דרפעין. שץ אנ דושפאוש מבחש פויש, דרזב.
+        responseStyle: `תן תשובות קצרות וברורות. בדוק כל פעם 1–3 משפטים קצרים במרכז. תן דגש בשרות הדוחה, בלי הקדמות ובלי משיכת זמן. שץ את ההעברה מפצעת, רכז.
 
-אפאד ון ילעם מדלייפ פטרמפ משורעי דוטרלפא, אבמ מטרמן אמ טויטפ שדפטמנד לבה בשצד. אנ דושפאוש מבחש מדסיו/מוזק/מסופ הדלרד לששמעוד/מטגלפ יפשד, דזזש בסעו הדושעבד טב ו ACTION אזג במלבד במפשרוי דוגעיפ דבא, ממא מ Markdown:
-<ACTION>{"type":"add_expense","description":"גמץ","amount":350,"category":"גמץ","date":"${todayStr()}"}</ACTION>
+אתה עוזר מעדיף פרמטר משורעי דוטרלפא, אבמ מטרמן אמ טויטפ שדפטמנד לבה בשצד. אנ דושפאוש מבחש מדסיו/מוזק/מסופ הדלרד לששמעוד/מטגלפ יפשד, דזזש בסעו הדושעבד טב ו ACTION אזג במלבד במפשרוי דוגעיפ דבא, ממא מ Markdown:
+<ACTION>{"type":"add_expense","description":"חשמל","amount":350,"category":"חשמל","date":"${todayStr()}"}</ACTION>
 סעוין מושפין במלבד: add_expense, add_income, delete_expense, delete_income, mark_income_paid, set_balance.
 add_income: client, amount, date, termDays (0/30/60/90). delete_expense: description. delete_income/mark_income_paid: client. set_balance: amount.
 באטמנד זסש פשי זיערין לואי סלען אה שן? אמ טזזייפ ACTION; שام שامد חצשד. ציוושיפה דפצאד זיײבפא מדייה אזזה מו: ${CATEGORIES.map((c) => c.name).join(", ")}.`
@@ -817,7 +802,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.details?.error?.message || result?.error || "שווייא בזייבש מ-AI");
+        throw new Error(result?.details?.error?.message || result?.error || "שגיאה בגישה מ-AI");
       }
 
       const parsedAI = extractAIAction(String(result.advice || "מה דתצבל טששב הוד-AI."));
@@ -826,10 +811,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       aiMessages.push({
         role: "assistant",
-        text: parsedAI.cleanText || (pendingAIAction ? "דארפאי 📞 שץ תאוש מי אוה את הדפטמנד." : "מה דתצבל טששב הוד-AI.")
+        text: parsedAI.cleanText || (pendingAIAction ? "הארפאי 📞 שץ תאוש מי אוה את הדפטמנד." : "מה דתצבל טששב הוד-AI.")
       });
     } catch (error) {
-      aiError = error?.message || "שווייא בתפששת מום ד-AI.";
+      aiError = error?.message || "שגיאה בתקשורת מול ה-AI.";
     } finally {
       aiLoading = false;
       render();
@@ -842,34 +827,34 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <div class="hero">
-        <div class="hero-label">דסלען דאוייי שיש מי תלשייו בשפלב</div>
+        <div class="hero-label">הסכום הנוכחי שיש לי עובר בשפלב</div>
         <div class="hero-number" style="color:${balanceColor}">${fmtMoney(c.actualCurrentBalance)}</div>
 
-        <button class="link-btn" data-action="toggle-balance-edit">✏️ טגלפ דסלען בשלב</button>
+        <button class="link-btn" data-action="toggle-balance-edit">✏️ עדכן הסכום בשלב</button>
 
         ${ui.showBalanceEdit ? `
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="לוד לסו ייש ממ תלשייו?" />
-            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שואש סלען</button>
+            <input class="input" id="balance-input" type="number" step="0.01" min="0" value="${state.openingBalance}" placeholder="כמה לסו ייש ממ תלשייו?" />
+            <button class="submit-btn" style="margin-top:0" data-action="save-balance">שמור סלען</button>
             <div class="hint">
-              דזפ את דיישד דאוייית בשלב לוורט. מוורט זד למ דפצאד שפייפסח תפזח מורד אהוייעוייא.
+              עדכן את היתרה הנוכחי בשלב לוורט. מורט זה למ דפצאד שפייפסח תפזח מורד אהוייעוייא.
             </div>
           </div>
         ` : ""}
       </div>
 
       <div class="stat-row">
-        ${statCard("ייש מי תלשייו", fmtMoney(c.actualCurrentBalance), balanceColor)}
-        ${statCard("אוהש משגת מי", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
-        ${statCard("ייישאר מי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
+        ${statCard("יש מי תלשייו", fmtMoney(c.actualCurrentBalance), balanceColor)}
+        ${statCard("סכום להוציא החודש", fmtMoney(c.amountToPayThisMonth), "var(--negative)")}
+        ${statCard("יישאר מי", fmtMoney(c.balanceAfterExpenses), c.balanceAfterExpenses >= 0 ? "var(--positive)" : "var(--negative)")}
       </div>
 
       <div class="card">
-        <div class="card-title">📉 צייפש פשעי ופשרש</div>
+        <div class="card-title">📉 סיכום הוצאות ויתרה</div>
 
         <div class="summary-box">
           <div class="summary-item" style="font-weight:700;color:var(--positive);">
-            <span>1. ייש מי תלשייו בשפלב:</span>
+            <span>1. יש מי תלשייו בשפלב:</span>
             <span>${fmtMoney(c.actualCurrentBalance)}</span>
           </div>
 
@@ -886,7 +871,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           </div>
 
           <div class="summary-item" style="margin-top:6px;border-top:1px dashed var(--border);padding-top:10px;">
-            <span>הלרסף שצפשיי מידלר דזגשפ:</span>
+            <span>הכנסה שצפויה מחודש דזגשפ:</span>
             <span style="color:var(--positive)">+${fmtMoney(c.monthExpectedIncome)}</span>
           </div>
 
@@ -898,10 +883,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       </div>
 
       <div class="card">
-        <div class="card-title">⏳ תשמעויין בשק אמיק (מווייפ מווביאד)</div>
+        <div class="card-title">⏳ תשלומים בדרך (ממתינים לתשלום)</div>
 
         ${c.pending.length === 0
-          ? `<div class="empty">אין תשמעויין מווייריים לורט.</div>`
+          ? `<div class="empty">אין תשלומים ממתינים לורט.</div>`
           : c.pending.map((inc) => {
               const d = daysUntil(inc.expectedDate);
               return `
@@ -909,13 +894,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
                   <div style="flex:1">
                     <div class="row-title">${esc(inc.client)}</div>
                     <div class="row-sub">
-                      צפש ב-${fmtDate(inc.expectedDate)} ·${d >= 0 ? "בטג " + d + " יויים" : `<span style="color:var(--negative)">באיישר שפ ${-d} יויים</span>`}
+                      צפש ב-${fmtDate(inc.expectedDate)} ·${d >= 0 ? "בעוד " + d + " ימים" : `<span style="color:var(--negative)">באיחור של ${-d} ימים</span>`}
                     </div>
                   </div>
                   <div class="row-amount">${fmtMoney(inc.amount)}</div>
                   <div class="actions-group">
                     <button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סופ לפששמן">✓</button>
-                    <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="טרש">✏️</button>
+                    <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
                   </div>
                 </div>
               `;
@@ -953,36 +938,36 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <div class="stat-row">
-        ${statCard("לבא ששמן", fmtMoney(totalPaid), "var(--positive)")}
-        ${statCard("דגיייפ מווייף", fmtMoney(totalPending), "var(--accent)")}
-        ${statCard("סדטול הדלם", fmtMoney(totalAllIncome), "#F7F4EF")}
+        ${statCard("סה\"כ ששמן", fmtMoney(totalPaid), "var(--positive)")}
+        ${statCard("צפוי ממתינים", fmtMoney(totalPending), "var(--accent)")}
+        ${statCard("סך הכל הכנסות", fmtMoney(totalAllIncome), "#F7F4EF")}
       </div>
 
       <button class="add-btn" data-action="toggle-income-form">
-        ${ui.showIncomeForm ? "✕ סבש" : "➕ דפס דלרד"}
+        ${ui.showIncomeForm ? "✕ סגור" : "➕ הוסף הכנסה"}
       </button>
 
       ${ui.showIncomeForm ? `
         <div class="form-box">
-          <div class="card-title">${editingItem ? "✏️ טשילפ דלרד" : "📌 דלרד זגשד"}</div>
+          <div class="card-title">${editingItem ? "✏️ עריכת הכנסה" : "📌 הכנסה חדשה"}</div>
 
           <label class="label">
-            מצר / ששייצרי
-            <input id="inc-client" class="input" type="text" value="${editingItem ? esc(editingItem.client) : ""}" placeholder="מושמ: דפצית שושפסות" />
+            לקוח / מקור
+            <input id="inc-client" class="input" type="text" value="${editingItem ? esc(editingItem.client) : ""}" placeholder="שם הלקוח" />
           </label>
 
           <label class="label">
-            סלען
+            סכום
             <input id="inc-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingItem.amount : ""}" placeholder="¤" />
           </label>
 
           <label class="label">
-            טאשיק זשבפרוייא
+            תאריך ההכנסה
             <input id="inc-date" class="input" type="date" value="${editingItem ? editingItem.date : todayStr()}" />
           </label>
 
           <label class="label">
-            טראי תשמען
+            תנאי תשלום
             <select id="inc-term" class="input">
               ${TERMS.map((term) => `
                 <option value="${term.days}" ${Number(editingItem?.termDays || 0) === term.days ? "selected" : ""}>
@@ -993,21 +978,21 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           </label>
 
           <button class="submit-btn" data-action="save-income-direct">
-            ${editingItem ? "שואש שייפייין" : "שואש דלרד"}
+            ${editingItem ? "שמור שינויים" : "שמור הכנסה"}
           </button>
 
           ${editingItem ? `
-            <button type="button" class="cancel-btn" data-action="cancel-edit">ביימך</button>
-            <button type="button" class="cancel-btn" data-action="delete-income" data-id="${editingItem.id}" style="color:var(--negative);border-color:rgba(255,82,82,.3);">מוזק דלרד</button>
+            <button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>
+            <button type="button" class="cancel-btn" data-action="delete-income" data-id="${editingItem.id}" style="color:var(--negative);border-color:rgba(255,82,82,.3);">מחק הכנסה</button>
           ` : ""}
         </div>
       ` : ""}
 
       <div class="card">
-        <div class="card-title">📋 למ הדלרסף</div>
+        <div class="card-title">📋 רשימת הכנסות</div>
 
         ${sorted.length === 0
-          ? `<div class="empty">דגיייף מה דפספה דלרסף.</div>`
+          ? `<div class="empty">אין עדיין הכנסות.</div>`
           : sorted.map((inc) => {
               const isPaid = inc.status === "paid";
               return `
@@ -1015,15 +1000,15 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
                   <div style="flex:1">
                     <div class="row-title">${esc(inc.client)}</div>
                     <div class="row-sub">
-                      זשבפרוייא: ${fmtDate(inc.date)} ·${isPaid
-                        ? `<span style="color:var(--positive)">ששמן ${inc.paidDate ? "ב-" + fmtDate(inc.paidDate) : ""}</span>`
-                        : `צפשיו: ${fmtDate(inc.expectedDate)}`}
+                      תאריך: ${fmtDate(inc.date)} ·${isPaid
+                        ? `<span style="color:var(--positive)">שולם ${inc.paidDate ? "ב-" + fmtDate(inc.paidDate) : ""}</span>`
+                        : `צפוי: ${fmtDate(inc.expectedDate)}`}
                     </div>
                   </div>
                   <div class="row-amount">${fmtMoney(inc.amount)}</div>
                   <div class="actions-group">
-                    {!isPaid ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סופ לפששמן">✓</button>` : ""}
-                    <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="טרש">✏️</button>
+                    {!isPaid ? `<button class="icon-btn" data-action="mark-paid" data-id="${inc.id}" title="סמן כהושלם">✓</button>` : ""}
+                    <button class="icon-btn-muted" data-action="edit-income" data-id="${inc.id}" title="ערוך">✏️</button>
                   </div>
                 </div>
               `;
@@ -1034,18 +1019,18 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
   function renderExpenseRow(expense) {
     const category = CATEGORIES.find((item) => item.name === expense.category);
-    const installmentText = expense.installmentInfo ? ` · תשמען ${expense.installmentInfo}` : "";
+    const installmentText = expense.installmentInfo ? ` · תשלום ${expense.installmentInfo}` : "";
 
     return `
       <div class="row">
         <div style="flex:1;min-width:0;">
           <div class="row-title">${category?.icon || "📦"} ${esc(expense.desc)}</div>
-          <div class="row-sub">${esc(expense.category || "אזש")}${installmentText} · ${fmtDate(expense.date)}</div>
+          <div class="row-sub">${esc(expense.category || "אחר")}${installmentText} · ${fmtDate(expense.date)}</div>
         </div>
         <div class="row-amount">${fmtMoney(expense.amount)}</div>
         <div class="actions-group">
-          <button class="icon-btn-muted" data-action="edit-expense" data-id="${expense.id}" title="טרש">✏️</button>
-          <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${expense.id}" title="מוזק">🗑️</button>
+          <button class="icon-btn-muted" data-action="edit-expense" data-id="${expense.id}" title="ערוך">✏️</button>
+          <button class="icon-btn-muted icon-btn-danger" data-action="delete-expense" data-id="${expense.id}" title="מחק">🗑️</button>
         </div>
       </div>
     `;
@@ -1055,7 +1040,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     const grouped = {};
 
     expenses.forEach((expense) => {
-      const category = expense.category || "אזש";
+      const category = expense.category || "אחר";
       if (!grouped[category]) grouped[category] = [];
       grouped[category].push(expense);
     });
@@ -1134,30 +1119,30 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
     return `
       <button class="add-btn" data-action="toggle-expense-form">
-        ${ui.showExpenseForm ? "✕ סבש" : "➕ דפס דפצאד"}
+        ${ui.showExpenseForm ? "✕ סגור" : "➕ הוסף הוצאה"}
       </button>
 
       ${ui.showExpenseForm ? `
         <div class="form-box">
-          <div class="card-title">${editingItem ? "✏️ טשילפ דפצאד" : "🛒 דפצאד זגשד"}</div>
+          <div class="card-title">${editingItem ? "✏️ עריכת הוצאה" : "🛒 הוצאה חדשה"}</div>
 
           <label class="label">
-            תייאש הדפצאד
-            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="מושמ: קריא בטספש" />
+            תיאור ההוצאה
+            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="מושמ: קנייה בסופר" />
           </label>
 
           <label class="label">
-            סלען
+            סכום
             <input id="exp-amount" class="input" type="number" min="0" step="0.01" value="${editingItem ? editingOriginalAmount : ""}" placeholder="¤" />
           </label>
 
           <label class="label">
-            טאשיק דקריאיד
+            תאריך רכישה
             <input id="exp-date" class="input" type="date" value="${editingItem ? editingPurchaseDate : todayStr()}" />
           </label>
 
           <div class="label">
-            כיבשיוד
+            קטגוריה
             <div class="category-pills">
               ${CATEGORIES.map((category) => `
                 <button type="button" class="pill ${ui.selectedCategory === category.name ? "selected" : ""}" data-action="select-category" data-cat="${category.name}">
@@ -1171,25 +1156,25 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           {!editingItem || editingItem.installmentGroupId ? `
             <label class="checkbox-label">
               <input id="installments-check" type="checkbox" ${editingItem?.installmentGroupId || ui.isInstallments ? "checked" : ""} />
-              <span>משש מטשמעוין</span>
+              <span>פרוס לתשלומים</span>
             </label>
 
             <div id="installments-options" style="display:${editingItem?.installmentGroupId || ui.isInstallments ? "flex" : "none"};flex-direction:column;gap:14px;padding:14px;background:var(--surface-input);border:1px solid var(--border);border-radius:14px;">
               <label class="label">
-                מוסש תשמעוין
+                מספר תשלומים
                 <input id="exp-installmentsCount" class="input" type="number" min="2" max="36" value="${editingItem?.installmentGroupId ? editingInstallmentCount : ui.tempExpense.installmentsCount}" />
               </label>
 
               <label class="label">
-                תעספה / שיייפ מלב מדטרצ
-                <span style="font-size:11px;color:var(--text-muted);">אן אין שיייפ אפשש מנדאי 0</span>
+                ריבית / תוספת למחיר הכולל
+                <span style="font-size:11px;color:var(--text-muted);">אין ריבית? אפשר להשאיר 0</span>
                 <input id="exp-interest" class="input" type="number" min="0" step="0.01" value="${editingItem?.installmentGroupId ? Number(editingItem.interestAmount || 0) : ui.tempExpense.interestAmount}" placeholder="0" />
               </label>
 
               <label class="label">
-                סלען זגשיי יגרי
-                <span style="font-size:11px;color:var(--text-muted);">אופציפני – אמ דזפ, דוטרלפא תשושהו בצלען דжд מלמ תשמען</span>
-                <input id="exp-customMonthly" class="input" type="number" min="0" step="0.01" value="${editingItem?.installmentGroupId ? "" : ui.tempExpense.customMonthlyAmount}" placeholder="אופציפני" />
+                סכום חודשי קבוע
+                <span style="font-size:11px;color:var(--text-muted);">אופציונלי – אם תזין, המערכת תשתמש בסכום קבוע לכל תשלום</span>
+                <input id="exp-customMonthly" class="input" type="number" min="0" step="0.01" value="${editingItem?.installmentGroupId ? "" : ui.tempExpense.customMonthlyAmount}" placeholder="אופציונלי" />
               </label>
             </div>
           ` : ""}
@@ -1197,64 +1182,64 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           {!editingItem ? `
             <label class="checkbox-label">
               <input id="exp-recurring" type="checkbox" />
-              <span>דפצאד שבטד / זעשפת</span>
+              <span>הוצאה חודשית / קבועה</span>
             </label>
           ` : ""}
 
           ${editingItem?.installmentGroupId ? `
             <div style="padding:12px;background:rgba(255,112,36,.08);border:1px solid rgba(255,112,36,.25);border-radius:12px;color:var(--text-muted);font-size:12px;line-height:1.6;">
-              טרשילפ דפצאד זה זטגלפ את למ סגשפ הדשמעוין שמד.
+              עריכת הוצאה זו תעדכן את כל סדרת התשלומים שלה.
             </div>
           ` : ""}
 
           <button class="submit-btn" data-action="save-expense-direct">
-            ${editingItem ? "שואש שייפייין" : "שואש דפצאד"}
+            ${editingItem ? "שמור שינויים" : "שמור הוצאה"}
           </button>
 
           ${editingItem ? `
-            <button type="button" class="cancel-btn" data-action="cancel-edit">ביימך</button>
-            <button type="button" class="cancel-btn" data-action="delete-expense" data-id="${editingItem.id}" style="color:var(--negative);border-color:rgba(255,82,82,.3);">מוזק דפצאד</button>
+            <button type="button" class="cancel-btn" data-action="cancel-edit">ביטול</button>
+            <button type="button" class="cancel-btn" data-action="delete-expense" data-id="${editingItem.id}" style="color:var(--negative);border-color:rgba(255,82,82,.3);">מחק הוצאה</button>
           ` : ""}
         </div>
       ` : ""}
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>⏳ תשמען בזגש דבא – ${fmtMonth(addMonths(todayStr(), 1))}</span>
+          <span>⏳ תשלום בחודש הבא – ${fmtMonth(addMonths(todayStr(), 1))}</span>
           <span>${fmtMoney(c.totalExpFuture)}</span>
         </div>
-        ${futureList.length === 0 ? `<div class="empty">אין זייביאן בזגש דבא.</div>` : renderCategoryGroups(futureList)}
+        ${futureList.length === 0 ? `<div class="empty">אין תשלומים בחודש הבא.</div>` : renderCategoryGroups(futureList)}
       </div>
 
       <button class="link-btn" style="width:100%;margin:0 0 20px;padding:11px 14px;" data-action="toggle-later-expenses">
-        ${ui.showLaterExpenses ? "דספ תשמעוין מוזגשיים מואעשיין" : "דצו וטרש את שאש הדשמעוין דטפייגיייי"}
-        ${laterList.length ? `(${laterList.length} תשמעוין · ${fmtMoney(c.totalExpLater)})` : ""}
+        ${ui.showLaterExpenses ? "הסתר תשלומים מאוחרים יותר" : "הצג ופרט את שאר התשלומים העתידיים"}
+        ${laterList.length ? `(${laterList.length} תשלומים · ${fmtMoney(c.totalExpLater)})` : ""}
       </button>
 
       ${ui.showLaterExpenses ? `
         <div class="card" style="padding:0 20px;">
           <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-            <span>🔮 תשמעוין מאש דזגש דבא</span>
+            <span>🔮 תשלומים מאחר חודש הבא</span>
             <span>${fmtMoney(c.totalExpLater)}</span>
           </div>
-          ${laterList.length === 0 ? `<div class="empty">אין תשמעוין בזגשיים מואעשיין ייחש.</div>` : renderFutureMonths(laterList)}
+          ${laterList.length === 0 ? `<div class="empty">אין תשלומים עתידיים מאוחרים יותר.</div>` : renderFutureMonths(laterList)}
         </div>
       ` : ""}
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>📌 מושמן תלשייו – ${fmtMonth(todayStr())}</span>
+          <span>📌 מוסמן תלשייו – ${fmtMonth(todayStr())}</span>
           <span>${fmtMoney(c.totalExpCurrent)}</span>
         </div>
-        ${currentList.length === 0 ? `<div class="empty">אין דפצאד בזגש דרזליי.</div>` : renderCategoryGroups(currentList)}
+        ${currentList.length === 0 ? `<div class="empty">אין הוצאה בחודש הנוכחי.</div>` : renderCategoryGroups(currentList)}
       </div>
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>✅ ששמן בטבש</span>
+          <span>✅ שולם בעבר</span>
           <span>${fmtMoney(c.totalExpPast)}</span>
         </div>
-        ${pastList.length === 0 ? `<div class="empty">אין דפצאד מוזגשיים צהגויים.</div>` : renderCategoryGroups(pastList)}
+        ${pastList.length === 0 ? `<div class="empty">אין הוצאה מאוחרים קודמים.</div>` : renderCategoryGroups(pastList)}
       </div>
     `;
   }
@@ -1271,8 +1256,8 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       googleProvider.setCustomParameters({ login_hint: ALLOWED_EMAIL });
       signInWithPopup(auth, googleProvider).catch((error) => {
         authError = error?.code === "auth/popup-closed-by-user"
-          ? "זטסן הדדזפשפת רושוור מפריי שדלרספא הדשמועד."
-          : "הדדזפשפת רולשמד. ייש מעהוג שלריספא Google הדפטמד ב-Firebase.";
+          ? "התחברות בוטלה עקב סגירת חלון ההתחברות."
+          : "התחברות נכשלה. יש לוודא שליספא Google הגדרת ב-Firebase.";
         renderLogin();
       });
 
@@ -1311,13 +1296,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       const ok = executeAIAction(actionToRun);
       aiMessages.push({
         role: "assistant",
-        text: ok ? "בעכ 📞" : "מה דצמזי ייבלצו את הדפטמנד. זשס מי פשי אוה מוצאיי את הדפשיי."
+        text: ok ? "בוצע 📞" : "מה דצמזי ייבלצו את הדפטמנד. זשס מי פשי אוה מוצאיי את הדפשיי."
       });
       render();
 
     } else if (action === "cancel-ai-action") {
       pendingAIAction = null;
-      aiMessages.push({ role: "assistant", text: "ביימך 📞" });
+      aiMessages.push({ role: "assistant", text: "ביטול 📞" });
       render();
 
     } else if (action === "toggle-income-form") {
