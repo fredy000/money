@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ניהול תקציב - מתוך דלרספא, דעסאב וטעשב AI</title>
+  <title>ניהול תקציב - מערכת חכמה</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
 
@@ -135,7 +135,7 @@
 </head>
 
 <body>
-<div id="app">טוען נתונים...</div>
+<div id="app">טוען נתונים ופונקציות AI...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -176,7 +176,7 @@
     { name: "סופר", icon: "🛒" },
     { name: "דלק", icon: "🚗" },
     { name: "חשמל", icon: "⚡" },
-    { name: "בילויים ופנאי", icon: "🍕" },
+    { name: "יציאות ובילויים", icon: "🍕" },
     { name: "ארנונה", icon: "🏠" },
     { name: "קופת חולים", icon: "💊" },
     { name: "אירועים", icon: "🎉" },
@@ -243,6 +243,7 @@
     return dateToStr(endOfInvoiceMonth);
   };
 
+  // חישוב מדויק של מועד חיוב האשראי לפי יום החיוב (למשל ה-2 לחודש)
   const calcCreditChargeDate = (expenseDateStr, billingDay = 2) => {
     const d = parseLocalDate(expenseDateStr);
     let month = d.getMonth();
@@ -302,7 +303,8 @@
 
       series.forEach((expense, index) => {
         expense.purchaseDate = purchaseDate;
-        expense.date = addMonths(firstPaymentDate, index);
+        const targetMonthDate = addMonths(firstPaymentDate, index);
+        expense.date = calcCreditChargeDate(targetMonthDate, state.creditCardBillingDay || 2);
         expense.scheduleVersion = 2;
       });
     });
@@ -1025,7 +1027,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       <div class="row">
         <div style="flex:1;min-width:0;">
           <div class="row-title">${category?.icon || "📦"} ${esc(expense.desc)}</div>
-          <div class="row-sub">${esc(expense.category || "אחר")}${installmentText} · ${fmtDate(expense.date)}</div>
+          <div class="row-sub">${esc(expense.category || "אחר")}${installmentText} · חיוב ב-${fmtDate(expense.date)}</div>
         </div>
         <div class="row-amount">${fmtMoney(expense.amount)}</div>
         <div class="actions-group">
@@ -1128,7 +1130,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
           <label class="label">
             תיאור ההוצאה
-            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="מושמ: קנייה בסופר" />
+            <input id="exp-desc" class="input" type="text" value="${editingItem ? esc(editingItem.desc) : ""}" placeholder="למשל: קנייה בסופר" />
           </label>
 
           <label class="label">
@@ -1219,7 +1221,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       ${ui.showLaterExpenses ? `
         <div class="card" style="padding:0 20px;">
           <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-            <span>🔮 תשלומים מאחר חודש הבא</span>
+            <span>🔮 תשלומים אחרי חודש הבא</span>
             <span>${fmtMoney(c.totalExpLater)}</span>
           </div>
           ${laterList.length === 0 ? `<div class="empty">אין תשלומים עתידיים מאוחרים יותר.</div>` : renderFutureMonths(laterList)}
@@ -1228,7 +1230,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--negative);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>📌 מוסמן תלשייו – ${fmtMonth(todayStr())}</span>
+          <span>📌 חודש נוכחי (לפי חיוב אשראי) – ${fmtMonth(todayStr())}</span>
           <span>${fmtMoney(c.totalExpCurrent)}</span>
         </div>
         ${currentList.length === 0 ? `<div class="empty">אין הוצאה בחודש הנוכחי.</div>` : renderCategoryGroups(currentList)}
@@ -1236,10 +1238,10 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
 
       <div class="card" style="padding:0 20px;">
         <div style="padding:14px 0;font-weight:700;font-size:15px;color:var(--positive);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span>✅ שולם בעבר</span>
+          <span>✅ חודש קודם / עבר</span>
           <span>${fmtMoney(c.totalExpPast)}</span>
         </div>
-        ${pastList.length === 0 ? `<div class="empty">אין הוצאה מאוחרים קודמים.</div>` : renderCategoryGroups(pastList)}
+        ${pastList.length === 0 ? `<div class="empty">אין הוצאות בחודש קודם.</div>` : renderCategoryGroups(pastList)}
       </div>
     `;
   }
@@ -1257,7 +1259,7 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       signInWithPopup(auth, googleProvider).catch((error) => {
         authError = error?.code === "auth/popup-closed-by-user"
           ? "התחברות בוטלה עקב סגירת חלון ההתחברות."
-          : "התחברות נכשלה. יש לוודא שליספא Google הגדרת ב-Firebase.";
+          : "התחברות נכשלה. יש לוודא הגדרות Google ב-Firebase.";
         renderLogin();
       });
 
@@ -1296,13 +1298,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
       const ok = executeAIAction(actionToRun);
       aiMessages.push({
         role: "assistant",
-        text: ok ? "בוצע 📞" : "מה דצמזי ייבלצו את הדפטמנד. זשס מי פשי אוה מוצאיי את הדפשיי."
+        text: ok ? "בוצע בהצלחה ✓" : "שגיאה בביצוע הפעולה."
       });
       render();
 
     } else if (action === "cancel-ai-action") {
       pendingAIAction = null;
-      aiMessages.push({ role: "assistant", text: "ביטול 📞" });
+      aiMessages.push({ role: "assistant", text: "בוטל." });
       render();
 
     } else if (action === "toggle-income-form") {
@@ -1403,9 +1405,11 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
     } else if (action === "save-expense-direct") {
       const desc = document.getElementById("exp-desc").value.trim();
       const amountInput = Number(document.getElementById("exp-amount").value);
-      const date = document.getElementById("exp-date").value;
+      const date = document.getElementById("exp-date").value; // תאריך רכישה
 
       if (!desc || !date || !isValidAmount(amountInput)) return;
+
+      const billingDay = state.creditCardBillingDay || 2;
 
       if (ui.editingExpenseId) {
         const editedExpense = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
@@ -1427,12 +1431,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           state.expenses = state.expenses.filter((expense) => expense.installmentGroupId !== groupId);
 
           for (let i = 0; i < count; i++) {
+            const targetMonthDate = addMonths(firstPaymentDate, i);
             state.expenses.push({
               id: uid(),
               installmentGroupId: groupId,
               desc,
               amount: installmentAmounts[i] / 100,
-              date: addMonths(firstPaymentDate, i),
+              date: calcCreditChargeDate(targetMonthDate, billingDay),
               purchaseDate: date,
               scheduleVersion: 2,
               category: ui.selectedCategory,
@@ -1442,8 +1447,16 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
             });
           }
         } else {
+          // הוצאה רגילה בעריכה - מחשבים מחדש את תאריך החיוב לפי יום החיוב באשראי
           state.expenses = state.expenses.map((expense) => expense.id === ui.editingExpenseId
-            ? { ...expense, desc, amount: amountInput, date, category: ui.selectedCategory }
+            ? { 
+                ...expense, 
+                desc, 
+                amount: amountInput, 
+                date: calcCreditChargeDate(date, billingDay), 
+                purchaseDate: date,
+                category: ui.selectedCategory 
+              }
             : expense);
         }
 
@@ -1465,12 +1478,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           const firstPaymentDate = calcInstallmentStartDate(date);
 
           for (let i = 0; i < count; i++) {
+            const targetMonthDate = addMonths(firstPaymentDate, i);
             state.expenses.push({
               id: uid(),
               installmentGroupId,
               desc,
               amount: installmentAmounts[i] / 100,
-              date: addMonths(firstPaymentDate, i),
+              date: calcCreditChargeDate(targetMonthDate, billingDay),
               purchaseDate: date,
               scheduleVersion: 2,
               category: ui.selectedCategory,
@@ -1481,11 +1495,13 @@ add_income: client, amount, date, termDays (0/30/60/90). delete_expense: descrip
           }
         } else {
           const recurring = document.getElementById("exp-recurring")?.checked;
+          // הוצאה חדשה רגילה - מחשבים את תאריך החיוב (למשל ה-2 לחודש)
           state.expenses.push({
             id: uid(),
             desc,
             amount: amountInput,
-            date,
+            date: calcCreditChargeDate(date, billingDay),
+            purchaseDate: date,
             category: ui.selectedCategory,
             recurring: !!recurring
           });
